@@ -11,8 +11,8 @@ import (
     "io/ioutil"
     "log"
     "crypto/x509"
-    env "local.com/leobrada/the_pep/env"
-    sf_info "local.com/leobrada/the_pep/sf_info"
+    env "local.com/leobrada/ztsfc_pep/env"
+    sf_info "local.com/leobrada/ztsfc_pep/sf_info"
 )
 
 // FOR TESTING:
