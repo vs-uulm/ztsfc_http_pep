@@ -11,10 +11,10 @@ import (
     "io/ioutil"
     "log"
     "crypto/x509"
-    env "local.com/leobrada/ztsfc_pep/env"
-    sf_info "local.com/leobrada/ztsfc_pep/sf_info"
+    env "local.com/leobrada/ztsfc_http_pep/env"
+    sf_info "local.com/leobrada/ztsfc_http_pep/sf_info"
     
-    "local.com/leobrada/ztsfc_pep/logwriter"
+    "local.com/leobrada/ztsfc_http_pep/logwriter"
 )
 
 // FOR TESTING:

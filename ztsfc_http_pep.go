@@ -7,9 +7,9 @@ import (
     "net/url"
     "flag"
 
-    env "local.com/leobrada/ztsfc_pep/env"
-    router "local.com/leobrada/ztsfc_pep/router"
-    sf_info "local.com/leobrada/ztsfc_pep/sf_info"
+    env "local.com/leobrada/ztsfc_http_pep/env"
+    router "local.com/leobrada/ztsfc_http_pep/router"
+    sf_info "local.com/leobrada/ztsfc_http_pep/sf_info"
 )
 
 var (
