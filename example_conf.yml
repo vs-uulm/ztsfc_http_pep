@@ -1,0 +1,21 @@
+pep:
+  listen_addr: ":443"
+  certs_pep_accepts_when_shown_by_clients:
+    - /etc/the_pep/certs/external_client_certs/CA_root_1.crt
+
+service_pool:
+  nginx:
+    sni: service1.testbed.informatik.uni-ulm.de
+    target_service_addr: "https://10.5.0.53:443"
+    cert_shown_by_pep_to_clients_matching_sni: /etc/letsencrypt/live/service1.testbed.informatik.uni-ulm.de/fullchain.pem
+    privkey_for_cert_shown_by_pep_to_client: /etc/letsencrypt/live/service1.testbed.informatik.uni-ulm.de/privkey.pem
+    cert_shown_by_pep_to_service: /etc/the_pep/certs/dataPlane_pep_certs/server.crt
+    privkey_for_cert_shown_by_pep_to_service: /etc/the_pep/certs/dataPlane_pep_certs/private.key
+    cert_pep_accepts_when_shown_by_service: /etc/the_pep/certs/dataPlane_service_certs/nginx_root.crt
+
+sf_pool:
+  dummy:
+    target_sf_addr: "https://10.5.0.54:443"
+    cert_shown_by_pep_to_sf: /etc/the_pep/certs/dataPlane_pep_certs/server.crt
+    privkey_for_cert_shown_by_pep_to_sf: /etc/the_pep/certs/dataPlane_pep_certs/private.key
+    cert_pep_accepts_shown_by_sf: /etc/the_pep/certs/external_client_certs/CA_root_1.crt
