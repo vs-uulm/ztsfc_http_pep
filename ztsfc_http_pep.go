@@ -1,5 +1,5 @@
 package main
-// hello alex
+// hello world
 
 import (
     "log"
