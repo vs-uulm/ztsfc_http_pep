@@ -66,7 +66,7 @@ func init() {
 }
 
 func main() {
-	// Load Service Pool from config file
+	// Load Service Pool from config file_
 	service_pool := loadServicePool(env.Config)
 
 	// Load Service Function Pool from configuration file
