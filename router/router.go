@@ -15,6 +15,7 @@ import (
     "crypto/x509"
     env "local.com/leobrada/ztsfc_http_pep/env"
     sf_info "local.com/leobrada/ztsfc_http_pep/sf_info"
+    pwAuth "local.com/leobrada/ztsfc_http_pep/pwAuth"
 
     "local.com/leobrada/ztsfc_http_pep/logwriter"
 )
@@ -287,12 +288,32 @@ func matchTLSConst(input uint16) string {
 }
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+    fmt.Println("Test")
+    /*fmt.Fprintf(w, "Hi there, I love %s!", req.URL.Path[1:])
+    fmt.Println(len(req.TLS.PeerCertificates))
+    fmt.Println(req.TLS.PeerCertificates[0].Subject.CommonName)*/
+
     router.LogHTTPRequest(req, 1)
+
+    // Check, if user requested Password-Authentication site
+    if req.URL.Path == "pwAuth" {
+        pwAuth.PasswordAuthentication(w,req)
+        return
+    }
+
+    // Check for right user
+    name, err := req.Cookie("Username")
+    if err==nil && name.Value!="alex" {
+        pwAuth.PasswordAuthentication(w,req)
+        return
+    }
+
+
 
     var proxy *httputil.ReverseProxy
     // HE COMES THE LOGIC IN THIS FUNCTION
     need_to_go_through_sf := router.SetUpSFC()
-    sf_to_add_name := "dummy"
+    sf_to_add_name := "dpi"
     service_to_add_name := "nginx"
 
     if (need_to_go_through_sf) {
