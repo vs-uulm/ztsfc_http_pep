@@ -1,9 +1,5 @@
 package router
 
-// A comment, that shouldn't be added
-// Another one comment
-// The third one
-
 import (
     // "os"
     // "strings"
