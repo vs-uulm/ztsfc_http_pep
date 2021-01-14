@@ -95,9 +95,24 @@ func (lw LogWriter) Write(p []byte) (n int, err error) {
             output = output + ",denied\n"
         }
     }
-    
+
     // Push the line to the log channel
     lw.channel <- []byte(output)
 
     return 1, nil
+}
+
+func (lw LogWriter) GetLogTimeStamp() string {
+    // Get current time
+    t := time.Now()
+
+    // Format time stamp
+    ts := fmt.Sprintf("%4d/%02d/%02d %02d:%02d:%02d",
+                       t.Year(),
+                          t.Month(),
+                             t.Day(),
+                                t.Hour(),
+                                     t.Minute(),
+                                          t.Second())
+    return ts
 }
