@@ -10,8 +10,8 @@ This file realizes a Password-Authentication mechanism. When a user requests the
 the user can enter his username and password. For simplicity only the User "alex" with the Password "test" is available.
 */
 
-func PasswordAuthentication(w http.ResponseWriter, req *http.Request) {
-	var username, password string
+func PasswordAuthentication(w http.ResponseWriter, req *http.Request) (username string, failedAuth bool){
+	var password string
 	form := `<html>
             <body>
             <form action="/" method="post">
@@ -31,6 +31,7 @@ func PasswordAuthentication(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(401)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			fmt.Fprintf(w, form)
+			return "", true
 		}
 
 		nmbr_of_postvalues := len(req.PostForm)
@@ -39,6 +40,7 @@ func PasswordAuthentication(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(401)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			fmt.Fprintf(w, form)
+			return "",true
 		}
 
 		usernamel, exist := req.PostForm["username"]
@@ -48,6 +50,7 @@ func PasswordAuthentication(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(401)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			fmt.Fprintf(w, form)
+			return username, true
 		}
 
 		passwordl, exist := req.PostForm["password"]
@@ -57,6 +60,7 @@ func PasswordAuthentication(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(401)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			fmt.Fprintf(w, form)
+			return username, true
 		}
 
 		cookie := http.Cookie{
@@ -67,11 +71,13 @@ func PasswordAuthentication(w http.ResponseWriter, req *http.Request) {
 		}
 		http.SetCookie(w, &cookie)
 		fmt.Fprintf(w,"Authentication successful")
+		return username, false
 
 	} else {
 		fmt.Println("only post methods are accepted in this state")
 		w.WriteHeader(401)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		fmt.Fprintf(w, form)
+		return "",false
 	}
 }

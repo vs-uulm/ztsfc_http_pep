@@ -6,6 +6,7 @@ import (
     // "os"
     // "strings"
     "crypto/tls"
+    "local.com/leobrada/ztsfc_http_pep/trustCalculation"
     "net/http"
     "net/http/httputil"
     "time"
@@ -50,6 +51,8 @@ type Router struct {
 
     // Proxy server serving the incoming requests
     service_pool map[string]sf_info.ServiceFunctionInfo // the key represents the SNI; the value is the respective proxy serving the request addressed to the SNI
+
+    trustCalc trustCalculation.TrustCalculation         // Package for calculation of trust and based on that, how the request should be handled
 }
 
 func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool map[string]sf_info.ServiceFunctionInfo) (*Router, error) {
@@ -72,7 +75,7 @@ func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool ma
         MaxVersion: tls.VersionTLS13,
         SessionTicketsDisabled: true,
         Certificates: nil,
-        ClientAuth: tls.RequireAndVerifyClientCert,
+        ClientAuth: tls.VerifyClientCertIfGiven,
         ClientCAs: router.ca_cert_pool_ext,
         GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
             // Load Let's Encrypt Certificate that is shown to Clients
@@ -109,6 +112,8 @@ func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool ma
 
     router.service_pool = _service_pool
     router.sf_pool = _sf_pool
+
+    router.trustCalc = trustCalculation.NewTrustCalculation(router.logChannel)
 
     return router, nil
 }
@@ -288,35 +293,41 @@ func matchTLSConst(input uint16) string {
 }
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-    fmt.Println("Test")
-    /*fmt.Fprintf(w, "Hi there, I love %s!", req.URL.Path[1:])
-    fmt.Println(len(req.TLS.PeerCertificates))
-    fmt.Println(req.TLS.PeerCertificates[0].Subject.CommonName)*/
-
     router.LogHTTPRequest(req, 1)
 
     // Check, if user requested Password-Authentication site
-    if req.URL.Path == "pwAuth" {
-        pwAuth.PasswordAuthentication(w,req)
+    if req.URL.Path == "/pwAuth" {
+        username, faildAuth := pwAuth.PasswordAuthentication(w,req)
+        if faildAuth && username != ""{                                 // When authentication failed, the authentication attempts are increased
+            router.trustCalc.GetDataSources().IncAuthAttempt(username)
+            router.Log("User "+ username+" failed password authentication\n")
+        }
         return
     }
 
     // Check for right user
     name, err := req.Cookie("Username")
-    if err==nil && name.Value!="alex" {
-        pwAuth.PasswordAuthentication(w,req)
+    if err==nil && name.Value != "alex" {
+        router.Log("Unknown user " + name.Value + " -> block\n")
+        pwAuth.PasswordAuthentication(w, req)
         return
     }
 
-
+    forwardSFC, block := router.trustCalc.ForwardingDecision(req)
+    if(block) { // According to the achieved trust-value, the request is blocked
+        router.Log("Request blocked\n")
+        return
+    }
+    router.Log("Request forwarded\n")
 
     var proxy *httputil.ReverseProxy
     // HE COMES THE LOGIC IN THIS FUNCTION
-    need_to_go_through_sf := router.SetUpSFC()
+    //need_to_go_through_sf := router.SetUpSFC()
     sf_to_add_name := "dpi"
     service_to_add_name := "nginx"
 
-    if (need_to_go_through_sf) {
+    if (forwardSFC) {
+        router.Log("Request send to DPI\n")
         /*
             Here comes a Magic:
             Definition a set of Sfs to go through
