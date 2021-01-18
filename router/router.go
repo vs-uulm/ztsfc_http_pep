@@ -24,6 +24,12 @@ const (
     DEBUG
 )
 
+const (
+    SFLOGGER_PRINT_TLS_INFO       uint32  = 1<<8
+    SFLOGGER_PRINT_EMPTY_FIELDS   uint32  = 1<<31
+)
+
+
 // FOR TESTING:
 var forward bool = false
 
@@ -311,9 +317,13 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
     // HE COMES THE LOGIC IN THIS FUNCTION
     need_to_go_through_sf := router.SetUpSFC()
     
-    need_to_go_through_sf = false
     
-    sf_to_add_name := "dummy"
+    // Forward packets through the SF "Logger"
+    need_to_go_through_logger := true
+    
+    // need_to_go_through_sf = false
+    
+    sf_to_add_name := "log"
     service_to_add_name := "nginx"
 
     if (need_to_go_through_sf) {
@@ -328,7 +338,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
         
         router.Log(DEBUG, "[ Service functions ]\n")
         router.Log(DEBUG, fmt.Sprintf("    - %s\n", sf_to_add_name))
-        router.Log(DEBUG, "[ Service ]")
+        router.Log(DEBUG, "[ Service ]\n")
         router.Log(DEBUG, fmt.Sprintf("    %s\n", service_to_add_name))
         
         // Temporary Solution
@@ -344,6 +354,16 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
         sfp = append(sfp, service_to_add.Dst_url.String())
         req.Header["Sfp"] = sfp
 
+        // Set the SF "Logger" verbosity level
+        if (need_to_go_through_logger) {
+            LoggerHeaderName := "Sfloggerlevel"
+            _, ok := req.Header[LoggerHeaderName]
+            if ok {
+                req.Header.Del(LoggerHeaderName)
+            }
+            req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_EMPTY_FIELDS | SFLOGGER_PRINT_TLS_INFO)}
+        }
+        
         dest, ok := router.sf_pool[sf_to_add_name]
         if !ok {
             w.WriteHeader(503)
