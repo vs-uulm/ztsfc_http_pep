@@ -52,7 +52,7 @@ type Router struct {
     // Proxy server serving the incoming requests
     service_pool map[string]sf_info.ServiceFunctionInfo // the key represents the SNI; the value is the respective proxy serving the request addressed to the SNI
 
-    trustCalc trustCalculation.TrustCalculation         // Package for calculation of trust and based on that, how the request should be handled
+    trustCalc trustCalculation.TrustCalculation         // Package for calculation of trust - Based on that request is blocked, send to DPI or send to service
 }
 
 func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool map[string]sf_info.ServiceFunctionInfo) (*Router, error) {
@@ -294,31 +294,33 @@ func matchTLSConst(input uint16) string {
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
     router.LogHTTPRequest(req, 1)
-
+    router.Log("\nNew request-----------------------------------\n")
     // Check, if user requested Password-Authentication site
     if req.URL.Path == "/pwAuth" {
-        username, faildAuth := pwAuth.PasswordAuthentication(w,req)
-        if faildAuth && username != ""{                                 // When authentication failed, the authentication attempts are increased
-            router.trustCalc.GetDataSources().IncAuthAttempt(username)
+        username, failedAuth := pwAuth.PasswordAuthentication(w, req, router.trustCalc.GetDataSources())
+        if failedAuth {
             router.Log("User "+ username+" failed password authentication\n")
         }
         return
     }
 
     // Check for right user
-    name, err := req.Cookie("Username")
-    if err==nil && name.Value != "alex" {
+   /* name, err := req.Cookie("Username")
+    if err == nil && name.Value != "alex" {
         router.Log("Unknown user " + name.Value + " -> block\n")
         pwAuth.PasswordAuthentication(w, req)
         return
-    }
+    }*/
 
-    forwardSFC, block := router.trustCalc.ForwardingDecision(req)
-    if(block) { // According to the achieved trust-value, the request is blocked
-        router.Log("Request blocked\n")
+    forwardSFC, block := router.trustCalc.ForwardingDecision(req) // calculate trust and decide according to trust, how the request is handled
+    if block {                                                    // Check, if trust was to low and request is blocked
+        w.WriteHeader(401)
+        router.Log("---Request blocked\n")
+        fmt.Println("Request blocked")
         return
+    }else {
+        router.Log("---Request forwarded\n")
     }
-    router.Log("Request forwarded\n")
 
     var proxy *httputil.ReverseProxy
     // HE COMES THE LOGIC IN THIS FUNCTION

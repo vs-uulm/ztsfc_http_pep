@@ -2,7 +2,7 @@ package trustCalculation
 
 /*
 In this file the threshold values for the three provided services, the trust-increase for user-attribtues, the
-trust-increase for device attributes, user-information and device information of managed devices is stored
+trust-increase for device attributes, user-information and device information of managed devices are stored
  */
 
 type DataSources struct {
@@ -10,7 +10,7 @@ type DataSources struct {
 	// Trust-increase, when a DPI is used
 	dpiTrustIncrease int
 
-	// Maximum authentication attempts to get trust for the attribute authetnication attempts
+	// Maximum authentication attempts to get trust for the attribute authentication attempts
 	maxAuthAttempts int
 
 	// Map, where threshold values for the devices are stored
@@ -23,12 +23,12 @@ type DataSources struct {
 	trustIncreaseDeviceAttr map[string]int
 
 	// Map, where the current status of each user is stored
-	userDatabase map[string]*User
+	UserDatabase map[string]*User
 
 	// Map, where the current status of managed devices is stored
 	deviceDatabase map[string]map[string]bool
 
-	// Map, where for a IP address the geographic area is stored, where the request comes from
+	// Map, where for a IP address the geographic area is stored
 	mapIPgeoArea map[string]string
 
 }
@@ -40,7 +40,7 @@ func NewDataSources() *DataSources {
 }
 
 
-// In this method, the specified data sources are filled with content
+// In this method values are assigned to the specified attributes
 func (dataSources *DataSources) InitDataSources()  {
 	dataSources.dpiTrustIncrease = 6
 
@@ -62,10 +62,11 @@ func (dataSources *DataSources) InitDataSources()  {
 	dataSources.trustIncreaseDeviceAttr = make(map[string]int)
 	dataSources.trustIncreaseDeviceAttr["LPL"] = 3	// Latest patch level
 	dataSources.trustIncreaseDeviceAttr["NAVS"] = 2	// No alerts of virus scanner
-	dataSources.trustIncreaseDeviceAttr["RI"] = 1	// Re-installation
+	dataSources.trustIncreaseDeviceAttr["RI"] = 1	// Device recently re-installed
 
 	dataSources.deviceDatabase = make(map[string]map[string]bool)
 
+	// create managed devices in the device database
 	var device1 = make(map[string]bool)
 	dataSources.deviceDatabase["device1"] = device1
 	device1["LPL"] = true
@@ -73,22 +74,24 @@ func (dataSources *DataSources) InitDataSources()  {
 	device1["RI"] = true
 
 	var device2 = make(map[string]bool)
-	dataSources.deviceDatabase["device2"] = device1
+	dataSources.deviceDatabase["device2"] = device2
 	device2["LPL"] = false
-	device2["NAVS"] = true
+	device2["NAVS"] = false
 	device2["RI"] = false
 
-	dataSources.userDatabase = make(map[string]*User)
-	user := NewUser("DE",[]string{"service1"},1000,300,1)
-	dataSources.userDatabase["alex"] = user
+	// create users in the user database
+	dataSources.UserDatabase = make(map[string]*User)
+	alex := NewUser("DE",[]string{"service1","service2","service3"},10000,0,0)
+	ceo := NewUser("DE",[]string{"service1","service2","service3"},10000,0,0)
+	man := NewUser("DE",[]string{"service1","service2","service3"},10000,0,0)
+	dev := NewUser("DE",[]string{"service1","service2","service3"},10000,0,0)
+	dataSources.UserDatabase["alex"] = alex
+	dataSources.UserDatabase["ceo"] = ceo
+	dataSources.UserDatabase["man"] = man
+	dataSources.UserDatabase["dev"] = dev
 
+	// assign ip-addresses to geographic areas (exemplary values)
 	dataSources.mapIPgeoArea = make(map[string]string)
 	dataSources.mapIPgeoArea["36.10.10.20"]="DE"
-}
-
-// The method increases the authentication attempts of a user, after a failed authentication
-func (dataSrc *DataSources)IncAuthAttempt(username string) {
-	if user, ok := dataSrc.userDatabase[username]; ok {
-		user.authAttempts++
-	}
+	dataSources.mapIPgeoArea["46.10.10.20"]="US"
 }

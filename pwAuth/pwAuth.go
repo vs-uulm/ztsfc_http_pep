@@ -2,15 +2,16 @@ package pwAuth
 
 import (
 	"fmt"
+	"local.com/leobrada/ztsfc_http_pep/trustCalculation"
 	"net/http"
 )
 
 /*
-This file realizes a Password-Authentication mechanism. When a user requests the path "pwAuth", a Form is send, where
-the user can enter his username and password. For simplicity only the User "alex" with the Password "test" is available.
+This file realizes a Password-Authentication mechanism. When a user requests the path "pwAuth", a form is send, where
+the user can enter his username and password. For simplicity "test" is the password for every user.
 */
 
-func PasswordAuthentication(w http.ResponseWriter, req *http.Request) (username string, failedAuth bool){
+func PasswordAuthentication(w http.ResponseWriter, req *http.Request, dataSources *trustCalculation.DataSources) (username string, failedAuth bool){
 	var password string
 	form := `<html>
             <body>
@@ -45,7 +46,7 @@ func PasswordAuthentication(w http.ResponseWriter, req *http.Request) (username 
 
 		usernamel, exist := req.PostForm["username"]
 		username = usernamel[0]
-		if !exist || username != "alex" {
+		if _, ok:= dataSources.UserDatabase[username]; !ok || !exist{				// Check, if username exists in user database
 			fmt.Println("username not present or wrong")
 			w.WriteHeader(401)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -55,7 +56,7 @@ func PasswordAuthentication(w http.ResponseWriter, req *http.Request) (username 
 
 		passwordl, exist := req.PostForm["password"]
 		password = passwordl[0]
-		if !exist || password != "test" {
+		if !exist || password != "test" {						// for simplicity, password is "test" for very user
 			fmt.Println("password not present or wrong")
 			w.WriteHeader(401)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
