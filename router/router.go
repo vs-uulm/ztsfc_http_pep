@@ -28,10 +28,15 @@ const (
     SFLOGGER_REGISTER_PACKETS_ONLY  uint32  = 1 << iota
     SFLOGGER_PRINT_GENERAL_INFO
     SFLOGGER_PRINT_HEADER_FIELDS
-    SFLOGGER_PRINT_TLS_INFO
+    SFLOGGER_PRINT_TRAILERS
+    SFLOGGER_PRINT_BODY
+    SFLOGGER_PRINT_FORMS
+    SFLOGGER_PRINT_TLS_MAIN_INFO
+    SFLOGGER_PRINT_TLS_CERTIFICATES
     SFLOGGER_PRINT_TLS_PUBLIC_KEY
     SFLOGGER_PRINT_TLS_CERT_SIGNATURE
     SFLOGGER_PRINT_RAW
+    SFLOGGER_PRINT_REDIRECTED_RESPONSE
     SFLOGGER_PRINT_EMPTY_FIELDS
 )
 
@@ -367,11 +372,27 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
             if ok {
                 req.Header.Del(LoggerHeaderName)
             }
-            // req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_EMPTY_FIELDS | SFLOGGER_PRINT_TLS_INFO)}
-            // req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_TLS_INFO | SFLOGGER_PRINT_RAW)}
-            req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_GENERAL_INFO | SFLOGGER_PRINT_HEADER_FIELDS)}
+            // req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_EMPTY_FIELDS | SFLOGGER_PRINT_TLS_MAIN_INFO)}
+            // req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_TLS_MAIN_INFO | SFLOGGER_PRINT_RAW)}
+            req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_TLS_CERTIFICATES | SFLOGGER_PRINT_RAW)}
         }
         
+        
+    // SFLOGGER_REGISTER_PACKETS_ONLY  uint32  = 1 << iota
+    // SFLOGGER_PRINT_GENERAL_INFO
+    // SFLOGGER_PRINT_HEADER_FIELDS
+    // SFLOGGER_PRINT_TRAILERS
+    // SFLOGGER_PRINT_BODY
+    // SFLOGGER_PRINT_FORMS
+    // SFLOGGER_PRINT_TLS_MAIN_INFO
+    // SFLOGGER_PRINT_TLS_CERTIFICATES
+    // SFLOGGER_PRINT_TLS_PUBLIC_KEY
+    // SFLOGGER_PRINT_TLS_CERT_SIGNATURE
+    // SFLOGGER_PRINT_RAW
+    // SFLOGGER_PRINT_REDIRECTED_RESPONSE
+    // SFLOGGER_PRINT_EMPTY_FIELDS
+    
+    
         dest, ok := router.sf_pool[sf_to_add_name]
         if !ok {
             w.WriteHeader(503)
