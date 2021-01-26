@@ -46,7 +46,7 @@ func (trustCalc TrustCalculation) ForwardingDecision(req *http.Request) (forward
 	trustCalc.removeHTTPHeader(req)												// Remove http header, which are only necessary for trust-calculation
 
 	trust := userTrust + deviceTrust
-	service := strings.Split(req.URL.String(),"/")[1]						// Derive requested service from URL
+	service := strings.Split(req.URL.Path,"/")[1]						// Derive requested service from URL
 	trustCalc.Log("----Requested service: " + service + "\n")
 
 	if threshold, ok := trustCalc.dataSources.thresholdValues[service]; ok {

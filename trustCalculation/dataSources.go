@@ -75,9 +75,15 @@ func (dataSources *DataSources) InitDataSources()  {
 
 	var device2 = make(map[string]bool)
 	dataSources.deviceDatabase["device2"] = device2
-	device2["LPL"] = false
-	device2["NAVS"] = false
-	device2["RI"] = false
+	device2["LPL"] = true
+	device2["NAVS"] = true
+	device2["RI"] = true
+
+	var device3 = make(map[string]bool)
+	dataSources.deviceDatabase["device3"] = device3
+	device3["LPL"] = true
+	device3["NAVS"] = true
+	device3["RI"] = true
 
 	// create users in the user database
 	dataSources.UserDatabase = make(map[string]*User)
