@@ -110,7 +110,7 @@ func (trustCalc TrustCalculation) calcUserTrust(req *http.Request) (trust int) {
 	}
 
 	// Analyze commonly used services
-	requestedService := strings.Split(req.URL.String(),"/")[1]				// service is identified with first part in the requested URL
+	requestedService := strings.Split(req.URL.Path,"/")[1]				// service is identified with first part in the requested URL
 	for _, commonService := range trustCalc.dataSources.UserDatabase[user].commonUsedService {
 		if requestedService == commonService {									// Check, if commonly used service corresponds to the requested service
 			trust = trust + trustCalc.dataSources.trustIncreaseUserAttr["CUS"]
