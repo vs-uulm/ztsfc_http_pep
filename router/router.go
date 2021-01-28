@@ -374,7 +374,20 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
             }
             // req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_EMPTY_FIELDS | SFLOGGER_PRINT_TLS_MAIN_INFO)}
             // req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_TLS_MAIN_INFO | SFLOGGER_PRINT_RAW)}
-            req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_TLS_CERTIFICATES | SFLOGGER_PRINT_RAW)}
+            req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d",
+                        SFLOGGER_PRINT_GENERAL_INFO |
+                        // SFLOGGER_PRINT_HEADER_FIELDS |
+                        // SFLOGGER_PRINT_TRAILERS |
+                        // SFLOGGER_PRINT_BODY |
+                        SFLOGGER_PRINT_FORMS |
+                        // SFLOGGER_PRINT_TLS_MAIN_INFO |
+                        // SFLOGGER_PRINT_TLS_CERTIFICATES |
+                        // SFLOGGER_PRINT_TLS_PUBLIC_KEY |
+                        // SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
+                        // SFLOGGER_PRINT_RAW |
+                        // SFLOGGER_PRINT_REDIRECTED_RESPONSE |
+                        SFLOGGER_PRINT_EMPTY_FIELDS |
+                        0 )}                        
         }
         
         
@@ -440,6 +453,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
             }
         }
     }
+    // fmt.Printf("\n%+v\n\n", req)
     proxy.ServeHTTP(w, req)
 }
 
