@@ -31,6 +31,7 @@ const (
     SFLOGGER_PRINT_TRAILERS
     SFLOGGER_PRINT_BODY
     SFLOGGER_PRINT_FORMS
+    SFLOGGER_PRINT_FORMS_FILE_CONTENT
     SFLOGGER_PRINT_TLS_MAIN_INFO
     SFLOGGER_PRINT_TLS_CERTIFICATES
     SFLOGGER_PRINT_TLS_PUBLIC_KEY
@@ -39,10 +40,6 @@ const (
     SFLOGGER_PRINT_REDIRECTED_RESPONSE
     SFLOGGER_PRINT_EMPTY_FIELDS
 )
-
-
-// FOR TESTING:
-var forward bool = false
 
 // TODO: MUST BE UPDATED
 func loadCaPool(path string) (ca_cert_pool *x509.CertPool) {
@@ -143,54 +140,6 @@ func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo,
 
     return router, nil
 }
-
-// // // // Printing request details
-// // // // ONLY FOR TESTING
-// // // func (router *Router) printRequest(w http.ResponseWriter, req *http.Request) {
-    // // // fmt.Printf("Method: %s\n", req.Method)
-    // // // fmt.Printf("URL: %s\n", req.URL)
-    // // // fmt.Printf("Protocol Version: %d.%d\n", req.ProtoMajor, req.ProtoMinor)
-    // // // fmt.Println("===================HEADER FIELDS=======================")
-    // // // for key, value := range req.Header {
-        // // // fmt.Printf("%s: %v\n", key, value)
-    // // // }
-    // // // fmt.Println("==========================================")
-    // // // fmt.Printf("Body: %s\n", "TBD")
-    // // // fmt.Printf("Content Length: %d\n", req.ContentLength)
-    // // // fmt.Printf("Transfer Encoding: %v\n", req.TransferEncoding)
-    // // // fmt.Printf("Close: %v\n", req.Close)
-    // // // fmt.Printf("Host: %s\n", req.Host)
-    // // // fmt.Println("====================FORM======================")
-    // // // if err := req.ParseForm(); err == nil {
-        // // // for key, value := range req.Form {
-            // // // fmt.Printf("%s: %v\n", key, value)
-        // // // }
-    // // // }
-    // // // fmt.Println("==========================================")
-    // // // fmt.Println("====================POST FORM======================")
-    // // // for key, value := range req.PostForm {
-        // // // fmt.Printf("%s: %v\n", key, value)
-    // // // }
-    // // // fmt.Println("==========================================")
-    // // // fmt.Println("====================MULTIPART FORM======================")
-    // // // if err := req.ParseMultipartForm(100); err == nil {
-        // // // for key, value := range req.MultipartForm.Value {
-            // // // fmt.Printf("%s: %v\n", key, value)
-        // // // }
-    // // // }
-    // // // fmt.Println("==========================================")
-    // // // fmt.Println("===================TRAILER HEADER=======================")
-    // // // for key, value := range req.Trailer {
-        // // // fmt.Printf("%s: %v\n", key, value)
-    // // // }
-    // // // fmt.Println("==========================================")
-    // // // fmt.Printf("Remote Address: %s\n", req.RemoteAddr)
-    // // // fmt.Printf("Request URI: %s\n", req.RequestURI)
-    // // // fmt.Printf("TLS: %s\n", "TBD")
-    // // // fmt.Printf("Cancel: %s\n", "TBD")
-    // // // fmt.Printf("Reponse: %s\n", "TBD")
-// // // }
-// // // // END TESTING
 
 func middlewareDummy(w http.ResponseWriter, req *http.Request) (bool){
     var username, password string
@@ -375,36 +324,22 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
             // req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_EMPTY_FIELDS | SFLOGGER_PRINT_TLS_MAIN_INFO)}
             // req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_TLS_MAIN_INFO | SFLOGGER_PRINT_RAW)}
             req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d",
+                        SFLOGGER_REGISTER_PACKETS_ONLY |
                         SFLOGGER_PRINT_GENERAL_INFO |
                         SFLOGGER_PRINT_HEADER_FIELDS |
                         SFLOGGER_PRINT_TRAILERS |
                         SFLOGGER_PRINT_BODY |
                         SFLOGGER_PRINT_FORMS |
-                        // SFLOGGER_PRINT_TLS_MAIN_INFO |
-                        // SFLOGGER_PRINT_TLS_CERTIFICATES |
-                        // SFLOGGER_PRINT_TLS_PUBLIC_KEY |
-                        // SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
-                        // SFLOGGER_PRINT_RAW |
-                        // SFLOGGER_PRINT_REDIRECTED_RESPONSE |
-                        // SFLOGGER_PRINT_EMPTY_FIELDS |
+                        SFLOGGER_PRINT_FORMS_FILE_CONTENT |
+                        SFLOGGER_PRINT_TLS_MAIN_INFO |
+                        SFLOGGER_PRINT_TLS_CERTIFICATES |
+                        SFLOGGER_PRINT_TLS_PUBLIC_KEY |
+                        SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
+                        SFLOGGER_PRINT_RAW |
+                        SFLOGGER_PRINT_REDIRECTED_RESPONSE |
+                        SFLOGGER_PRINT_EMPTY_FIELDS |
                         0 )}                        
         }
-        
-        
-    // SFLOGGER_REGISTER_PACKETS_ONLY  uint32  = 1 << iota
-    // SFLOGGER_PRINT_GENERAL_INFO
-    // SFLOGGER_PRINT_HEADER_FIELDS
-    // SFLOGGER_PRINT_TRAILERS
-    // SFLOGGER_PRINT_BODY
-    // SFLOGGER_PRINT_FORMS
-    // SFLOGGER_PRINT_TLS_MAIN_INFO
-    // SFLOGGER_PRINT_TLS_CERTIFICATES
-    // SFLOGGER_PRINT_TLS_PUBLIC_KEY
-    // SFLOGGER_PRINT_TLS_CERT_SIGNATURE
-    // SFLOGGER_PRINT_RAW
-    // SFLOGGER_PRINT_REDIRECTED_RESPONSE
-    // SFLOGGER_PRINT_EMPTY_FIELDS
-    
     
         dest, ok := router.sf_pool[sf_to_add_name]
         if !ok {
