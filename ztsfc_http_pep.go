@@ -14,6 +14,7 @@ import (
 
 var (
     conf_file_path = flag.String("c", "./conf.yml", "Path to user defined yml config file")
+    log_level = flag.Int("l", 0, "Log level")
 )
 
 func loadServicePool(config env.Config_t) (service_pool map[string]sf_info.ServiceFunctionInfo) {
@@ -73,7 +74,7 @@ func main() {
     // Load Service Function Pool from configuration file
     sf_pool := loadSfPool(env.Config)
 
-    pep, err := router.NewRouter(service_pool, sf_pool)
+    pep, err := router.NewRouter(service_pool, sf_pool, *log_level)
     if err != nil {
         log.Fatalln(err)
     }

@@ -17,8 +17,29 @@ import (
     "local.com/leobrada/ztsfc_http_pep/logwriter"
 )
 
-// FOR TESTING:
-var forward bool = false
+const (
+    NONE = iota
+    BASIC
+    ADVANCED
+    DEBUG
+)
+
+const (
+    SFLOGGER_REGISTER_PACKETS_ONLY  uint32  = 1 << iota
+    SFLOGGER_PRINT_GENERAL_INFO
+    SFLOGGER_PRINT_HEADER_FIELDS
+    SFLOGGER_PRINT_TRAILERS
+    SFLOGGER_PRINT_BODY
+    SFLOGGER_PRINT_FORMS
+    SFLOGGER_PRINT_FORMS_FILE_CONTENT
+    SFLOGGER_PRINT_TLS_MAIN_INFO
+    SFLOGGER_PRINT_TLS_CERTIFICATES
+    SFLOGGER_PRINT_TLS_PUBLIC_KEY
+    SFLOGGER_PRINT_TLS_CERT_SIGNATURE
+    SFLOGGER_PRINT_RAW
+    SFLOGGER_PRINT_REDIRECTED_RESPONSE
+    SFLOGGER_PRINT_EMPTY_FIELDS
+)
 
 // TODO: MUST BE UPDATED
 func loadCaPool(path string) (ca_cert_pool *x509.CertPool) {
@@ -35,33 +56,43 @@ func loadCaPool(path string) (ca_cert_pool *x509.CertPool) {
 type Router struct {
     tls_config *tls.Config
     frontend *http.Server
-    logger *log.Logger
     ca_cert_pool_ext *x509.CertPool
     ca_cert_pool_int *x509.CertPool
-
-    logChannel chan []byte
-    logWriter *logwriter.LogWriter
     
     // Map of available Service Functions 
     sf_pool map[string]sf_info.ServiceFunctionInfo
 
     // Proxy server serving the incoming requests
     service_pool map[string]sf_info.ServiceFunctionInfo // the key represents the SNI; the value is the respective proxy serving the request addressed to the SNI
+    
+    // Logger structs
+    logger *log.Logger
+    logLevel int
+    logChannel chan []byte
+    logWriter *logwriter.LogWriter
 }
 
-func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool map[string]sf_info.ServiceFunctionInfo) (*Router, error) {
+func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo,
+               _sf_pool      map[string]sf_info.ServiceFunctionInfo,
+               _log_level    int) (*Router, error) {
     router := new(Router)
-    router.init_ca_cert_pools(&env.Config)
-    
-    // Create a logging channel
+    router.logLevel = _log_level
+
+    // Create a log channel
     router.logChannel = make(chan []byte, 128)
-    
+
     // Create a new log writer
     router.logWriter = logwriter.NewLogWriter("./access.log", router.logChannel, 5)
-    
+
     // Run main loop of logWriter
     go router.logWriter.Work()
+    
+    router.Log(DEBUG, "============================================================\n")
+    router.Log(DEBUG, "A new PEP router has been created\n")
 
+    // Load all SF certificates to operate both in server and client modes
+    router.initAllCertificates(&env.Config)
+    
     router.tls_config = &tls.Config{
         Rand: nil,
         Time: nil,
@@ -110,53 +141,6 @@ func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool ma
     return router, nil
 }
 
-// Printing request details
-// ONLY FOR TESTING
-func (router *Router) printRequest(w http.ResponseWriter, req *http.Request) {
-    fmt.Printf("Method: %s\n", req.Method)
-    fmt.Printf("URL: %s\n", req.URL)
-    fmt.Printf("Protocol Version: %d.%d\n", req.ProtoMajor, req.ProtoMinor)
-    fmt.Println("===================HEADER FIELDS=======================")
-    for key, value := range req.Header {
-        fmt.Printf("%s: %v\n", key, value)
-    }
-    fmt.Println("==========================================")
-    fmt.Printf("Body: %s\n", "TBD")
-    fmt.Printf("Content Length: %d\n", req.ContentLength)
-    fmt.Printf("Transfer Encoding: %v\n", req.TransferEncoding)
-    fmt.Printf("Close: %v\n", req.Close)
-    fmt.Printf("Host: %s\n", req.Host)
-    fmt.Println("====================FORM======================")
-    if err := req.ParseForm(); err == nil {
-        for key, value := range req.Form {
-            fmt.Printf("%s: %v\n", key, value)
-        }
-    }
-    fmt.Println("==========================================")
-    fmt.Println("====================POST FORM======================")
-    for key, value := range req.PostForm {
-        fmt.Printf("%s: %v\n", key, value)
-    }
-    fmt.Println("==========================================")
-    fmt.Println("====================MULTIPART FORM======================")
-    if err := req.ParseMultipartForm(100); err == nil {
-        for key, value := range req.MultipartForm.Value {
-            fmt.Printf("%s: %v\n", key, value)
-        }
-    }
-    fmt.Println("==========================================")
-    fmt.Println("===================TRAILER HEADER=======================")
-    for key, value := range req.Trailer {
-        fmt.Printf("%s: %v\n", key, value)
-    }
-    fmt.Println("==========================================")
-    fmt.Printf("Remote Address: %s\n", req.RemoteAddr)
-    fmt.Printf("Request URI: %s\n", req.RequestURI)
-    fmt.Printf("TLS: %s\n", "TBD")
-    fmt.Printf("Cancel: %s\n", "TBD")
-    fmt.Printf("Reponse: %s\n", "TBD")
-}
-// END TESTING
 func middlewareDummy(w http.ResponseWriter, req *http.Request) (bool){
     var username, password string
     form := `<html>
@@ -285,12 +269,21 @@ func matchTLSConst(input uint16) string {
 }
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-    router.LogHTTPRequest(req, 1)
+    // Log the http request
+    router.Log(DEBUG, "------------ HTTP packet ------------\n")
+    router.LogHTTPRequest(DEBUG, req)
 
     var proxy *httputil.ReverseProxy
     // HE COMES THE LOGIC IN THIS FUNCTION
     need_to_go_through_sf := router.SetUpSFC()
-    sf_to_add_name := "dummy"
+    
+    
+    // Forward packets through the SF "Logger"
+    need_to_go_through_logger := true
+    
+    // need_to_go_through_sf = false
+    
+    sf_to_add_name := "log"
     service_to_add_name := "nginx"
 
     if (need_to_go_through_sf) {
@@ -302,6 +295,12 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
             Adding SF information to the HTTP header
             ...
         */
+        
+        router.Log(DEBUG, "[ Service functions ]\n")
+        router.Log(DEBUG, fmt.Sprintf("    - %s\n", sf_to_add_name))
+        router.Log(DEBUG, "[ Service ]\n")
+        router.Log(DEBUG, fmt.Sprintf("    %s\n", service_to_add_name))
+        
         // Temporary Solution
         service_to_add := router.service_pool[service_to_add_name]
         /*
@@ -315,6 +314,33 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
         sfp = append(sfp, service_to_add.Dst_url.String())
         req.Header["Sfp"] = sfp
 
+        // Set the SF "Logger" verbosity level
+        if (need_to_go_through_logger) {
+            LoggerHeaderName := "Sfloggerlevel"
+            _, ok := req.Header[LoggerHeaderName]
+            if ok {
+                req.Header.Del(LoggerHeaderName)
+            }
+            // req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_EMPTY_FIELDS | SFLOGGER_PRINT_TLS_MAIN_INFO)}
+            // req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_TLS_MAIN_INFO | SFLOGGER_PRINT_RAW)}
+            req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d",
+                        SFLOGGER_REGISTER_PACKETS_ONLY |
+                        SFLOGGER_PRINT_GENERAL_INFO |
+                        SFLOGGER_PRINT_HEADER_FIELDS |
+                        SFLOGGER_PRINT_TRAILERS |
+                        SFLOGGER_PRINT_BODY |
+                        SFLOGGER_PRINT_FORMS |
+                        SFLOGGER_PRINT_FORMS_FILE_CONTENT |
+                        SFLOGGER_PRINT_TLS_MAIN_INFO |
+                        SFLOGGER_PRINT_TLS_CERTIFICATES |
+                        SFLOGGER_PRINT_TLS_PUBLIC_KEY |
+                        SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
+                        SFLOGGER_PRINT_RAW |
+                        SFLOGGER_PRINT_REDIRECTED_RESPONSE |
+                        SFLOGGER_PRINT_EMPTY_FIELDS |
+                        0 )}                        
+        }
+    
         dest, ok := router.sf_pool[sf_to_add_name]
         if !ok {
             w.WriteHeader(503)
@@ -339,6 +365,10 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
             }
         */
     } else {
+        router.Log(DEBUG, "[ Service functions ]\n")
+        router.Log(DEBUG, "    -\n")
+        router.Log(DEBUG, "[ Service ]\n")
+        router.Log(DEBUG, fmt.Sprintf("    %s\n", service_to_add_name))
         for _, service := range router.service_pool {
             if req.TLS.ServerName == service.SNI {
                 proxy = httputil.NewSingleHostReverseProxy(service.Dst_url)
@@ -358,6 +388,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
             }
         }
     }
+    // fmt.Printf("\n%+v\n\n", req)
     proxy.ServeHTTP(w, req)
 }
 
@@ -365,66 +396,103 @@ func (router *Router) ListenAndServeTLS() error {
     return router.frontend.ListenAndServeTLS("","")
 }
 
-func (router *Router) init_ca_cert_pools(conf *env.Config_t) {
+func (router *Router) initAllCertificates(conf *env.Config_t) {
     var caRoot []byte
     var err error
+    isErrorDetected := false
 
     router.ca_cert_pool_ext = x509.NewCertPool()
 
     // Read CA certs used for signing client certs and are accepted by the PEP
+    router.Log(DEBUG, "Loading clients CA certificates:\n")
     for _, acceptedClientCert := range conf.Pep.Certs_pep_accepts_when_shown_by_clients {
         caRoot, err = ioutil.ReadFile(acceptedClientCert)
-        if err != nil {
-            log.Fatal("ReadFile: ", err)
+        if err!=nil {
+            isErrorDetected = true
+            router.Log(DEBUG, fmt.Sprintf("    - %s - FAILED\n", acceptedClientCert))
+        } else {
+            router.Log(DEBUG, fmt.Sprintf("    - %s - OK\n", acceptedClientCert))
         }
-      // Append a certificate to the pool
+        // Append a certificate to the pool
         router.ca_cert_pool_ext.AppendCertsFromPEM(caRoot)
     }
 
     router.ca_cert_pool_int = x509.NewCertPool()
 
     // Read CA certs used for signing client certs and are accepted by the PEP
-    for _, service_config := range(conf.Service_pool) {
+    if (len(conf.Service_pool) > 0) {
+        router.Log(DEBUG, "Loading CA certificates for services:\n")
+    }
+    for service_name, service_config := range(conf.Service_pool) {
         caRoot, err = ioutil.ReadFile(service_config.Cert_pep_accepts_when_shown_by_service)
-        if err != nil {
-            log.Fatal("ReadFile: ", err)
+        if err!=nil {
+            isErrorDetected = true
+            router.Log(DEBUG, fmt.Sprintf("    %s: %s - FAILED\n", service_name,
+                                          service_config.Cert_pep_accepts_when_shown_by_service))
+        } else {
+            router.Log(DEBUG, fmt.Sprintf("    %s: %s - OK\n", service_name,
+                                          service_config.Cert_pep_accepts_when_shown_by_service))
         }
         // Append a certificate to the pool
         router.ca_cert_pool_int.AppendCertsFromPEM(caRoot)
     }
 
-    for _, sf_config := range(conf.Sf_pool) {
+    if (len(conf.Sf_pool) > 0) {
+        router.Log(DEBUG, "Loading CA certificates for service functions:\n")
+    }
+    for sf_name, sf_config := range(conf.Sf_pool) {
         caRoot, err = ioutil.ReadFile(sf_config.Cert_pep_accepts_shown_by_sf)
-        if err != nil {
-            log.Fatal("ReadFile: ", err)
+        if err!=nil {
+            isErrorDetected = true
+            router.Log(DEBUG, fmt.Sprintf("    %s: %s - FAILED\n", sf_name,
+                                          sf_config.Cert_pep_accepts_shown_by_sf))
+        } else {
+            router.Log(DEBUG, fmt.Sprintf("    %s: %s - OK\n", sf_name,
+                                          sf_config.Cert_pep_accepts_shown_by_sf))
         }
         // Append a certificate to the pool
         router.ca_cert_pool_int.AppendCertsFromPEM(caRoot)
     }
+    
+    if isErrorDetected {
+        log.Fatal("An error occurred during certificates loading. See details in the log file.")
+    }
 }
 
-func (router *Router) Log(s string) {
-  router.logChannel <- []byte(s)
+// The Log() function writes messages from a provided slice as space-separated string into the log
+func (router *Router) Log (logLevel int, messages ...string) {
+    // Nothing to do, if message's log level is lower than those, user has set
+    if logLevel < router.logLevel {
+        return
+    }
+    
+    // Creates a comma-separated string out of the incoming slice of strings
+    s := router.logWriter.GetLogTimeStamp()
+    for _, message := range messages {
+        s = s + "," + message
+    }
+    
+    // Send the resulting string to the logging channel
+    router.logChannel <- []byte(s)
 }
 
-func (router *Router) LogHTTPRequest(req *http.Request, loglevel int) {
-  // Make a string to log
-  t := time.Now()
-  ts := fmt.Sprintf("%d/%d/%d %02d:%02d:%02d ",
-                     t.Year(),
-                        t.Month(),
-                           t.Day(),
-                              t.Hour(),
-                                   t.Minute(),
-                                         t.Second())
-  s := fmt.Sprintf("%s,%s,%s,%s,%t,%t,%s,success\n",
-                    ts,
-                       req.RemoteAddr,
-                          req.TLS.ServerName,
-                             matchTLSConst(req.TLS.Version),
-                                req.TLS.HandshakeComplete,
-                                   req.TLS.DidResume,
-                                      matchTLSConst(req.TLS.CipherSuite))
-  
-  router.Log(s)
+
+// The LogHTTPRequest() function prints HTTP request details into the log file
+func (router *Router) LogHTTPRequest(logLevel int, req *http.Request) {
+    // Check if we have something to do
+    if logLevel < router.logLevel {
+        return
+    }
+
+    // Fill in the string with the rest data
+    s := fmt.Sprintf("%s,%s,%s,%t,%t,%s,success\n",
+                      req.RemoteAddr,
+                         req.TLS.ServerName,
+                            matchTLSConst(req.TLS.Version),
+                               req.TLS.HandshakeComplete,
+                                  req.TLS.DidResume,
+                                     matchTLSConst(req.TLS.CipherSuite))                                        
+
+    // Write the string to the log file
+    router.Log(logLevel, s)
 }
