@@ -124,7 +124,7 @@ func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo,
     mux.Handle("/", router)
 
     // Frontend Loggers
-    router.logger = log.New(logwriter.LogWriter{}, "", log.LstdFlags)
+    router.logger = log.New(router.logWriter, "", log.LstdFlags)
 
     router.frontend = &http.Server {
         Addr: env.Config.Pep.Listen_addr,
@@ -321,24 +321,23 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
             if ok {
                 req.Header.Del(LoggerHeaderName)
             }
-            // req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_EMPTY_FIELDS | SFLOGGER_PRINT_TLS_MAIN_INFO)}
-            // req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_TLS_MAIN_INFO | SFLOGGER_PRINT_RAW)}
+            
             req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d",
-                        SFLOGGER_REGISTER_PACKETS_ONLY |
+                        // SFLOGGER_REGISTER_PACKETS_ONLY |
                         SFLOGGER_PRINT_GENERAL_INFO |
                         SFLOGGER_PRINT_HEADER_FIELDS |
-                        SFLOGGER_PRINT_TRAILERS |
-                        SFLOGGER_PRINT_BODY |
-                        SFLOGGER_PRINT_FORMS |
-                        SFLOGGER_PRINT_FORMS_FILE_CONTENT |
-                        SFLOGGER_PRINT_TLS_MAIN_INFO |
-                        SFLOGGER_PRINT_TLS_CERTIFICATES |
-                        SFLOGGER_PRINT_TLS_PUBLIC_KEY |
-                        SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
-                        SFLOGGER_PRINT_RAW |
-                        SFLOGGER_PRINT_REDIRECTED_RESPONSE |
-                        SFLOGGER_PRINT_EMPTY_FIELDS |
-                        0 )}                        
+                        // SFLOGGER_PRINT_TRAILERS |
+                        // SFLOGGER_PRINT_BODY |
+                        // SFLOGGER_PRINT_FORMS |
+                        // SFLOGGER_PRINT_FORMS_FILE_CONTENT |
+                        // SFLOGGER_PRINT_TLS_MAIN_INFO |
+                        // SFLOGGER_PRINT_TLS_CERTIFICATES |
+                        // SFLOGGER_PRINT_TLS_PUBLIC_KEY |
+                        // SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
+                        // SFLOGGER_PRINT_RAW |
+                        // SFLOGGER_PRINT_REDIRECTED_RESPONSE |
+                        // SFLOGGER_PRINT_EMPTY_FIELDS |
+                        0)}                        
         }
     
         dest, ok := router.sf_pool[sf_to_add_name]
