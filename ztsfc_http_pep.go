@@ -1,11 +1,11 @@
 package main
-// hello alex
 
 import (
     "log"
     "net/http"
     "net/url"
     "flag"
+    "crypto/tls"
 
     env "local.com/leobrada/ztsfc_http_pep/env"
     router "local.com/leobrada/ztsfc_http_pep/router"
@@ -35,6 +35,9 @@ func loadServicePool(config env.Config_t) (service_pool map[string]sf_info.Servi
             log.Fatal("Creating Service Pool Critical Error: ", err)
         }
         service_pool[service_name] = service
+        env.Config.Service_pool[service_name].X509KeyPair_shown_to_clients, err = tls.LoadX509KeyPair(
+            service_config.Cert_shown_by_pep_to_clients_matching_sni,
+            service_config.Privkey_for_cert_shown_by_pep_to_client)
     }
     return
 }

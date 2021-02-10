@@ -9,6 +9,7 @@ import (
 	sf_info "local.com/leobrada/ztsfc_http_pep/sf_info"
 	"log"
 	"net/http"
+    "net/url"
 	"net/http/httputil"
 	"time"
 
@@ -29,28 +30,17 @@ type Router struct {
 
 	// Logger structs
 	logger     *log.Logger
-	//logLevel   int
-	//logChannel chan []byte
-	log_writer  *logwriter.LogWriter
+	log_writer *logwriter.LogWriter
 }
 
 func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool map[string]sf_info.ServiceFunctionInfo,
-    _log_writer *logwriter.LogWriter) (*Router, error) {
+	_log_writer *logwriter.LogWriter) (*Router, error) {
 
 	router := new(Router)
-	//router.logLevel = _log_level
 
-    // Access log writer
-    router.log_writer = _log_writer
+	// Access log writer
+	router.log_writer = _log_writer
 	go router.log_writer.Work()
-
-	// Create a log channel
-	//router.logChannel = make(chan []byte, 128)
-
-	// Create a new log writer
-	//router.logWriter = logwriter.NewLogWriter("./access.log", router.logChannel, 5)
-
-	// Run main loop of logWriter
 
 	// Load all SF certificates to operate both in server and client modes
 	router.initAllCertificates(&env.Config)
@@ -68,15 +58,21 @@ func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool ma
 			// load a suitable certificate that is shown to clients according the request domain/TLS SNI
 			for _, service := range env.Config.Service_pool {
 				if cli.ServerName == service.Sni {
-					external_pep_service_cert, err := tls.LoadX509KeyPair(
-						service.Cert_shown_by_pep_to_clients_matching_sni,
-						service.Privkey_for_cert_shown_by_pep_to_client)
-					if err != nil {
-						log.Fatal("[Router.NewRouter]: LoadX509KeyPair: ", err)
-					}
-					return &external_pep_service_cert, nil
+					//external_pep_service_cert, err := tls.LoadX509KeyPair(
+					//	service.Cert_shown_by_pep_to_clients_matching_sni,
+					//	service.Privkey_for_cert_shown_by_pep_to_client)
+					//if err != nil {
+					//	log.Fatal("[Router.NewRouter]: LoadX509KeyPair: ", err)
+					//}
+                    //return &external_pep_service_cert, nil
+					return &service.X509KeyPair_shown_to_clients, nil
 				}
 			}
+			//for _, service := range router.service_pool {
+			//	if cli.ServerName == service.SNI {
+			//		return &service.Certificate, nil
+			//	}
+			//}
 			return nil, fmt.Errorf("Error: Could not serve a suitable certificate for %s\n", cli.ServerName)
 		},
 	}
@@ -88,7 +84,7 @@ func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool ma
 	// Frontend Loggers
 	router.logger = log.New(router.log_writer, "", log.LstdFlags)
 
-    // Setting Up the Frontend Server
+	// Setting Up the Frontend Server
 	router.frontend = &http.Server{
 		Addr:         env.Config.Pep.Listen_addr,
 		TLSConfig:    router.tls_config,
@@ -105,7 +101,6 @@ func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool ma
 	router.log_writer.Log("A new PEP router has been created\n")
 	return router, nil
 }
-
 
 func (router *Router) SetUpSFC() bool {
 	return true
@@ -144,7 +139,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		router.log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
 
 		// Temporary Solution
-		service_to_add := router.service_pool[service_to_add_name]
+		//service_to_add := router.service_pool[service_to_add_name]
+		service_to_add := env.Config.Service_pool[service_to_add_name]
 		/*
 		   req.Header.Add("service", service_to_add.Dst_url.String())
 		*/
@@ -153,7 +149,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if ok {
 			req.Header.Del("Sfp")
 		}
-		sfp = append(sfp, service_to_add.Dst_url.String())
+		sfp = append(sfp, service_to_add.Target_service_addr)
 		req.Header["Sfp"] = sfp
 
 		// Set the SF "Logger" verbosity level
@@ -198,22 +194,25 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				ClientAuth:         tls.RequireAndVerifyClientCert,
 				ClientCAs:          router.ca_cert_pool_int,
 			},
-        }
+		}
 
 	} else {
 		router.log_writer.Log("[ Service functions ]\n")
 		router.log_writer.Log("    -\n")
 		router.log_writer.Log("[ Service ]\n")
 		router.log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
-		for _, service := range router.service_pool {
-			if req.TLS.ServerName == service.SNI {
-				proxy = httputil.NewSingleHostReverseProxy(service.Dst_url)
+		for _, service := range env.Config.Service_pool {
+	//		if req.TLS.ServerName == service.SNI {
+	//			proxy = httputil.NewSingleHostReverseProxy(service.Dst_url)
+			if req.TLS.ServerName == service.Sni {
+                dst_url, _ := url.Parse(service.Target_service_addr)
+				proxy = httputil.NewSingleHostReverseProxy(dst_url)
 
 				// When the PEP is acting as a client; this defines his behavior
 				// TODO: MOVE TO A BETTER PLACE
 				proxy.Transport = &http.Transport{
 					TLSClientConfig: &tls.Config{
-						Certificates:       []tls.Certificate{router.service_pool[service_to_add_name].Certificate},
+						Certificates:       []tls.Certificate{env.Config.Service_pool[service_to_add_name].X509KeyPair_shown_to_clients},
 						InsecureSkipVerify: true,
 						ClientAuth:         tls.RequireAndVerifyClientCert,
 						ClientCAs:          router.ca_cert_pool_int,
@@ -295,4 +294,3 @@ func (router *Router) initAllCertificates(conf *env.Config_t) {
 		log.Fatal("An error occurred during certificates loading. See details in the log file.")
 	}
 }
-
