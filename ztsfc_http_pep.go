@@ -10,6 +10,7 @@ import (
     env "local.com/leobrada/ztsfc_http_pep/env"
     router "local.com/leobrada/ztsfc_http_pep/router"
     sf_info "local.com/leobrada/ztsfc_http_pep/sf_info"
+    logr "local.com/leobrada/ztsfc_http_pep/logwriter"
 )
 
 var (
@@ -74,7 +75,12 @@ func main() {
     // Load Service Function Pool from configuration file
     sf_pool := loadSfPool(env.Config)
 
-    pep, err := router.NewRouter(service_pool, sf_pool, *log_level)
+    // Create Logwriter
+    logChannel := make(chan []byte, 128)
+    log_writer := logr.NewLogWriter(*log_level, "./access.log", logChannel, 5)
+
+    // Create new PEP router
+    pep, err := router.NewRouter(service_pool, sf_pool, log_writer)
     if err != nil {
         log.Fatalln(err)
     }
