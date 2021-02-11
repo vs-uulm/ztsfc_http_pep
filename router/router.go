@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	env "local.com/leobrada/ztsfc_http_pep/env"
+	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -17,10 +18,13 @@ import (
 type Router struct {
 	tls_config       *tls.Config
 	frontend         *http.Server
+
+    // TODO: Stay here or outsource?
 	ca_cert_pool_ext *x509.CertPool
 	ca_cert_pool_int *x509.CertPool
 
 	// Logger structs
+    // TODO: should we use the builtin logger only?
 	logger     *log.Logger
 	log_writer *logwriter.LogWriter
 }
@@ -42,27 +46,16 @@ func NewRouter(_log_writer *logwriter.LogWriter) (*Router, error) {
 		MaxVersion:             tls.VersionTLS13,
 		SessionTicketsDisabled: true,
 		Certificates:           nil,
-		ClientAuth:             tls.RequireAndVerifyClientCert,
+		//ClientAuth:             tls.RequireAndVerifyClientCert,
+		ClientAuth:             tls.VerifyClientCertIfGiven,
 		ClientCAs:              router.ca_cert_pool_ext,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// load a suitable certificate that is shown to clients according the request domain/TLS SNI
 			for _, service := range env.Config.Service_pool {
 				if cli.ServerName == service.Sni {
-					//external_pep_service_cert, err := tls.LoadX509KeyPair(
-					//	service.Cert_shown_by_pep_to_clients_matching_sni,
-					//	service.Privkey_for_cert_shown_by_pep_to_client)
-					//if err != nil {
-					//	log.Fatal("[Router.NewRouter]: LoadX509KeyPair: ", err)
-					//}
-                    //return &external_pep_service_cert, nil
 					return &service.X509KeyPair_shown_by_pep_to_client, nil
 				}
 			}
-			//for _, service := range router.service_pool {
-			//	if cli.ServerName == service.SNI {
-			//		return &service.Certificate, nil
-			//	}
-			//}
 			return nil, fmt.Errorf("Error: Could not serve a suitable certificate for %s\n", cli.ServerName)
 		},
 	}
@@ -94,9 +87,13 @@ func (router *Router) SetUpSFC() bool {
 }
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	// Log the http request
+	// Log the http request incl. TLS information
 	router.log_writer.Log("------------ HTTP packet ------------\n")
 	router.log_writer.LogHTTPRequest(req)
+
+    if !bauth.Basic_auth(w, req) {
+        return
+    }
 
 	var proxy *httputil.ReverseProxy
 	// HE COMES THE LOGIC IN THIS FUNCTION

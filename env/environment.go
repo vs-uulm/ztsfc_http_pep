@@ -4,6 +4,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"os"
     "crypto/tls"
+    "crypto/x509"
     "net/url"
 )
 
@@ -35,9 +36,11 @@ type ServFunction_t struct {
 }
 
 type Config_t struct {
-	Pep          Pep_t                     `yaml:"pep"`
+	Pep          Pep_t                      `yaml:"pep"`
 	Service_pool map[string]*Service_t      `yaml:"service_pool"`
 	Sf_pool      map[string]*ServFunction_t `yaml:"sf_pool"`
+    CA_cert_pool_pep_accepts_from_ext       *x509.CertPool
+    CA_cert_pool_pep_accepts_from_int       *x509.CertPool
 }
 
 var Config Config_t
