@@ -4,6 +4,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"os"
     "crypto/tls"
+    "net/url"
 )
 
 type Pep_t struct {
@@ -19,7 +20,9 @@ type Service_t struct {
 	Cert_shown_by_pep_to_service              string `yaml:"cert_shown_by_pep_to_service"`
 	Privkey_for_cert_shown_by_pep_to_service  string `yaml:"privkey_for_cert_shown_by_pep_to_service"`
 	Cert_pep_accepts_when_shown_by_service    string `yaml:"cert_pep_accepts_when_shown_by_service"`
-    X509KeyPair_shown_to_clients              tls.Certificate
+    X509KeyPair_shown_by_pep_to_client        tls.Certificate
+    X509KeyPair_shown_by_pep_to_service       tls.Certificate
+    Target_service_url                        *url.URL
 }
 
 type ServFunction_t struct {
@@ -27,6 +30,8 @@ type ServFunction_t struct {
 	Cert_shown_by_pep_to_sf             string `yaml:"cert_shown_by_pep_to_sf"`
 	Privkey_for_cert_shown_by_pep_to_sf string `yaml:"privkey_for_cert_shown_by_pep_to_sf"`
 	Cert_pep_accepts_shown_by_sf        string `yaml:"cert_pep_accepts_shown_by_sf"`
+    X509KeyPair_shown_by_pep_to_sf      tls.Certificate
+	Target_sf_url                       *url.URL
 }
 
 type Config_t struct {

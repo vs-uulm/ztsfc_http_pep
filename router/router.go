@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	env "local.com/leobrada/ztsfc_http_pep/env"
-	sf_info "local.com/leobrada/ztsfc_http_pep/sf_info"
 	"log"
 	"net/http"
-    "net/url"
 	"net/http/httputil"
 	"time"
 
@@ -22,20 +20,12 @@ type Router struct {
 	ca_cert_pool_ext *x509.CertPool
 	ca_cert_pool_int *x509.CertPool
 
-	// Map of available Service Functions
-	sf_pool map[string]sf_info.ServiceFunctionInfo
-
-	// Proxy server serving the incoming requests
-	service_pool map[string]sf_info.ServiceFunctionInfo // the key represents the SNI; the value is the respective proxy serving the request addressed to the SNI
-
 	// Logger structs
 	logger     *log.Logger
 	log_writer *logwriter.LogWriter
 }
 
-func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool map[string]sf_info.ServiceFunctionInfo,
-	_log_writer *logwriter.LogWriter) (*Router, error) {
-
+func NewRouter(_log_writer *logwriter.LogWriter) (*Router, error) {
 	router := new(Router)
 
 	// Access log writer
@@ -65,7 +55,7 @@ func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool ma
 					//	log.Fatal("[Router.NewRouter]: LoadX509KeyPair: ", err)
 					//}
                     //return &external_pep_service_cert, nil
-					return &service.X509KeyPair_shown_to_clients, nil
+					return &service.X509KeyPair_shown_by_pep_to_client, nil
 				}
 			}
 			//for _, service := range router.service_pool {
@@ -93,9 +83,6 @@ func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool ma
 		Handler:      mux,
 		ErrorLog:     router.logger,
 	}
-
-	router.service_pool = _service_pool
-	router.sf_pool = _sf_pool
 
 	router.log_writer.Log("============================================================\n")
 	router.log_writer.Log("A new PEP router has been created\n")
@@ -139,7 +126,6 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		router.log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
 
 		// Temporary Solution
-		//service_to_add := router.service_pool[service_to_add_name]
 		service_to_add := env.Config.Service_pool[service_to_add_name]
 		/*
 		   req.Header.Add("service", service_to_add.Dst_url.String())
@@ -179,17 +165,18 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 					0)}
 		}
 
-		dest, ok := router.sf_pool[sf_to_add_name]
+        dest, ok := env.Config.Sf_pool[sf_to_add_name]
 		if !ok {
 			w.WriteHeader(503)
 			return
 		}
-		proxy = httputil.NewSingleHostReverseProxy(dest.Dst_url)
+		proxy = httputil.NewSingleHostReverseProxy(dest.Target_sf_url)
 
 		// When the PEP is acting as a client; this defines his behavior
 		proxy.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
-				Certificates:       []tls.Certificate{router.service_pool[service_to_add_name].Certificate},
+                // TODO: Replace it by loading the cert for the first SF in the chain
+				Certificates:       []tls.Certificate{env.Config.Sf_pool[sf_to_add_name].X509KeyPair_shown_by_pep_to_sf},
 				InsecureSkipVerify: true,
 				ClientAuth:         tls.RequireAndVerifyClientCert,
 				ClientCAs:          router.ca_cert_pool_int,
@@ -205,14 +192,13 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//		if req.TLS.ServerName == service.SNI {
 	//			proxy = httputil.NewSingleHostReverseProxy(service.Dst_url)
 			if req.TLS.ServerName == service.Sni {
-                dst_url, _ := url.Parse(service.Target_service_addr)
-				proxy = httputil.NewSingleHostReverseProxy(dst_url)
+				proxy = httputil.NewSingleHostReverseProxy(service.Target_service_url)
 
 				// When the PEP is acting as a client; this defines his behavior
 				// TODO: MOVE TO A BETTER PLACE
 				proxy.Transport = &http.Transport{
 					TLSClientConfig: &tls.Config{
-						Certificates:       []tls.Certificate{env.Config.Service_pool[service_to_add_name].X509KeyPair_shown_to_clients},
+						Certificates:       []tls.Certificate{env.Config.Service_pool[service_to_add_name].X509KeyPair_shown_by_pep_to_client},
 						InsecureSkipVerify: true,
 						ClientAuth:         tls.RequireAndVerifyClientCert,
 						ClientCAs:          router.ca_cert_pool_int,
