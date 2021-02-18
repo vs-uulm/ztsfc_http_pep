@@ -15,10 +15,6 @@ import (
 type Router struct {
 	tls_config       *tls.Config
 	frontend         *http.Server
-
-	// Logger structs
-    // TODO: should we use the builtin logger only?
-	logger     *log.Logger
 }
 
 func NewRouter() (*Router, error) {
@@ -49,9 +45,6 @@ func NewRouter() (*Router, error) {
 	mux := http.NewServeMux()
 	mux.Handle("/", router)
 
-	// Frontend Loggers
-	router.logger = log.New(logr.Log_writer, "", log.LstdFlags)
-
 	// Setting Up the Frontend Server
 	router.frontend = &http.Server{
 		Addr:         env.Config.Pep.Listen_addr,
@@ -59,11 +52,11 @@ func NewRouter() (*Router, error) {
 		ReadTimeout:  time.Second * 5,
 		WriteTimeout: time.Second * 5,
 		Handler:      mux,
-		ErrorLog:     router.logger,
+        ErrorLog: log.New(logr.Log_writer, "", log.LstdFlags),
 	}
 
-	logr.Log_writer.Log("============================================================\n")
-	logr.Log_writer.Log("A new PEP router has been created\n")
+	fmt.Print("============================================================\n")
+	fmt.Print("A new PEP router has been created\n")
 	return router, nil
 }
 
@@ -73,7 +66,7 @@ func (router *Router) SetUpSFC() bool {
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Log all http requests incl. TLS information
-	logr.Log_writer.Log("------------ HTTP packet ------------\n")
+	//logr.Log_writer.Log("------------ HTTP packet ------------\n")
 	logr.Log_writer.LogHTTPRequest(req)
 
     // Check if the user is authenticated; if not authenticate him/her; if that fails return an error
@@ -108,10 +101,10 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		   ...
 		*/
 
-		logr.Log_writer.Log("[ Service functions ]\n")
-		logr.Log_writer.Log(fmt.Sprintf("    - %s\n", sf_to_add_name))
-		logr.Log_writer.Log("[ Service ]\n")
-		logr.Log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
+		//logr.Log_writer.Log("[ Service functions ]\n")
+		//logr.Log_writer.Log(fmt.Sprintf("    - %s\n", sf_to_add_name))
+		//logr.Log_writer.Log("[ Service ]\n")
+		//logr.Log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
 
 		// Temporary Solution
 		service_to_add := env.Config.Service_pool[service_to_add_name]
@@ -172,10 +165,10 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 
 	} else {
-		logr.Log_writer.Log("[ Service functions ]\n")
-		logr.Log_writer.Log("    -\n")
-		logr.Log_writer.Log("[ Service ]\n")
-		logr.Log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
+		//logr.Log_writer.Log("[ Service functions ]\n")
+		//logr.Log_writer.Log("    -\n")
+		//logr.Log_writer.Log("[ Service ]\n")
+		//logr.Log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
 		for _, service := range env.Config.Service_pool {
 	//		if req.TLS.ServerName == service.SNI {
 	//			proxy = httputil.NewSingleHostReverseProxy(service.Dst_url)

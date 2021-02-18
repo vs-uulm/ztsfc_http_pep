@@ -143,7 +143,7 @@ func (lw *LogWriter) Log(messages ...string) {
 		s = s + "," + message
 	}
 
-	// Send the resulting string to the logging channel
+	// Send the resulhe buting string to the logging channel
 	lw.channel <- []byte(s)
 }
 
@@ -196,6 +196,7 @@ func MatchTLSConst(input uint16) string {
 	case 0x0304:
 		return "VersionTLS13"
 	// TLS CIPHER SUITES
+    // TODO: Replace it by func CipherSuiteName --> version 1.14 needed
 	case 0x0005:
 		return "TLS_RSA_WITH_RC4_128_SHA"
 	case 0x000a:
