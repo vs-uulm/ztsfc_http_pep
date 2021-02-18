@@ -35,6 +35,8 @@ const (
 	SFLOGGER_PRINT_EMPTY_FIELDS
 )
 
+var Log_writer *LogWriter
+
 type LogWriter struct {
     log_level               int
 	logFilePath             string
