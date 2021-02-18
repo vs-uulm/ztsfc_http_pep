@@ -2,42 +2,27 @@ package router
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	env "local.com/leobrada/ztsfc_http_pep/env"
 	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
+	logr "local.com/leobrada/ztsfc_http_pep/logwriter"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"time"
-
-	"local.com/leobrada/ztsfc_http_pep/logwriter"
 )
 
 type Router struct {
 	tls_config       *tls.Config
 	frontend         *http.Server
 
-    // TODO: Stay here or outsource?
-	ca_cert_pool_ext *x509.CertPool
-	ca_cert_pool_int *x509.CertPool
-
 	// Logger structs
     // TODO: should we use the builtin logger only?
 	logger     *log.Logger
-	log_writer *logwriter.LogWriter
 }
 
-func NewRouter(_log_writer *logwriter.LogWriter) (*Router, error) {
+func NewRouter() (*Router, error) {
 	router := new(Router)
-
-	// Access log writer
-	router.log_writer = _log_writer
-	go router.log_writer.Work()
-
-	// Load all SF certificates to operate both in server and client modes
-	router.initAllCertificates(&env.Config)
 
 	router.tls_config = &tls.Config{
 		Rand:                   nil,
@@ -48,7 +33,7 @@ func NewRouter(_log_writer *logwriter.LogWriter) (*Router, error) {
 		Certificates:           nil,
 		//ClientAuth:             tls.RequireAndVerifyClientCert,
 		ClientAuth:             tls.VerifyClientCertIfGiven,
-		ClientCAs:              router.ca_cert_pool_ext,
+		ClientCAs:              env.Config.CA_cert_pool_pep_accepts_from_ext,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// load a suitable certificate that is shown to clients according the request domain/TLS SNI
 			for _, service := range env.Config.Service_pool {
@@ -65,7 +50,7 @@ func NewRouter(_log_writer *logwriter.LogWriter) (*Router, error) {
 	mux.Handle("/", router)
 
 	// Frontend Loggers
-	router.logger = log.New(router.log_writer, "", log.LstdFlags)
+	router.logger = log.New(logr.Log_writer, "", log.LstdFlags)
 
 	// Setting Up the Frontend Server
 	router.frontend = &http.Server{
@@ -77,8 +62,8 @@ func NewRouter(_log_writer *logwriter.LogWriter) (*Router, error) {
 		ErrorLog:     router.logger,
 	}
 
-	router.log_writer.Log("============================================================\n")
-	router.log_writer.Log("A new PEP router has been created\n")
+	logr.Log_writer.Log("============================================================\n")
+	logr.Log_writer.Log("A new PEP router has been created\n")
 	return router, nil
 }
 
@@ -87,15 +72,21 @@ func (router *Router) SetUpSFC() bool {
 }
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	// Log the http request incl. TLS information
-	router.log_writer.Log("------------ HTTP packet ------------\n")
-	router.log_writer.LogHTTPRequest(req)
+	// Log all http requests incl. TLS information
+	logr.Log_writer.Log("------------ HTTP packet ------------\n")
+	logr.Log_writer.LogHTTPRequest(req)
 
+    // Check if the user is authenticated; if not authenticate him/her; if that fails return an error
+    // TODO: return error to client?
     if !bauth.Basic_auth(w, req) {
         return
     }
 
+    // If user could be authenticated, create ReverseProxy variable for the connection to serve
 	var proxy *httputil.ReverseProxy
+
+    // ===== GARBAGE STARTING FROM HERE =====
+
 	// HE COMES THE LOGIC IN THIS FUNCTION
 	need_to_go_through_sf := router.SetUpSFC()
 
@@ -117,10 +108,10 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		   ...
 		*/
 
-		router.log_writer.Log("[ Service functions ]\n")
-		router.log_writer.Log(fmt.Sprintf("    - %s\n", sf_to_add_name))
-		router.log_writer.Log("[ Service ]\n")
-		router.log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
+		logr.Log_writer.Log("[ Service functions ]\n")
+		logr.Log_writer.Log(fmt.Sprintf("    - %s\n", sf_to_add_name))
+		logr.Log_writer.Log("[ Service ]\n")
+		logr.Log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
 
 		// Temporary Solution
 		service_to_add := env.Config.Service_pool[service_to_add_name]
@@ -145,20 +136,20 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			// req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_EMPTY_FIELDS | SFLOGGER_PRINT_TLS_MAIN_INFO)}
 			// req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d", SFLOGGER_PRINT_TLS_MAIN_INFO | SFLOGGER_PRINT_RAW)}
 			req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d",
-				//                        logwriter.SFLOGGER_REGISTER_PACKETS_ONLY |
-				logwriter.SFLOGGER_PRINT_GENERAL_INFO|
-					logwriter.SFLOGGER_PRINT_HEADER_FIELDS|
-					logwriter.SFLOGGER_PRINT_TRAILERS|
-					logwriter.SFLOGGER_PRINT_BODY|
-					logwriter.SFLOGGER_PRINT_FORMS|
-					logwriter.SFLOGGER_PRINT_FORMS_FILE_CONTENT|
-					//                        logwriter.SFLOGGER_PRINT_TLS_MAIN_INFO |
-					//                        logwriter.SFLOGGER_PRINT_TLS_CERTIFICATES |
-					//                        logwriter.SFLOGGER_PRINT_TLS_PUBLIC_KEY |
-					//                        logwriter.SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
-					//                        logwriter.SFLOGGER_PRINT_RAW |
-					logwriter.SFLOGGER_PRINT_REDIRECTED_RESPONSE|
-					//                        logwriter.SFLOGGER_PRINT_EMPTY_FIELDS |
+				//                        logr.SFLOGGER_REGISTER_PACKETS_ONLY |
+				logr.SFLOGGER_PRINT_GENERAL_INFO|
+					logr.SFLOGGER_PRINT_HEADER_FIELDS|
+					logr.SFLOGGER_PRINT_TRAILERS|
+					logr.SFLOGGER_PRINT_BODY|
+					logr.SFLOGGER_PRINT_FORMS|
+					logr.SFLOGGER_PRINT_FORMS_FILE_CONTENT|
+					//                        logr.SFLOGGER_PRINT_TLS_MAIN_INFO |
+					//                        logr.SFLOGGER_PRINT_TLS_CERTIFICATES |
+					//                        logr.SFLOGGER_PRINT_TLS_PUBLIC_KEY |
+					//                        logr.SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
+					//                        logr.SFLOGGER_PRINT_RAW |
+					logr.SFLOGGER_PRINT_REDIRECTED_RESPONSE|
+					//                        logr.SFLOGGER_PRINT_EMPTY_FIELDS |
 					0)}
 		}
 
@@ -176,15 +167,15 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				Certificates:       []tls.Certificate{env.Config.Sf_pool[sf_to_add_name].X509KeyPair_shown_by_pep_to_sf},
 				InsecureSkipVerify: true,
 				ClientAuth:         tls.RequireAndVerifyClientCert,
-				ClientCAs:          router.ca_cert_pool_int,
+				ClientCAs:          env.Config.CA_cert_pool_pep_accepts_from_int,
 			},
 		}
 
 	} else {
-		router.log_writer.Log("[ Service functions ]\n")
-		router.log_writer.Log("    -\n")
-		router.log_writer.Log("[ Service ]\n")
-		router.log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
+		logr.Log_writer.Log("[ Service functions ]\n")
+		logr.Log_writer.Log("    -\n")
+		logr.Log_writer.Log("[ Service ]\n")
+		logr.Log_writer.Log(fmt.Sprintf("    %s\n", service_to_add_name))
 		for _, service := range env.Config.Service_pool {
 	//		if req.TLS.ServerName == service.SNI {
 	//			proxy = httputil.NewSingleHostReverseProxy(service.Dst_url)
@@ -198,7 +189,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 						Certificates:       []tls.Certificate{env.Config.Service_pool[service_to_add_name].X509KeyPair_shown_by_pep_to_client},
 						InsecureSkipVerify: true,
 						ClientAuth:         tls.RequireAndVerifyClientCert,
-						ClientCAs:          router.ca_cert_pool_int,
+				        ClientCAs:          env.Config.CA_cert_pool_pep_accepts_from_int,
 					},
 				}
 			} else {
@@ -207,7 +198,9 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 	}
-	// fmt.Printf("\n%+v\n\n", req)
+
+    // ======= END GARBAGE =======
+
 	proxy.ServeHTTP(w, req)
 }
 
@@ -215,65 +208,3 @@ func (router *Router) ListenAndServeTLS() error {
 	return router.frontend.ListenAndServeTLS("", "")
 }
 
-func (router *Router) initAllCertificates(conf *env.Config_t) {
-	var caRoot []byte
-	var err error
-	isErrorDetected := false
-
-	router.ca_cert_pool_ext = x509.NewCertPool()
-
-	// Read CA certs used for signing client certs and are accepted by the PEP
-	router.log_writer.Log("Loading clients CA certificates:\n")
-	for _, acceptedClientCert := range conf.Pep.Certs_pep_accepts_when_shown_by_clients {
-		caRoot, err = ioutil.ReadFile(acceptedClientCert)
-		if err != nil {
-			isErrorDetected = true
-			router.log_writer.Log(fmt.Sprintf("    - %s - FAILED\n", acceptedClientCert))
-		} else {
-			router.log_writer.Log(fmt.Sprintf("    - %s - OK\n", acceptedClientCert))
-		}
-		// Append a certificate to the pool
-		router.ca_cert_pool_ext.AppendCertsFromPEM(caRoot)
-	}
-
-	router.ca_cert_pool_int = x509.NewCertPool()
-
-	// Read CA certs used for signing client certs and are accepted by the PEP
-	if len(conf.Service_pool) > 0 {
-		router.log_writer.Log("Loading CA certificates for services:\n")
-	}
-	for service_name, service_config := range conf.Service_pool {
-		caRoot, err = ioutil.ReadFile(service_config.Cert_pep_accepts_when_shown_by_service)
-		if err != nil {
-			isErrorDetected = true
-			router.log_writer.Log(fmt.Sprintf("    %s: %s - FAILED\n", service_name,
-				service_config.Cert_pep_accepts_when_shown_by_service))
-		} else {
-			router.log_writer.Log(fmt.Sprintf("    %s: %s - OK\n", service_name,
-				service_config.Cert_pep_accepts_when_shown_by_service))
-		}
-		// Append a certificate to the pool
-		router.ca_cert_pool_int.AppendCertsFromPEM(caRoot)
-	}
-
-	if len(conf.Sf_pool) > 0 {
-		router.log_writer.Log("Loading CA certificates for service functions:\n")
-	}
-	for sf_name, sf_config := range conf.Sf_pool {
-		caRoot, err = ioutil.ReadFile(sf_config.Cert_pep_accepts_shown_by_sf)
-		if err != nil {
-			isErrorDetected = true
-			router.log_writer.Log(fmt.Sprintf("    %s: %s - FAILED\n", sf_name,
-				sf_config.Cert_pep_accepts_shown_by_sf))
-		} else {
-			router.log_writer.Log(fmt.Sprintf("    %s: %s - OK\n", sf_name,
-				sf_config.Cert_pep_accepts_shown_by_sf))
-		}
-		// Append a certificate to the pool
-		router.ca_cert_pool_int.AppendCertsFromPEM(caRoot)
-	}
-
-	if isErrorDetected {
-		log.Fatal("An error occurred during certificates loading. See details in the log file.")
-	}
-}

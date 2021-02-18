@@ -5,7 +5,7 @@ import (
     "fmt"
 )
 
-func Basic_auth (w http.ResponseWriter, req *http.Request) bool {
+func Basic_auth(w http.ResponseWriter, req *http.Request) bool {
 
     if perform_x509_auth(w, req) {
         return true
