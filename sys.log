@@ -1,0 +1,11 @@
+Loading clients CA certificates:
+    - /etc/the_pep/certs/external_client_certs/CA_root_1.crt - OK
+Loading CA certificates for services:
+    nginx: /etc/the_pep/certs/dataPlane_service_certs/nginx_root.crt - OK
+Loading CA certificates for service functions:
+    dummy: /etc/the_pep/certs/external_client_certs/CA_root_1.crt - OK
+============================================================
+A new PEP router has been created
+only post methods are accepted in this state
+only post methods are accepted in this state
+only post methods are accepted in this state
