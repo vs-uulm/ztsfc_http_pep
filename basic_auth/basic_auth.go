@@ -90,6 +90,7 @@ func perform_passwd_auth(w http.ResponseWriter, req *http.Request) bool {
           Path: "/",
         }
         http.SetCookie(w, &cookie)
+        // TODO: make it user configurable
         http.Redirect(w, req, "https://service1.testbed.informatik.uni-ulm.de", 303)
         return true
 
