@@ -91,6 +91,8 @@ func perform_passwd_auth(w http.ResponseWriter, req *http.Request) bool {
         }
         http.SetCookie(w, &cookie)
         // TODO: make it user configurable
+        // TODO: is there a better solution for the content-length  /body length "bug"?
+        req.ContentLength = 0
         http.Redirect(w, req, "https://service1.testbed.informatik.uni-ulm.de", 303)
         return true
 
@@ -102,5 +104,7 @@ func perform_passwd_auth(w http.ResponseWriter, req *http.Request) bool {
         return false
       }
     }
+
+
     return true
 }
