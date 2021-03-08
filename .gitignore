@@ -15,4 +15,4 @@
 # vendor/
 .env
 conf.yml
-access.log
+*.log
