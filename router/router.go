@@ -135,20 +135,20 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 
 			req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d",
-				// logr.SFLOGGER_REGISTER_PACKETS_ONLY |
+				// logwriter.SFLOGGER_REGISTER_PACKETS_ONLY |
 				logwriter.SFLOGGER_PRINT_GENERAL_INFO|
 				logwriter.SFLOGGER_PRINT_HEADER_FIELDS|
 				logwriter.SFLOGGER_PRINT_TRAILERS|
 				logwriter.SFLOGGER_PRINT_BODY|
 				logwriter.SFLOGGER_PRINT_FORMS|
 				logwriter.SFLOGGER_PRINT_FORMS_FILE_CONTENT|
-				// logr.SFLOGGER_PRINT_TLS_MAIN_INFO |
-				// logr.SFLOGGER_PRINT_TLS_CERTIFICATES |
-				// logr.SFLOGGER_PRINT_TLS_PUBLIC_KEY |
-				// logr.SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
-				// logr.SFLOGGER_PRINT_RAW |
+				// logwriter.SFLOGGER_PRINT_TLS_MAIN_INFO |
+				// logwriter.SFLOGGER_PRINT_TLS_CERTIFICATES |
+				// logwriter.SFLOGGER_PRINT_TLS_PUBLIC_KEY |
+				// logwriter.SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
+				// logwriter.SFLOGGER_PRINT_RAW |
 				logwriter.SFLOGGER_PRINT_REDIRECTED_RESPONSE|
-				// logr.SFLOGGER_PRINT_EMPTY_FIELDS |
+				// logwriter.SFLOGGER_PRINT_EMPTY_FIELDS |
 				0)}
 		}
 

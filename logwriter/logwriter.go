@@ -90,9 +90,9 @@ func (lw LogWriter) Write(p []byte) (n int, err error) {
 		} else {
 			output = output + ",denied\n"
 		}
-		logrus.Error(output)
+		lw.Logger.Error(output)
 	} else {
-		logrus.Info(output)
+		lw.Logger.Info(output)
 	}
 	return 1, nil
 }
