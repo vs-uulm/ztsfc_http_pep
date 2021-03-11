@@ -6,6 +6,7 @@ import (
     "crypto/tls"
     "crypto/x509"
     "net/url"
+	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
 )
 
 type Pep_t struct {
@@ -46,11 +47,13 @@ type Config_t struct {
 var Config Config_t
 
 // Parses a configuration yaml file into the global Config variable
-func LoadConfig(configPath string) (err error) {
+func LoadConfig(configPath string, lw *logwriter.LogWriter) (err error) {
 	// Open config file
 	file, err := os.Open(configPath)
 	if err != nil {
-		return
+		lw.Logger.Fatalf("Open configuration file error: %v\n", err)
+	} else {
+		lw.Logger.Debugf("Configuration file %s exists and is readable\n", configPath)
 	}
 	defer file.Close()
 
@@ -59,5 +62,11 @@ func LoadConfig(configPath string) (err error) {
 
 	// Start YAML decoding from file
 	err = d.Decode(&Config)
+	if err != nil {
+		lw.Logger.Fatalf("Configuration yaml-->go decoding error: %v\n", err)
+	} else {
+		lw.Logger.Debugf("Configuration has been successfully decoded\n")
+	}
+	
 	return
 }

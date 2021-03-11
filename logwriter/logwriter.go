@@ -2,20 +2,11 @@ package logwriter
 
 import (
     "net/http"
-	"fmt"
+	"strings"
 	"log"
 	"os"
-	"strings"
-	"time"
-)
-
-const capacity = 32768
-
-const (
-	NONE = iota
-	BASIC
-	ADVANCED
-	DEBUG
+	
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -38,78 +29,55 @@ const (
 var Log_writer *LogWriter
 
 type LogWriter struct {
-    log_level               int
-	logFilePath             string
-	buffer                  []byte
-	position                int
-	channel                 chan []byte
-	saveBufferEveryNSeconds time.Duration
+	Logger			*logrus.Logger
+	logfile			*os.File
 }
 
 // Creates and return a new LogWriter structure
-func NewLogWriter(_log_level int, _logFilePath string, _channel chan []byte, _period time.Duration) *LogWriter {
-	return &LogWriter{
-        log_level:               _log_level,
-		logFilePath:             _logFilePath,
-		buffer:                  make([]byte, capacity),
-		channel:                 _channel,
-		saveBufferEveryNSeconds: _period,
+func New(_log_file_path, _log_level string, _ifJSONformatter bool) *LogWriter {
+	var err error
+	Log_writer = new (LogWriter)
+	
+	// Create a new instance of logrus logger
+	Log_writer.Logger = logrus.New()
+	
+	// Set a log level (debug, info, warning, error)
+	switch strings.ToLower(_log_level) {
+		case "debug":
+			Log_writer.Logger.SetLevel(logrus.DebugLevel)
+		case "info":
+			Log_writer.Logger.SetLevel(logrus.InfoLevel)
+		case "warning":
+			Log_writer.Logger.SetLevel(logrus.WarnLevel)
+		case "error":
+			Log_writer.Logger.SetLevel(logrus.ErrorLevel)
+		case "":
+			Log_writer.Logger.SetLevel(logrus.ErrorLevel)
+		default:
+			log.Fatal("Wrong log level value. Supported values are info, warning, error (default)")
 	}
-}
 
-// Main goroutine for reading messages from the channel and writing them to the log file
-func (lw *LogWriter) Work() {
-	// Infinite loop
-	for {
-		// Wit for channel event or timeout
-		select {
-		// Incoming event, read string from the channel
-		case event := <-lw.channel:
-			length := len(event)
+	// Set a JSON log formatter if necessary
+	if _ifJSONformatter {
+		Log_writer.Logger.SetFormatter(&logrus.JSONFormatter{})
+	} else {
+		Log_writer.Logger.SetFormatter(&logrus.TextFormatter{})
+	}
 
-			// Message is tooooo long
-			if length > capacity {
-				log.Println("message received was too large")
-				continue
-			}
-
-			// Not enough free space in the buffer to store the message
-			if (length + lw.position) > capacity {
-				// Flush the buffer to the log file and clear it
-				lw.Save()
-			}
-
-			// Append new message to the buffer content
-			copy(lw.buffer[lw.position:], event)
-
-			// Shift the buffer pointer
-			lw.position += length
-
-		// Flush the buffer to the log file periodically
-		case <-time.After(lw.saveBufferEveryNSeconds * time.Second):
-			lw.Save()
-		} // select
-	} // for
-} // Work()
-
-// Save the log buffer content to the log file and clear the buffer
-func (lw *LogWriter) Save() {
-	// Save only if buffer is not empty
-	if lw.position != 0 {
-		// Open the log file
-		file, err := os.OpenFile(lw.logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if strings.ToLower(_log_file_path) == "stdout" {
+		Log_writer.Logger.SetOutput(os.Stdout)
+	} else {
+		// Open a file for the logger output
+		Log_writer.logfile, err = os.OpenFile(_log_file_path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Fatal("[LogWriter.Save] Error: ", err)
+			log.Fatal(err)
 		}
 
-		defer file.Close()
-
-		// Save the buffer content to the file
-		fmt.Fprintf(file, "%s", lw.buffer[0:lw.position])
-
-		// "clear" the buffer
-		lw.position = 0
+		// Redirect the logger output to the file
+		Log_writer.Logger.SetOutput(Log_writer.logfile)
 	}
+	
+	return Log_writer
 }
 
 // Function for calling by http.Server ErrorLog
@@ -122,64 +90,26 @@ func (lw LogWriter) Write(p []byte) (n int, err error) {
 		} else {
 			output = output + ",denied\n"
 		}
+		lw.Logger.Error(output)
+	} else {
+		lw.Logger.Info(output)
 	}
-
-	// Push the line to the log channel
-	lw.channel <- []byte(output)
-
 	return 1, nil
-}
-
-// The Log() function writes messages from a provided slice as space-separated string into the log
-func (lw *LogWriter) Log(messages ...string) {
-	// Nothing to do, if message's log level is lower than those, user has set
-	if lw.log_level < 0 {
-		return
-	}
-
-	// Creates a comma-separated string out of the incoming slice of strings
-	s := lw.GetLogTimeStamp()
-	for _, message := range messages {
-		s = s + "," + message
-	}
-
-	// Send the resulhe buting string to the logging channel
-	lw.channel <- []byte(s)
 }
 
 // The LogHTTPRequest() function prints HTTP request details into the log file
 func (lw *LogWriter) LogHTTPRequest(req *http.Request) {
-	// Check if we have something to do
-	if lw.log_level < 0 {
-		return
-	}
-
-	// Fill in the string with the rest data
-	s := fmt.Sprintf("%s,%s,%s,%t,%t,%s,success\n",
+	lw.Logger.Infof("%s,%s,%s,%t,%t,%s,success\n",
 		req.RemoteAddr,
 		req.TLS.ServerName,
 		MatchTLSConst(req.TLS.Version),
 		req.TLS.HandshakeComplete,
 		req.TLS.DidResume,
 		MatchTLSConst(req.TLS.CipherSuite))
-
-	// Write the string to the log file
-	lw.Log(s)
 }
 
-func (lw LogWriter) GetLogTimeStamp() string {
-	// Get current time
-	t := time.Now()
-
-	// Format time stamp
-	ts := fmt.Sprintf("%4d/%02d/%02d %02d:%02d:%02d",
-		t.Year(),
-		t.Month(),
-		t.Day(),
-		t.Hour(),
-		t.Minute(),
-		t.Second())
-	return ts
+func (lw *LogWriter) Terminate() {
+	lw.logfile.Close()
 }
 
 func MatchTLSConst(input uint16) string {
