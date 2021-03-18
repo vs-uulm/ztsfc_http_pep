@@ -61,9 +61,6 @@ func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 		Handler:      mux,
 		ErrorLog:     log.New(w, "", 0),
 	}
-
-	lw.Logger.Debug("============================================================\n")
-	lw.Logger.Debug("A new PEP router has been created\n")
 	return router, nil
 }
 
@@ -75,7 +72,6 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Log all http requests incl. TLS information
 	logwriter.Log_writer.LogHTTPRequest(req)	
 	
-
 	// Check if the user is authenticated; if not authenticate him/her; if that fails return an error
 	// TODO: return error to client?
 	if !bauth.Basic_auth(w, req) {
@@ -138,16 +134,16 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				// logwriter.SFLOGGER_REGISTER_PACKETS_ONLY |
 				logwriter.SFLOGGER_PRINT_GENERAL_INFO|
 				logwriter.SFLOGGER_PRINT_HEADER_FIELDS|
-				logwriter.SFLOGGER_PRINT_TRAILERS|
-				logwriter.SFLOGGER_PRINT_BODY|
-				logwriter.SFLOGGER_PRINT_FORMS|
-				logwriter.SFLOGGER_PRINT_FORMS_FILE_CONTENT|
-				// logwriter.SFLOGGER_PRINT_TLS_MAIN_INFO |
-				// logwriter.SFLOGGER_PRINT_TLS_CERTIFICATES |
+				// logwriter.SFLOGGER_PRINT_BODY|
+				// logwriter.SFLOGGER_PRINT_FORMS|
+				// logwriter.SFLOGGER_PRINT_FORMS_FILE_CONTENT|
+				// logwriter.SFLOGGER_PRINT_TRAILERS|
+				logwriter.SFLOGGER_PRINT_TLS_MAIN_INFO |
+				logwriter.SFLOGGER_PRINT_TLS_CERTIFICATES |
 				// logwriter.SFLOGGER_PRINT_TLS_PUBLIC_KEY |
 				// logwriter.SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
 				// logwriter.SFLOGGER_PRINT_RAW |
-				logwriter.SFLOGGER_PRINT_REDIRECTED_RESPONSE|
+				// logwriter.SFLOGGER_PRINT_REDIRECTED_RESPONSE|
 				// logwriter.SFLOGGER_PRINT_EMPTY_FIELDS |
 				0)}
 		}

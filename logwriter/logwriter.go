@@ -34,7 +34,7 @@ type LogWriter struct {
 }
 
 // Creates and return a new LogWriter structure
-func New(_log_file_path, _log_level string, _ifJSONformatter bool) *LogWriter {
+func New(_log_file_path, _log_level string, _ifTextFormatter bool) *LogWriter {
 	var err error
 	Log_writer = new (LogWriter)
 	
@@ -58,10 +58,10 @@ func New(_log_file_path, _log_level string, _ifJSONformatter bool) *LogWriter {
 	}
 
 	// Set a JSON log formatter if necessary
-	if _ifJSONformatter {
-		Log_writer.Logger.SetFormatter(&logrus.JSONFormatter{})
-	} else {
+	if _ifTextFormatter {
 		Log_writer.Logger.SetFormatter(&logrus.TextFormatter{})
+	} else {
+		Log_writer.Logger.SetFormatter(&logrus.JSONFormatter{})
 	}
 
 	if strings.ToLower(_log_file_path) == "stdout" {

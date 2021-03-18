@@ -7,6 +7,7 @@ import (
     "crypto/x509"
     "net/url"
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
+	"github.com/sirupsen/logrus"
 )
 
 type Pep_t struct {
@@ -51,9 +52,9 @@ func LoadConfig(configPath string, lw *logwriter.LogWriter) (err error) {
 	// Open config file
 	file, err := os.Open(configPath)
 	if err != nil {
-		lw.Logger.Fatalf("Open configuration file error: %v\n", err)
+		lw.Logger.WithFields(logrus.Fields{"type":"system"}).Fatalf("Open configuration file error: %v", err)
 	} else {
-		lw.Logger.Debugf("Configuration file %s exists and is readable\n", configPath)
+		lw.Logger.WithFields(logrus.Fields{"type":"system"}).Debugf("Configuration file %s exists and is readable", configPath)
 	}
 	defer file.Close()
 
@@ -63,9 +64,9 @@ func LoadConfig(configPath string, lw *logwriter.LogWriter) (err error) {
 	// Start YAML decoding from file
 	err = d.Decode(&Config)
 	if err != nil {
-		lw.Logger.Fatalf("Configuration yaml-->go decoding error: %v\n", err)
+		lw.Logger.WithFields(logrus.Fields{"type":"system"}).Fatalf("Configuration yaml-->go decoding error: %v", err)
 	} else {
-		lw.Logger.Debugf("Configuration has been successfully decoded\n")
+		lw.Logger.WithFields(logrus.Fields{"type":"system"}).Debugf("Configuration has been successfully decoded")
 	}
 	
 	return
