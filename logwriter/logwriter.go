@@ -1,12 +1,12 @@
 package logwriter
 
 import (
-    "net/http"
-	"strings"
-	"log"
-	"os"
-	
+	"fmt"
 	"github.com/sirupsen/logrus"
+	"log"
+	"net/http"
+	"os"
+	"strings"
 )
 
 const (
@@ -29,32 +29,32 @@ const (
 var Log_writer *LogWriter
 
 type LogWriter struct {
-	Logger			*logrus.Logger
-	logfile			*os.File
+	Logger  *logrus.Logger
+	logfile *os.File
 }
 
 // Creates and return a new LogWriter structure
 func New(_log_file_path, _log_level string, _ifTextFormatter bool) *LogWriter {
 	var err error
-	Log_writer = new (LogWriter)
-	
+	Log_writer = new(LogWriter)
+
 	// Create a new instance of logrus logger
 	Log_writer.Logger = logrus.New()
-	
+
 	// Set a log level (debug, info, warning, error)
 	switch strings.ToLower(_log_level) {
-		case "debug":
-			Log_writer.Logger.SetLevel(logrus.DebugLevel)
-		case "info":
-			Log_writer.Logger.SetLevel(logrus.InfoLevel)
-		case "warning":
-			Log_writer.Logger.SetLevel(logrus.WarnLevel)
-		case "error":
-			Log_writer.Logger.SetLevel(logrus.ErrorLevel)
-		case "":
-			Log_writer.Logger.SetLevel(logrus.ErrorLevel)
-		default:
-			log.Fatal("Wrong log level value. Supported values are info, warning, error (default)")
+	case "debug":
+		Log_writer.Logger.SetLevel(logrus.DebugLevel)
+	case "info":
+		Log_writer.Logger.SetLevel(logrus.InfoLevel)
+	case "warning":
+		Log_writer.Logger.SetLevel(logrus.WarnLevel)
+	case "error":
+		Log_writer.Logger.SetLevel(logrus.ErrorLevel)
+	case "":
+		Log_writer.Logger.SetLevel(logrus.ErrorLevel)
+	default:
+		log.Fatal("Wrong log level value. Supported values are info, warning, error (default)")
 	}
 
 	// Set a JSON log formatter if necessary
@@ -76,7 +76,7 @@ func New(_log_file_path, _log_level string, _ifTextFormatter bool) *LogWriter {
 		// Redirect the logger output to the file
 		Log_writer.Logger.SetOutput(Log_writer.logfile)
 	}
-	
+
 	return Log_writer
 }
 
@@ -86,13 +86,17 @@ func (lw LogWriter) Write(p []byte) (n int, err error) {
 	output := string(p)
 	if !strings.Contains(output, ",success") {
 		if strings.HasSuffix(output, "\n") {
-			output = strings.TrimSuffix(output, "\n") + ",denied\n"
-		} else {
-			output = output + ",denied\n"
-		}
-		lw.Logger.Error(output)
+			output = strings.TrimSuffix(output, "\n")
+        }
+//		if strings.HasSuffix(output, "\n") {
+//			output = strings.TrimSuffix(output, "\n") + ",denied"
+	//	} else {
+	//		output = output + ",denied"
+	//	}
+		lw.Logger.WithFields(logrus.Fields{"result": "denied"}).Info(output)
 	} else {
-		lw.Logger.Info(output)
+        output = strings.TrimSuffix(output, ",success")
+		lw.Logger.WithFields(logrus.Fields{"result": "success"}).Info(output)
 	}
 	return 1, nil
 }
@@ -100,13 +104,14 @@ func (lw LogWriter) Write(p []byte) (n int, err error) {
 // The LogHTTPRequest() function prints HTTP request details into the log file
 // TODO Rename the function!
 func (lw *LogWriter) LogHTTPRequest(req *http.Request) {
-	lw.Logger.Infof("%s,%s,%s,%t,%t,%s,success\n",
+    // TODO: MAKE THIS BETTER
+	lw.Write([]byte(fmt.Sprintf("%s,%s,%s,%t,%t,%s,success",
 		req.RemoteAddr,
 		req.TLS.ServerName,
 		MatchTLSConst(req.TLS.Version),
 		req.TLS.HandshakeComplete,
 		req.TLS.DidResume,
-		MatchTLSConst(req.TLS.CipherSuite))
+		MatchTLSConst(req.TLS.CipherSuite))))
 }
 
 func (lw *LogWriter) Terminate() {
@@ -127,7 +132,7 @@ func MatchTLSConst(input uint16) string {
 	case 0x0304:
 		return "VersionTLS13"
 	// TLS CIPHER SUITES
-    // TODO: Replace it by func CipherSuiteName --> version 1.14 needed
+	// TODO: Replace it by func CipherSuiteName --> version 1.14 needed
 	case 0x0005:
 		return "TLS_RSA_WITH_RC4_128_SHA"
 	case 0x000a:

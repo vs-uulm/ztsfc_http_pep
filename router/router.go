@@ -6,9 +6,9 @@ import (
 	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 	env "local.com/leobrada/ztsfc_http_pep/env"
 	"log"
-	
+
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
-	
+
 	"net/http"
 	"net/http/httputil"
 	"time"
@@ -17,13 +17,13 @@ import (
 type Router struct {
 	tls_config *tls.Config
 	frontend   *http.Server
-	lw *logwriter.LogWriter
+	lw         *logwriter.LogWriter
 }
 
 func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 	router := new(Router)
 	router.lw = lw
-	
+
 	router.tls_config = &tls.Config{
 		Rand:                   nil,
 		Time:                   nil,
@@ -33,7 +33,7 @@ func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 		Certificates:           nil,
 		ClientAuth:             tls.RequireAndVerifyClientCert,
 		// ClientAuth:				tls.VerifyClientCertIfGiven,
-		ClientCAs:  env.Config.CA_cert_pool_pep_accepts_from_ext,
+		ClientCAs: env.Config.CA_cert_pool_pep_accepts_from_ext,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// load a suitable certificate that is shown to clients according the request domain/TLS SNI
 			for _, service := range env.Config.Service_pool {
@@ -49,9 +49,6 @@ func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 	mux := http.NewServeMux()
 	mux.Handle("/", router)
 
-	w := lw.Logger.Writer()
-	defer w.Close()
-	
 	// Setting Up the Frontend Server
 	router.frontend = &http.Server{
 		Addr:         env.Config.Pep.Listen_addr,
@@ -59,7 +56,7 @@ func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 		ReadTimeout:  time.Second * 5,
 		WriteTimeout: time.Second * 5,
 		Handler:      mux,
-		ErrorLog:     log.New(w, "", 0),
+		ErrorLog:     log.New(lw, "", 0),
 	}
 	return router, nil
 }
@@ -70,8 +67,8 @@ func (router *Router) SetUpSFC() bool {
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Log all http requests incl. TLS information
-	logwriter.Log_writer.LogHTTPRequest(req)	
-	
+	logwriter.Log_writer.LogHTTPRequest(req)
+
 	// Check if the user is authenticated; if not authenticate him/her; if that fails return an error
 	// TODO: return error to client?
 	if !bauth.Basic_auth(w, req) {
@@ -133,19 +130,19 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			req.Header[LoggerHeaderName] = []string{fmt.Sprintf("%d",
 				// logwriter.SFLOGGER_REGISTER_PACKETS_ONLY |
 				logwriter.SFLOGGER_PRINT_GENERAL_INFO|
-				logwriter.SFLOGGER_PRINT_HEADER_FIELDS|
-				// logwriter.SFLOGGER_PRINT_BODY|
-				// logwriter.SFLOGGER_PRINT_FORMS|
-				// logwriter.SFLOGGER_PRINT_FORMS_FILE_CONTENT|
-				// logwriter.SFLOGGER_PRINT_TRAILERS|
-				logwriter.SFLOGGER_PRINT_TLS_MAIN_INFO |
-				logwriter.SFLOGGER_PRINT_TLS_CERTIFICATES |
-				// logwriter.SFLOGGER_PRINT_TLS_PUBLIC_KEY |
-				// logwriter.SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
-				// logwriter.SFLOGGER_PRINT_RAW |
-				// logwriter.SFLOGGER_PRINT_REDIRECTED_RESPONSE|
-				// logwriter.SFLOGGER_PRINT_EMPTY_FIELDS |
-				0)}
+					logwriter.SFLOGGER_PRINT_HEADER_FIELDS|
+					// logwriter.SFLOGGER_PRINT_BODY|
+					// logwriter.SFLOGGER_PRINT_FORMS|
+					// logwriter.SFLOGGER_PRINT_FORMS_FILE_CONTENT|
+					// logwriter.SFLOGGER_PRINT_TRAILERS|
+					logwriter.SFLOGGER_PRINT_TLS_MAIN_INFO|
+					logwriter.SFLOGGER_PRINT_TLS_CERTIFICATES|
+					// logwriter.SFLOGGER_PRINT_TLS_PUBLIC_KEY |
+					// logwriter.SFLOGGER_PRINT_TLS_CERT_SIGNATURE |
+					// logwriter.SFLOGGER_PRINT_RAW |
+					// logwriter.SFLOGGER_PRINT_REDIRECTED_RESPONSE|
+					// logwriter.SFLOGGER_PRINT_EMPTY_FIELDS |
+					0)}
 		}
 
 		dest, ok := env.Config.Sf_pool[sf_to_add_name]
@@ -154,11 +151,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		proxy = httputil.NewSingleHostReverseProxy(dest.Target_sf_url)
-		
-		w := router.lw.Logger.Writer()
-	    defer w.Close()
-	
-		proxy.ErrorLog = log.New(w, "", 0)
+
+		proxy.ErrorLog = log.New(router.lw, "", 0)
 
 		// When the PEP is acting as a client; this defines his behavior
 		proxy.Transport = &http.Transport{
@@ -207,51 +201,3 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func (router *Router) ListenAndServeTLS() error {
 	return router.frontend.ListenAndServeTLS("", "")
 }
-
-func matchTLSConst(input uint16) string {
-    switch input {
-    // TLS VERSION
-    case 0x0300:
-        return "VersionSSL30"
-    case 0x0301:
-        return "VersionTLS10"
-    case 0x0302:
-        return "VersionTLS11"
-    case 0x0303:
-        return "VersionTLS12"
-    case 0x0304:
-        return "VersionTLS13"
-    // TLS CIPHER SUITES
-    case 0x0005:
-        return "TLS_RSA_WITH_RC4_128_SHA"
-    case 0x000a:
-        return "TLS_RSA_WITH_3DES_EDE_CBC_SHA"
-    case 0x002f:
-        return "TLS_RSA_WITH_AES_128_CBC_SHA"
-    case 0x0035:
-        return "TLS_RSA_WITH_AES_256_CBC_SHA"
-    case 0x003c:
-        return "TLS_RSA_WITH_AES_128_CBC_SHA256"
-    case 0x009c:
-        return "TLS_RSA_WITH_AES_128_GCM_SHA256"
-    case 0x009d:
-        return "TLS_RSA_WITH_AES_256_GCM_SHA384"
-    case 0xc007:
-        return "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA"
-    case 0xc009:
-        return "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA"
-    case 0xc00a:
-        return "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA"
-    case 0x1301:
-        return "TLS_AES_128_GCM_SHA256"
-    case 0x1302:
-        return "TLS_AES_256_GCM_SHA384"
-    case 0x1303:
-        return "TLS_CHACHA20_POLY1305_SHA256"
-    case 0x5600:
-        return "TLS_FALLBACK_SCSV"
-    default:
-        return "unsupported"
-    }
-}
-
