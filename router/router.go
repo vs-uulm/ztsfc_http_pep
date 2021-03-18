@@ -95,7 +95,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// need_to_go_through_sf = false
 
-	sf_to_add_name := "logger"
+	sf_to_add_name := "dummy"
 	service_to_add_name := "nginx"
 
 	if need_to_go_through_sf {
