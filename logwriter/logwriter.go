@@ -98,6 +98,7 @@ func (lw LogWriter) Write(p []byte) (n int, err error) {
 }
 
 // The LogHTTPRequest() function prints HTTP request details into the log file
+// TODO Rename the function!
 func (lw *LogWriter) LogHTTPRequest(req *http.Request) {
 	lw.Logger.Infof("%s,%s,%s,%t,%t,%s,success\n",
 		req.RemoteAddr,
