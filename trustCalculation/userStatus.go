@@ -1,7 +1,8 @@
 package trustCalculation
 
 /*
-This file represents the status of a User
+This file represents the status of a User. Here are stored several properties of the user, which are necessary for
+the calculation of the trust score of the user attributes.
  */
 
 type User struct{

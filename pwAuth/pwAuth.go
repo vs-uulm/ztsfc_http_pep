@@ -7,10 +7,20 @@ import (
 )
 
 /*
-This file realizes a Password-Authentication mechanism. When a user requests the path "pwAuth", a form is send, where
+This file realizes a password-authentication mechanism. When a user requests the path "pwAuth", a form is send, where
 the user can enter his username and password. For simplicity "test" is the password for every user.
 */
 
+/*
+This function is called, when the path pwAuth is called and thus the user wants to authenticate with a password.
+
+@param w: Writer to send a response to the corresponding request
+@param req: Request of the password authentication
+@param dataSources: Access to databases of the PEP, like the userdatabase
+
+@return username: In case of a successful, the username is provided to the calling instance
+@return failedAuth: It is specified, if the authentication was successful
+ */
 func PasswordAuthentication(w http.ResponseWriter, req *http.Request, dataSources *trustCalculation.DataSources) (username string, failedAuth bool){
 	var password string
 	form := `<html>
@@ -26,6 +36,7 @@ func PasswordAuthentication(w http.ResponseWriter, req *http.Request, dataSource
             </html>
             `
 
+	// handle post-request, where the username and password should be included
 	if req.Method == "POST" {
 		if err := req.ParseForm(); err != nil {
 			fmt.Println("Parsing Error")
@@ -44,7 +55,7 @@ func PasswordAuthentication(w http.ResponseWriter, req *http.Request, dataSource
 			return "",true
 		}
 
-		usernamel, exist := req.PostForm["username"]
+		usernamel, exist := req.PostForm["username"]								// Get username from post request
 		username = usernamel[0]
 		if _, ok:= dataSources.UserDatabase[username]; !ok || !exist{				// Check, if username exists in user database
 			fmt.Println("username not present or wrong")
@@ -54,9 +65,9 @@ func PasswordAuthentication(w http.ResponseWriter, req *http.Request, dataSource
 			return username, true
 		}
 
-		passwordl, exist := req.PostForm["password"]
+		passwordl, exist := req.PostForm["password"]								// Get password from post request
 		password = passwordl[0]
-		if !exist || password != "test" {						// for simplicity, password is "test" for very user
+		if !exist || password != "test" {											// for simplicity, password is "test" for very user
 			fmt.Println("password not present or wrong")
 			w.WriteHeader(401)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -64,7 +75,7 @@ func PasswordAuthentication(w http.ResponseWriter, req *http.Request, dataSource
 			return username, true
 		}
 
-		cookie := http.Cookie{
+		cookie := http.Cookie{														// Create cookie, which is sent in very request of the client to identify the client in the PEP
 			Name:   "Username",
 			Value:  username,
 			MaxAge: 1000,
@@ -75,6 +86,7 @@ func PasswordAuthentication(w http.ResponseWriter, req *http.Request, dataSource
 		return username, false
 
 	} else {
+		// send html form to the client, where the client can enter the username and the password
 		fmt.Println("only post methods are accepted in this state")
 		w.WriteHeader(401)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")

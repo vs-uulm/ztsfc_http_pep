@@ -17,8 +17,8 @@ import (
     "net/http"
     "net/http/httputil"
     "time"
-
     "local.com/leobrada/ztsfc_http_pep/logwriter"
+    "net"
 )
 
 // FOR TESTING:
@@ -45,8 +45,8 @@ type Router struct {
 
     logChannel chan []byte
     logWriter *logwriter.LogWriter
-    
-    // Map of available Service Functions 
+
+    // Map of available Service Functions
     sf_pool map[string]sf_info.ServiceFunctionInfo
 
     // Proxy server serving the incoming requests
@@ -58,13 +58,13 @@ type Router struct {
 func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool map[string]sf_info.ServiceFunctionInfo) (*Router, error) {
     router := new(Router)
     router.init_ca_cert_pools(&env.Config)
-    
+
     // Create a logging channel
     router.logChannel = make(chan []byte, 128)
-    
+
     // Create a new log writer
     router.logWriter = logwriter.NewLogWriter("./access.log", router.logChannel, 5)
-    
+
     // Run main loop of logWriter
     go router.logWriter.Work()
 
@@ -75,7 +75,7 @@ func NewRouter(_service_pool map[string]sf_info.ServiceFunctionInfo, _sf_pool ma
         MaxVersion: tls.VersionTLS13,
         SessionTicketsDisabled: true,
         Certificates: nil,
-        ClientAuth: tls.VerifyClientCertIfGiven,
+        ClientAuth: tls.VerifyClientCertIfGiven,                                    // client authentication with password or certificate possible -> Client certificate not mandatory
         ClientCAs: router.ca_cert_pool_ext,
         GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
             // Load Let's Encrypt Certificate that is shown to Clients
@@ -295,13 +295,13 @@ func matchTLSConst(input uint16) string {
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
     router.LogHTTPRequest(req, 1)
     router.Log("\nNew request-----------------------------------\n")
-    // Check, if user requested Password-Authentication site
-    if req.URL.Path == "/pwAuth" {
+
+    if req.URL.Path == "/pwAuth" {                              // Check, if user requested the Password-Authentication site
         username, failedAuth := pwAuth.PasswordAuthentication(w, req, router.trustCalc.GetDataSources())
         if failedAuth {
-            router.Log("User "+ username+" failed password authentication\n")
+            router.Log("User " + username + " failed password authentication\n")
         }
-        return
+        return                                                  // When the password authentication site was accessed, no further processing is necessary, because no service was accessed
     }
 
     // Check for right user
@@ -314,6 +314,10 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
     forwardSFC, block := router.trustCalc.ForwardingDecision(req) // calculate trust and decide according to trust, how the request is handled
 
+    // --- Specification PEP behavior ----
+    // Here it can be specified, if the PEP should send all requests to the PEP or to the service (relevant for some cases in the evaluation)
+    //forwardSFC = false
+    //block = false
 
     if block {                                                    // Check, if trust was to low and request is blocked
         w.WriteHeader(401)
@@ -359,6 +363,13 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
             return
         }
         proxy = httputil.NewSingleHostReverseProxy(dest.Dst_url)
+        proxy.Transport = &http.Transport{
+            MaxIdleConns: 100,
+            IdleConnTimeout: 10* time.Second,
+            Dial: (&net.Dialer{
+                Timeout:   10 * time.Second,                        // Specifies timeout to establish a connection
+            }).Dial,
+        }
 
 
 
@@ -371,14 +382,19 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
         for _, service := range router.service_pool {
             if req.TLS.ServerName == service.SNI {
                 proxy = httputil.NewSingleHostReverseProxy(service.Dst_url)
-
+                proxy.Transport = &http.Transport{
+                    MaxIdleConns: 100,
+                    IdleConnTimeout: 10 * time.Second,
+                    Dial: (&net.Dialer{
+                        Timeout:   10 * time.Second,                // Specifies timeout to establish a connection
+                    }).Dial,
+                }
             } else {
                 w.WriteHeader(503)
                 return
             }
         }
     }
-    //req.URL.Scheme="http"
     proxy.ServeHTTP(w, req)
 }
 
@@ -446,6 +462,6 @@ func (router *Router) LogHTTPRequest(req *http.Request, loglevel int) {
                                 req.TLS.HandshakeComplete,
                                    req.TLS.DidResume,
                                       matchTLSConst(req.TLS.CipherSuite))
-  
+
   router.Log(s)
 }

@@ -1,8 +1,9 @@
 package trustCalculation
 
 /*
-In this file the threshold values for the three provided services, the trust-increase for user-attribtues, the
-trust-increase for device attributes, user-information and device information of managed devices are stored
+In this file the threshold values for the three provided services, the trust-increase for user-attributes, the
+trust-increase for device attributes, user-information for registered users and device-information of managed devices
+are stored
  */
 
 type DataSources struct {
@@ -22,13 +23,13 @@ type DataSources struct {
 	// Map, where the trust-increase of device attributes is provided, when these attributes are fulfilled
 	trustIncreaseDeviceAttr map[string]int
 
-	// Map, where the current status of each user is stored
+	// Map, where the current status of each user is stored (= user database)
 	UserDatabase map[string]*User
 
-	// Map, where the current status of managed devices is stored
+	// Map, where the current status of managed devices is stored (= device database)
 	deviceDatabase map[string]map[string]bool
 
-	// Map, where for a IP address the geographic area is stored
+	// Map, where for a IP address the geographic area is stored (to determine from the source IP address of requests the geographic area)
 	mapIPgeoArea map[string]string
 
 }
@@ -40,7 +41,9 @@ func NewDataSources() *DataSources {
 }
 
 
-// In this method values are assigned to the specified attributes
+/*
+In this method values are assigned to the specified attributes
+ */
 func (dataSources *DataSources) InitDataSources()  {
 	dataSources.dpiTrustIncrease = 6
 

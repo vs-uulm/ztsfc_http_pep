@@ -1,8 +1,8 @@
 package trustCalculation
 
 /*
-In this file, the trust of a request is calculated. According to the trust it is decided, if a request is forwarded
-or blocked.
+In this file, the trust score of a request is calculated. According to the trust score it is decided, if a request is
+forwarded or blocked.
 */
 
 import (
@@ -23,14 +23,19 @@ func NewTrustCalculation(log chan []byte) TrustCalculation{
 	return trustCalculation
 }
 
-/* This function decides based on the achieved trust-value and the requested service, if the request should be directly
-send to the service, send to the DPI or be blocked.
+/*
+This function decides based on the achieved trust score and the requested service, if the request should be directly
+sent to the service, sent to the DPI or be blocked.
+
+@param req: request of the user
+
+@return forwardSFC: True, when the request should be sent to the DPI; False, when the request should be sent to the service
+@return block: True, when the request should be blocked; False, when the request should be forwarded
  */
 func (trustCalc TrustCalculation) ForwardingDecision(req *http.Request) (forwardSFC bool, block bool){
-	// Check authentication
-	authenticated := trustCalc.checkAuthentication(req)
-	if !authenticated {	// Check if authentication is valid
-		return false, true
+	authenticated := trustCalc.checkAuthentication(req)			// Check authentication (checks, if user provided a valid username, which is contained in the user database)
+	if !authenticated {											// Check if authentication is valid
+		return false, true						// Block request, when no valid user name was provided
 	}
 
 	trustCalc.Log("---Trustcalculation\n")
@@ -43,10 +48,10 @@ func (trustCalc TrustCalculation) ForwardingDecision(req *http.Request) (forward
 	trustCalc.Log("----Device-trust: " + strconv.Itoa(deviceTrust) + "\n")
 	fmt.Printf("Device-Trust: %d\n", deviceTrust)
 
-	trustCalc.removeHTTPHeader(req)												// Remove http header, which are only necessary for trust-calculation
+	trustCalc.removeHTTPHeader(req)												// Remove custom http header, which are only necessary for trust-calculation
 
 	trust := userTrust + deviceTrust
-	service := strings.Split(req.URL.Path,"/")[1]						// Derive requested service from URL
+	service := strings.Split(req.URL.Path,"/")[1]							// Derive requested service from URL
 	trustCalc.Log("----Requested service: " + service + "\n")
 
 	if threshold, ok := trustCalc.dataSources.thresholdValues[service]; ok {
@@ -68,51 +73,57 @@ func (trustCalc TrustCalculation) ForwardingDecision(req *http.Request) (forward
 	}
 }
 
-// Calculate trust of the user attributes
+/*
+In this fuction the trust score of the user attributes is calculated
+
+@param req: request of the user
+
+@return trust: trust score of user attributes
+ */
 func (trustCalc TrustCalculation) calcUserTrust(req *http.Request) (trust int) {
 	trust = 0
 
 	// Analyze authentication type
-	userPW := ""	// Not empty, when authenticated with password
-	userCert := ""	// Not empty, when authenticated with client-certificate
+	userPW := ""
+	userCert := ""
 	user := ""
 
-	if name, err := req.Cookie("Username"); err==nil {
+	if name, err := req.Cookie("Username"); err==nil {						// Check, if user authenticated with a password
 		userPW = name.Value
 		trustCalc.Log("----Authenticated with password, username: " + userPW+"\n")
 	}
 
-	if certs := req.TLS.PeerCertificates; (len(certs) > 0) {
+	if certs := req.TLS.PeerCertificates; (len(certs) > 0) {						// Check, if user authenticated with a certificate
 		userCert = certs[0].Subject.CommonName
 		trustCalc.Log("----Authenticated with certificate, username: " + userCert + "\n")
 	}
 
-	if userPW != "" && userCert != "" && userPW == userCert {
-		trust = trust + trustCalc.dataSources.trustIncreaseUserAttr["CRT_PW"]	// Authenticated with Password and Client-Certificate
+	if userPW != "" && userCert != "" && userPW == userCert {						// Check, if user authenticated with a password and a client-certificate
+		trust = trust + trustCalc.dataSources.trustIncreaseUserAttr["CRT_PW"]
 		user = userPW
 		trustCalc.Log("----User and Certificate authentication, Trust: " + strconv.Itoa(trust) + "\n")
-	} else if userCert != "" {
-		trust = trust + trustCalc.dataSources.trustIncreaseUserAttr["CRT"] 		// Authenticated only with Client-Certificate
+	} else if userCert != "" {														// Check, if user authenticated only with a client-certificate
+		trust = trust + trustCalc.dataSources.trustIncreaseUserAttr["CRT"]
 		user = userCert
 		trustCalc.Log("----Certificate authentication, Trust: " + strconv.Itoa(trust) + "\n")
-	} else if userPW != "" {
-		user = userPW															// Authenticated only with password
+	} else if userPW != "" {														// Check, if user authenticated only with a password
+		user = userPW
 		trustCalc.Log("----Password authentication (no trust-increase), Trust: " + strconv.Itoa(trust) + "\n")
 	}
 
 	// Analyze geographic area
 	ip := req.Header.Get("ip-addr-geo-area")
 	if geoArea, ok := trustCalc.dataSources.mapIPgeoArea[ip]; ok {
-		if trustCalc.dataSources.UserDatabase[user].usualGeo == geoArea { // Check, if usual geographic area corresponds to geographic area of the request
+		if trustCalc.dataSources.UserDatabase[user].usualGeo == geoArea { 			// Check, if usual geographic area corresponds to geographic area of the request
 			trust = trust + trustCalc.dataSources.trustIncreaseUserAttr["UGA"]
 			trustCalc.Log("----Geographic area: " + geoArea + ", Trust: " +  strconv.Itoa(trust) + "\n")
 		}
 	}
 
 	// Analyze commonly used services
-	requestedService := strings.Split(req.URL.Path,"/")[1]				// service is identified with first part in the requested URL
+	requestedService := strings.Split(req.URL.Path,"/")[1]						// Service is identified with first part in the requested URL
 	for _, commonService := range trustCalc.dataSources.UserDatabase[user].commonUsedService {
-		if requestedService == commonService {									// Check, if commonly used service corresponds to the requested service
+		if requestedService == commonService {										// Check, if commonly used service corresponds to the requested service
 			trust = trust + trustCalc.dataSources.trustIncreaseUserAttr["CUS"]
 			trustCalc.Log("----Commonly used service: " + commonService+", Trust: " +  strconv.Itoa(trust) + "\n")
 			break
@@ -134,12 +145,18 @@ func (trustCalc TrustCalculation) calcUserTrust(req *http.Request) (trust int) {
 	return trust
 }
 
-// Calculate trust of the device attributes
+/*
+In this function the trust score of the device attributes is calculated
+
+@param req: request of the user
+
+@return trust: trust score of device attributes
+ */
 func (trustCalc TrustCalculation) calcDeviceTrust(req *http.Request) (trust int) {
 	trust = 0
 	deviceName := ""
 
-	if device := req.Header.Get("managedDevice"); device != "" {
+	if device := req.Header.Get("managedDevice"); device != "" {			// Extract the used managed device form the HTTP header
 		deviceName = device
 		trustCalc.Log("----Managed device: " + deviceName + "\n")
 	} else{
@@ -148,16 +165,16 @@ func (trustCalc TrustCalculation) calcDeviceTrust(req *http.Request) (trust int)
 	}
 
 	fmt.Println(deviceName)
-	if device, ok := trustCalc.dataSources.deviceDatabase[deviceName]; ok {			// Check, if managed device is known to device database
-		if device["LPL"] { 	// Check, if on the device the latest patch levels are installed
+	if device, ok := trustCalc.dataSources.deviceDatabase[deviceName]; ok {		// Check, if the specified managed device is registered in the device database
+		if device["LPL"] { 														// Check, if on the device the latest patch levels are installed
 			trust = trust + trustCalc.dataSources.trustIncreaseDeviceAttr["LPL"]
 			trustCalc.Log("----Current Patch level, Trust: " +  strconv.Itoa(trust) + "\n")
 		}
-		if device["NAVS"] {	// Check, if there are (no) alerts from the virus scanner
+		if device["NAVS"] {														// Check, if there are no alerts from the virus scanner
 			trust = trust + trustCalc.dataSources.trustIncreaseDeviceAttr["NAVS"]
 			trustCalc.Log("----No alerts from virus scanner, Trust: " +  strconv.Itoa(trust) + "\n")
 		}
-		if device["RI"] { 	// Check, if device was recently re-installed
+		if device["RI"] { 														// Check, if the device was recently re-installed
 			trust = trust + trustCalc.dataSources.trustIncreaseDeviceAttr["RI"]
 			trustCalc.Log("----Re-Installed, Trust: " +  strconv.Itoa(trust) + "\n")
 		}
@@ -166,16 +183,21 @@ func (trustCalc TrustCalculation) calcDeviceTrust(req *http.Request) (trust int)
 	return trust
 }
 
-// In this method is checked, if the user authenticated with a password or client-certificate and if the user is known to the PEP
+/*
+In this method is checked, if the user authenticated with a password or client-certificate and if the user is known to the PEP
+
+@param req: request of the user
+
+@return authenticated: True, when the user successfully authenticated; False, when the user didn't authenticate
+ */
 func (trustCalc TrustCalculation) checkAuthentication(req *http.Request) (authenticated bool) {
 	userNamePW := ""
 	userNameCert := ""
 
 	// Check password-authentication
-	if name, err := req.Cookie("Username"); err == nil {
+	if name, err := req.Cookie("Username"); err == nil {				// Extract specified username in the cookie of the request
 		userNamePW = name.Value
-		// Check if user exists in user-database
-		if _, ok:= trustCalc.dataSources.UserDatabase[userNamePW]; !ok {
+		if _, ok:= trustCalc.dataSources.UserDatabase[userNamePW]; !ok {	// Check, if specified username exists in the user database
 			trustCalc.Log("----Username " + userNamePW + "unknown -> Block\n")
 			fmt.Println("Username " + userNamePW + " unknown")
 			return false
@@ -184,9 +206,8 @@ func (trustCalc TrustCalculation) checkAuthentication(req *http.Request) (authen
 
 	// Check certificate-authentication
 	if certs := req.TLS.PeerCertificates; len(certs) > 0 {
-		userNameCert = certs[0].Subject.CommonName
-		// Check if user exists in user-database
-		if _, ok:= trustCalc.dataSources.UserDatabase[userNameCert]; !ok {
+		userNameCert = certs[0].Subject.CommonName							// Extract username of the client certificate
+		if _, ok:= trustCalc.dataSources.UserDatabase[userNameCert]; !ok {	// Check, if specified username exists in the user database
 			trustCalc.Log("Username " + userNameCert + "unknown -> Block\n")
 			fmt.Println("Username " + userNameCert + " unknown")
 			return false
@@ -203,7 +224,11 @@ func (trustCalc TrustCalculation) checkAuthentication(req *http.Request) (authen
 	return true
 }
 
-// In this method the custom headers, which are only necessary for the PEP for trust-calculation, are removed
+/*
+In this method the custom headers, which are only necessary in the PEP for trust-calculation, are removed
+
+@param req: request of the user
+ */
 func (trustCalc TrustCalculation) removeHTTPHeader(req *http.Request) {
 		req.Header.Del("ip-addr-geo-area")
 		req.Header.Del("managedDevice")
