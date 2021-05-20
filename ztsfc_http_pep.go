@@ -9,6 +9,8 @@ import (
 	sf_init "local.com/leobrada/ztsfc_http_pep/init"
 	router "local.com/leobrada/ztsfc_http_pep/router"
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
+	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
+    bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 	"github.com/sirupsen/logrus"
 )
 
@@ -70,6 +72,19 @@ func init() {
 	} else {
 		sysLogger.WithFields(logrus.Fields{"type":"system"}).Debug("Loading CA certificates pool - OK")
 	}
+
+    // Init Reverse Proxies used for the modules
+    proxies.Basic_auth_proxy = proxies.NewBasicAuthProxy()
+    proxies.Pdp_client_pool = proxies.NewClientPool()
+    proxies.Sfp_logic_client_pool = proxies.NewClientPool()
+
+    // TEST
+    //proxies.Service_proxy = proxies.NewServiceProxy()
+
+    // Init RSA Keys für JWT
+    bauth.Jwt_pub_key = bauth.ParseRsaPublicKeyFromPemStr("./basic_auth/jwt_test_pub.pem")
+    bauth.MySigningKey = bauth.ParseRsaPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
+    ////bauth.Jwt_priv_key = bauth.ParseRsaPublicKeyFromPemStr("./basic_auth/jwt_test_pub.pem")
 }
 
 func main() {
