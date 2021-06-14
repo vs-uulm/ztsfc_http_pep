@@ -15,14 +15,12 @@ import (
     metadata "local.com/leobrada/ztsfc_http_pep/metadata"
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
 	sfpl "local.com/leobrada/ztsfc_http_pep/sfp_logic"
-    //proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 )
 
 type Router struct {
 	tls_config *tls.Config
 	frontend   *http.Server
 	lw         *logwriter.LogWriter
-//    md         *metadata.Cp_metadata
 }
 
 func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
@@ -64,26 +62,19 @@ func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 		ErrorLog:     log.New(lw, "", 0),
 	}
 
-    // Create metadata
-  //  router.md = new(metadata.Cp_metadata)
-
     //http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 10000
     //http.DefaultTransport.(*http.Transport).TLSHandshakeTimeout = 0 * time.Second
 
 	return router, nil
 }
 
-func (router *Router) SetUpSFC() bool {
-	return false
-}
-
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-//    start := time.Now()
-    //md.ClearMetadata()
+    // Used for measuring the time ServeHTTP runs
+    //start := time.Now()
     md := new(metadata.Cp_metadata)
 
-	// Log all http requests incl. TLS information
-	//logwriter.Log_writer.LogHTTPRequest(req)
+	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
+	logwriter.Log_writer.LogHTTPRequest(req)
 
     // BASIC AUTHENTICATION
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
@@ -91,6 +82,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
     // Check if user has a valid session already
     if !bauth.User_sessions_is_valid(req, md) {
         if !bauth.Basic_auth(w, req) {
+      //      fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
             return
         }
     }
@@ -102,38 +94,37 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
         //fmt.Println("Request was rejected due to too low trust score")
         w.WriteHeader(503)
         return
-    } else {
-        //fmt.Printf("Request was allowed with following sfc: %v\n", md.SFC)
     }
+
+    //fmt.Printf("SFC: %s\n", md.SFC)
 
     // SFP LOGIC
     sfpl.TransformSFCintoSFP(md)
 
 	// If user could be authenticated, create ReverseProxy variable for the connection to serve
 	var proxy *httputil.ReverseProxy
+    var service_url *url.URL
 
     //fmt.Printf("BEFORE JOINING: %s\n", md.SFP)
 
     if len(md.SFP) == 0 {
-        md.SFP = "https://10.5.0.53:443"
-
+        service_url, _ = url.Parse("https://10.5.0.53:443")
     } else {
         md.SFP = md.SFP + ",https://10.5.0.53:443"
+        sfp_slices := strings.Split(md.SFP, ",")
+        next_hop := sfp_slices[0]
+        //fmt.Printf("Next Hop: %s\n", next_hop)
+        sfp_slices = sfp_slices[1:]
+        if len(sfp_slices) != 0 {
+            md.SFP = strings.Join(sfp_slices[:], ",")
+            req.Header.Set("sfp", md.SFP)
+        }
+        service_url, _ = url.Parse(next_hop)
     }
 
-    sfp_slices := strings.Split(md.SFP, ",")
-    next_hop := sfp_slices[0]
-    //fmt.Printf("Next Hop: %s\n", next_hop)
-    sfp_slices = sfp_slices[1:]
-    if len(sfp_slices) != 0 {
-        md.SFP = strings.Join(sfp_slices[:], ",")
-        req.Header.Set("sfp", md.SFP)
-    }
+    // fmt.Printf("AFTER JOINING: %s\n", md.SFP)
 
-//    fmt.Printf("AFTER JOINING: %s\n", md.SFP)
-
-    service_url, _ := url.Parse(next_hop)
-    //fmt.Printf("SERVICE_RULM: %s\n", service_url.String())
+    // fmt.Printf("SERVICE_RULM: %s\n", service_url.String())
     proxy = httputil.NewSingleHostReverseProxy(service_url)
 
     //fmt.Printf("AFTER CREATING PROXY\n")
@@ -184,7 +175,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 //			return
 //		}
 
-    proxy.ErrorLog = log.New(router.lw, "", 0)
+   proxy.ErrorLog = log.New(router.lw, "", 0)
 
     // When the PEP is acting as a client; this defines his behavior
    proxy.Transport = &http.Transport{
@@ -194,6 +185,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
            // TODO: Replace it by loading the cert for the first SF in the chain
            Certificates:       []tls.Certificate{env.Config.Sf_pool["dummy"].X509KeyPair_shown_by_pep_to_sf},
            InsecureSkipVerify: true,
+           SessionTicketsDisabled: false,
            ClientAuth:         tls.RequireAndVerifyClientCert,
            ClientCAs:          env.Config.CA_cert_pool_pep_accepts_from_int,
        },
@@ -229,7 +221,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	proxy.ServeHTTP(w, req)
     //proxies.Service_proxy.ServeHTTP(w, req)
-  //  fmt.Printf("SFC: %s with exec time: %v\n", md.SFC, time.Since(start))
+   //fmt.Printf("'%s', %v\n", md.SFC, time.Since(start))
 }
 
 func (router *Router) ListenAndServeTLS() error {

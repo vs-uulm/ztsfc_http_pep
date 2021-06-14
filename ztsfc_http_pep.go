@@ -12,6 +12,7 @@ import (
 	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
     bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 	"github.com/sirupsen/logrus"
+//    "github.com/pkg/profile"
 )
 
 var (
@@ -35,7 +36,7 @@ func init() {
 
 	lw = logwriter.New(log_file_path, log_level, ifTextFormatter)
 	sysLogger := lw.Logger.WithFields(logrus.Fields{"type": "system"})
-	sf_init.SetupCloseHandler(lw)
+	//sf_init.SetupCloseHandler(lw)
 
 	// Loading all config parameter from config file defined in "conf_file_path"
 	err := env.LoadConfig(conf_file_path, lw)
@@ -73,13 +74,11 @@ func init() {
 		sysLogger.WithFields(logrus.Fields{"type":"system"}).Debug("Loading CA certificates pool - OK")
 	}
 
-    // Init Reverse Proxies used for the modules
-    proxies.Basic_auth_proxy = proxies.NewBasicAuthProxy()
+    // Init Reverse Proxies and Client Pools used for the Auth* modules
+    // Basic_auth_proxy currently not needed since BasicAuth is performed as part of the PEP
+    //proxies.Basic_auth_proxy = proxies.NewBasicAuthProxy()
     proxies.Pdp_client_pool = proxies.NewClientPool()
     proxies.Sfp_logic_client_pool = proxies.NewClientPool()
-
-    // TEST
-    //proxies.Service_proxy = proxies.NewServiceProxy()
 
     // Init RSA Keys für JWT
     bauth.Jwt_pub_key = bauth.ParseRsaPublicKeyFromPemStr("./basic_auth/jwt_test_pub.pem")
@@ -88,6 +87,10 @@ func init() {
 }
 
 func main() {
+//    defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
+//    defer profile.Start(profile.BlockProfile, profile.ProfilePath(".")).Stop()
+//    defer profile.Start(profile.GoroutineProfile, profile.ProfilePath(".")).Stop()
+
 	// Create new PEP router
 	pep, err := router.NewRouter(lw)
 	if err != nil {

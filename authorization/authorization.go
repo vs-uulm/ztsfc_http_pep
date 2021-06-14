@@ -5,16 +5,11 @@ import (
     "fmt"
     "net/http"
     "math/rand"
- //   "crypto/tls"
     "strconv"
-    //"strings"
     metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-//    env "local.com/leobrada/ztsfc_http_pep/env"
     proxies "local.com/leobrada/ztsfc_http_pep/proxies"
-//    bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 )
 
-//func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) (allow bool, sfc []string) {
 func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) {
     collectAttributes(req, cpm)
 
@@ -30,14 +25,6 @@ func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) {
 
     cpm.SFC = response.Header.Get("sfc")
     cpm.Auth_decision, _ = strconv.ParseBool(response.Header.Get("allow"))
-
-   // if response.Header.Get("allow") == "yes" {
-   //     allow = true
-   // } else {
-   //     allow = false
-   // }
-
-   // return allow, sfc
 }
 
 func prepareAuthRequest(autho_req *http.Request, cpm *metadata.Cp_metadata) {

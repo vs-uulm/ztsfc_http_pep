@@ -2,10 +2,7 @@ package basic_auth
 
 import (
     "net/http"
-    //"net/http/httputil"
-    //"net/url"
     "fmt"
-    //"crypto/tls"
     "github.com/dgrijalva/jwt-go"
     "crypto/rsa"
     "crypto/x509"
@@ -13,15 +10,12 @@ import (
     "io/ioutil"
     "time"
     "github.com/jtblin/go-ldap-client"
-    //env "local.com/leobrada/ztsfc_http_pep/env"
     metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-//    proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 )
 
 var (
     Jwt_pub_key *rsa.PublicKey
     MySigningKey *rsa.PrivateKey
-//    Jwt_priv_key *rsa.*rsa.PrivateKey
 )
 
 func User_sessions_is_valid(req *http.Request, cpm *metadata.Cp_metadata) bool {
@@ -49,7 +43,6 @@ func User_sessions_is_valid(req *http.Request, cpm *metadata.Cp_metadata) bool {
 
 func Basic_auth(w http.ResponseWriter, req *http.Request) bool {
 
-//    proxies.Basic_auth_proxy.ServeHTTP(w, req)
     if perform_passwd_auth(w, req) {
         return true
     }
@@ -129,7 +122,7 @@ func createJWToken(mySigningKey *rsa.PrivateKey, username string) (string) {
     token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
     ss, _ := token.SignedString(mySigningKey)
 
-//    fmt.Printf("%v\n", ss)
+    // fmt.Printf("%v\n", ss)
     return ss
 }
 
