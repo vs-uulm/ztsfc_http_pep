@@ -3,6 +3,21 @@ pep:
   certs_pep_accepts_when_shown_by_clients:
     - /etc/the_pep/certs/external_client_certs/CA_root_1.crt
 
+ldap:
+  base: "ou=people,dc=planetexpress,dc=com"
+  host: "10.4.0.52"
+  port: 389
+  use_ssl: false
+  bind_dn: "cn=admin,dc=planetexpress,dc=com"
+  bind_password: "GoodNewsEveryone"
+  user_filter: "(uid=%s)"
+  group_filter: "(memberUid=%s)"
+  attributes:
+    - "givenName"
+    - "sn"
+    - "mail"
+    - "uid"
+
 service_pool:
   nginx:
     sni: service1.testbed.informatik.uni-ulm.de
