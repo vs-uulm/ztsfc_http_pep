@@ -27,6 +27,22 @@ type LDAP_t struct {
 	Attributes   []string `yaml:"attributes"`
 }
 
+type Pdp_t struct {
+	Target_pdp_addr                      string `yaml:"target_pdp_addr"`
+	Cert_shown_by_pep_to_pdp             string `yaml:"cert_shown_by_pep_to_pdp"`
+	Privkey_for_cert_shown_by_pep_to_pdp string `yaml:"privkey_for_cert_shown_by_pep_to_pdp"`
+	Cert_pep_accepts_shown_by_pdp        string `yaml:"cert_pep_accepts_shown_by_pdp"`
+	Pdp_client_pool_size                 string `yaml:"pdp_client_pool_size"`
+}
+
+type Sfpl_t struct {
+	Target_sfpl_addr                      string `yaml:"target_sfpl_addr"`
+	Cert_shown_by_pep_to_sfpl             string `yaml:"cert_shown_by_pep_to_sfpl"`
+	Privkey_for_cert_shown_by_pep_to_sfpl string `yaml:"privkey_for_cert_shown_by_pep_to_sfpl"`
+	Cert_pep_accepts_shown_by_sfpl        string `yaml:"cert_pep_accepts_shown_by_sfpl"`
+	sfpl_client_pool_size                 string `yaml:"sfpl_client_pool_size"`
+}
+
 type Service_t struct {
 	Sni                                       string `yaml:"sni"`
 	Target_service_addr                       string `yaml:"target_service_addr"`
@@ -52,6 +68,8 @@ type ServFunction_t struct {
 type Config_t struct {
 	Pep                               Pep_t                      `yaml:"pep"`
 	Ldap                              LDAP_t                     `yaml:"ldap"`
+	Pdp                               Pdp_t                      `yaml:"pdp"`
+	Sfp_logic                         Sfpl_t                     `yaml:"sfp_logic"`
 	Service_pool                      map[string]*Service_t      `yaml:"service_pool"`
 	Sf_pool                           map[string]*ServFunction_t `yaml:"sf_pool"`
 	CA_cert_pool_pep_accepts_from_ext *x509.CertPool

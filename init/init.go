@@ -2,6 +2,7 @@ package init
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -74,45 +75,38 @@ func LoadSfPool(config env.Config_t, sysLogger *logrus.Entry) error {
 	return err
 }
 
-func InitAllCACertificates(sysLogger *logrus.Entry) error {
-	var caRoot []byte
-	var err error
+func InitAllCACertificates(sysLogger *logrus.Entry) {
 
 	// Read CA certs used for signing client certs and are accepted by the PEP
 	for _, acceptedClientCert := range env.Config.Pep.Certs_pep_accepts_when_shown_by_clients {
-		caRoot, err = ioutil.ReadFile(acceptedClientCert)
-		if err != nil {
-			sysLogger.Fatalf("Loading client CA certificate from %s error", acceptedClientCert)
-		} else {
-			sysLogger.Debugf("Client CA certificate from %s is successfully loaded", acceptedClientCert)
-		}
-		// Append a certificate to the pool
-		env.Config.CA_cert_pool_pep_accepts_from_ext.AppendCertsFromPEM(caRoot)
+		loadCertificate(sysLogger, acceptedClientCert, "client", env.Config.CA_cert_pool_pep_accepts_from_ext)
 	}
 
 	// Read CA certs used for signing client certs and are accepted by the PEP
 	for service_name, service_config := range env.Config.Service_pool {
-		caRoot, err = ioutil.ReadFile(service_config.Cert_pep_accepts_when_shown_by_service)
-		if err != nil {
-			sysLogger.Fatalf("Loading service %s CA certificate from %s error", service_name, service_config.Cert_pep_accepts_when_shown_by_service)
-		} else {
-			sysLogger.Debugf("Service %s CA certificate from %s is successfully loaded", service_name, service_config.Cert_pep_accepts_when_shown_by_service)
-		}
-		// Append a certificate to the pool
-		env.Config.CA_cert_pool_pep_accepts_from_int.AppendCertsFromPEM(caRoot)
+		loadCertificate(sysLogger, service_config.Cert_pep_accepts_when_shown_by_service, "service "+service_name, env.Config.CA_cert_pool_pep_accepts_from_int)
 	}
 
 	for sf_name, sf_config := range env.Config.Sf_pool {
-		caRoot, err = ioutil.ReadFile(sf_config.Cert_pep_accepts_shown_by_sf)
-		if err != nil {
-			sysLogger.Fatalf("Loading service function %s CA certificate from %s error", sf_name, sf_config.Cert_pep_accepts_shown_by_sf)
-		} else {
-			sysLogger.Debugf("Service function %s CA certificate from %s is successfully loaded", sf_name, sf_config.Cert_pep_accepts_shown_by_sf)
-		}
-		// Append a certificate to the pool
-		env.Config.CA_cert_pool_pep_accepts_from_int.AppendCertsFromPEM(caRoot)
+		loadCertificate(sysLogger, sf_config.Cert_pep_accepts_shown_by_sf, "service function "+sf_name, env.Config.CA_cert_pool_pep_accepts_from_int)
 	}
-	return err
+
+	// Read certs accepted for PDP
+	loadCertificate(sysLogger, env.Config.Pdp.Cert_pep_accepts_shown_by_pdp, "PDP", env.Config.CA_cert_pool_pep_accepts_from_int)
+
+	// Read certs accepted for SFP logic
+	loadCertificate(sysLogger, env.Config.Sfp_logic.Cert_pep_accepts_shown_by_sfpl, "SFP_logic", env.Config.CA_cert_pool_pep_accepts_from_int)
+}
+
+func loadCertificate(sysLogger *logrus.Entry, certfile string, componentName string, certPool *x509.CertPool) {
+	caRoot, err := ioutil.ReadFile(certfile)
+	if err != nil {
+		sysLogger.Fatalf("Loading %s CA certificate from %s error", componentName, certfile)
+	} else {
+		sysLogger.Debugf("%s CA certificate from %s is successfully loaded", componentName, certfile)
+	}
+	// Append a certificate to the pool
+	certPool.AppendCertsFromPEM(caRoot)
 }
 
 func SetupCloseHandler(lw *logwriter.LogWriter) {

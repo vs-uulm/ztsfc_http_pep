@@ -66,12 +66,8 @@ func init() {
 	env.Config.CA_cert_pool_pep_accepts_from_int = x509.NewCertPool()
 
 	// Load all CA certificates
-	err = sf_init.InitAllCACertificates(sysLogger)
-	if err != nil {
-		sysLogger.Fatalf("Loading CA certificates pool - ERROR: %v", err)
-	} else {
-		sysLogger.WithFields(logrus.Fields{"type": "system"}).Debug("Loading CA certificates pool - OK")
-	}
+	sf_init.InitAllCACertificates(sysLogger)
+	sysLogger.Debug("Loading CA certificates pool - OK")
 
 	// Init Reverse Proxies used for the modules
 	proxies.Basic_auth_proxy = proxies.NewBasicAuthProxy()

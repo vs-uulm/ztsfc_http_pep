@@ -18,6 +18,20 @@ ldap:
     - "mail"
     - "uid"
 
+pdp:
+  target_pdp_addr: "https://10.4.0.52:8888"
+  cert_shown_by_pep_to_pdp:
+  privkey_for_cert_shown_by_pep_to_pdp:
+  cert_pep_accepts_shown_by_pdp:
+  pdp_client_pool_size: 50
+
+sfp_logic:
+  target_sfpl_addr: "https://10.4.0.52:8888"
+  cert_shown_by_pep_to_sfpl:
+  privkey_for_cert_shown_by_pep_to_sfpl:
+  cert_pep_accepts_shown_by_sfpl:
+  sfpl_client_pool_size: 50
+
 service_pool:
   nginx:
     sni: service1.testbed.informatik.uni-ulm.de
