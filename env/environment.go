@@ -8,7 +8,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
-	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
 )
 
 type Pep_t struct {
@@ -62,13 +61,13 @@ type Config_t struct {
 var Config Config_t
 
 // Parses a configuration yaml file into the global Config variable
-func LoadConfig(configPath string, lw *logwriter.LogWriter) (err error) {
+func LoadConfig(configPath string, sysLogger *logrus.Entry) (err error) {
 	// Open config file
 	file, err := os.Open(configPath)
 	if err != nil {
-		lw.Logger.WithFields(logrus.Fields{"type": "system"}).Fatalf("Open configuration file error: %v", err)
+		sysLogger.Fatalf("Open configuration file error: %v", err)
 	} else {
-		lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("Configuration file %s exists and is readable", configPath)
+		sysLogger.Debugf("Configuration file %s exists and is readable", configPath)
 	}
 	defer file.Close()
 
@@ -78,9 +77,9 @@ func LoadConfig(configPath string, lw *logwriter.LogWriter) (err error) {
 	// Start YAML decoding from file
 	err = d.Decode(&Config)
 	if err != nil {
-		lw.Logger.WithFields(logrus.Fields{"type": "system"}).Fatalf("Configuration yaml-->go decoding error: %v", err)
+		sysLogger.Fatalf("Configuration yaml-->go decoding error: %v", err)
 	} else {
-		lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("Configuration has been successfully decoded")
+		sysLogger.Debugf("Configuration has been successfully decoded")
 	}
 
 	return

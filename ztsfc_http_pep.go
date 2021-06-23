@@ -38,7 +38,7 @@ func init() {
 	sf_init.SetupCloseHandler(lw)
 
 	// Loading all config parameter from config file defined in "conf_file_path"
-	err := env.LoadConfig(conf_file_path, lw)
+	err := env.LoadConfig(conf_file_path, sysLogger)
 	if err != nil {
 		sysLogger.Fatalf("Loading logger configuration from %s - ERROR: %v", conf_file_path, err)
 	} else {
@@ -46,7 +46,7 @@ func init() {
 	}
 
 	// Loading all service related information into env.Config
-	err = sf_init.LoadServicePool(env.Config, lw)
+	err = sf_init.LoadServicePool(env.Config, sysLogger)
 	if err != nil {
 		sysLogger.Fatalf("Loading service pool - ERROR: %v", err)
 	} else {
@@ -54,7 +54,7 @@ func init() {
 	}
 
 	// Loading all sf related information into env.Config
-	err = sf_init.LoadSfPool(env.Config, lw)
+	err = sf_init.LoadSfPool(env.Config, sysLogger)
 	if err != nil {
 		sysLogger.Fatalf("Loading service functions pool - ERROR: %v", err)
 	} else {
@@ -66,7 +66,7 @@ func init() {
 	env.Config.CA_cert_pool_pep_accepts_from_int = x509.NewCertPool()
 
 	// Load all CA certificates
-	err = sf_init.InitAllCACertificates(lw)
+	err = sf_init.InitAllCACertificates(sysLogger)
 	if err != nil {
 		sysLogger.Fatalf("Loading CA certificates pool - ERROR: %v", err)
 	} else {
