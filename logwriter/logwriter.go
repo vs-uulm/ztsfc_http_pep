@@ -87,15 +87,15 @@ func (lw LogWriter) Write(p []byte) (n int, err error) {
 	if !strings.Contains(output, ",success") {
 		if strings.HasSuffix(output, "\n") {
 			output = strings.TrimSuffix(output, "\n")
-        }
-//		if strings.HasSuffix(output, "\n") {
-//			output = strings.TrimSuffix(output, "\n") + ",denied"
-	//	} else {
-	//		output = output + ",denied"
-	//	}
+		}
+		//		if strings.HasSuffix(output, "\n") {
+		//			output = strings.TrimSuffix(output, "\n") + ",denied"
+		//	} else {
+		//		output = output + ",denied"
+		//	}
 		lw.Logger.WithFields(logrus.Fields{"result": "denied"}).Info(output)
 	} else {
-        output = strings.TrimSuffix(output, ",success")
+		output = strings.TrimSuffix(output, ",success")
 		lw.Logger.WithFields(logrus.Fields{"result": "success"}).Info(output)
 	}
 	return 1, nil
@@ -104,7 +104,7 @@ func (lw LogWriter) Write(p []byte) (n int, err error) {
 // The LogHTTPRequest() function prints HTTP request details into the log file
 // TODO Rename the function!
 func (lw *LogWriter) LogHTTPRequest(req *http.Request) {
-    // TODO: MAKE THIS BETTER
+	// TODO: MAKE THIS BETTER
 	lw.Write([]byte(fmt.Sprintf("%s,%s,%s,%t,%t,%s,success",
 		req.RemoteAddr,
 		req.TLS.ServerName,

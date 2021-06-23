@@ -1,22 +1,22 @@
 package pep_jwt
 
 import (
-    "time"
-    "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
+	"time"
 )
 
 func CreateToken() (ss string) {
-    mySigningKey := []byte("Alex")
+	mySigningKey := []byte("Alex")
 
-    claims := &jwt.StandardClaims{
-        ExpiresAt: time.Now().Add(time.Second * 15).Unix(),
-        Issuer: "alex",
-    }
+	claims := &jwt.StandardClaims{
+		ExpiresAt: time.Now().Add(time.Second * 15).Unix(),
+		Issuer:    "alex",
+	}
 
-    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-    ss, _ = token.SignedString(mySigningKey)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	ss, _ = token.SignedString(mySigningKey)
 
-    return ss
+	return ss
 }
 
 //func parseToken(ss string) {
