@@ -19,26 +19,10 @@ func LoadServicePool(config env.Config_t, sysLogger *logrus.Entry) error {
 	for service_name, service_config := range env.Config.Service_pool {
 
 		// Preload X509KeyPairs shown by pep to client
-		env.Config.Service_pool[service_name].X509KeyPair_shown_by_pep_to_client, err =
-			tls.LoadX509KeyPair(
-				service_config.Cert_shown_by_pep_to_clients_matching_sni,
-				service_config.Privkey_for_cert_shown_by_pep_to_client)
-		if err != nil {
-			sysLogger.Fatalf("Critical Error when loading external X509KeyPair for service %s from %s and %s: %v", service_name, service_config.Cert_shown_by_pep_to_clients_matching_sni, service_config.Privkey_for_cert_shown_by_pep_to_client, err)
-		} else {
-			sysLogger.Debugf("External X509KeyPair for service %s from %s and %s is successfully loaded", service_name, service_config.Cert_shown_by_pep_to_clients_matching_sni, service_config.Privkey_for_cert_shown_by_pep_to_client)
-		}
+		env.Config.Service_pool[service_name].X509KeyPair_shown_by_pep_to_client = loadX509KeyPair(sysLogger, service_config.Cert_shown_by_pep_to_clients_matching_sni, service_config.Privkey_for_cert_shown_by_pep_to_client, "service "+service_name, "external")
 
 		// Preload X509KeyPairs shown by pep to service
-		env.Config.Service_pool[service_name].X509KeyPair_shown_by_pep_to_service, err =
-			tls.LoadX509KeyPair(
-				service_config.Cert_shown_by_pep_to_service,
-				service_config.Privkey_for_cert_shown_by_pep_to_service)
-		if err != nil {
-			sysLogger.Fatalf("Critical Error when loading internal X509KeyPair for service %s from %s and %s: %v", service_name, service_config.Cert_shown_by_pep_to_service, service_config.Privkey_for_cert_shown_by_pep_to_service, err)
-		} else {
-			sysLogger.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("Internal X509KeyPair for service %s from %s and %s is successfully loaded", service_name, service_config.Cert_shown_by_pep_to_clients_matching_sni, service_config.Privkey_for_cert_shown_by_pep_to_client)
-		}
+		env.Config.Service_pool[service_name].X509KeyPair_shown_by_pep_to_service = loadX509KeyPair(sysLogger, service_config.Cert_shown_by_pep_to_service, service_config.Privkey_for_cert_shown_by_pep_to_service, "service "+service_name, "internal")
 
 		// Preparse Service URL
 		env.Config.Service_pool[service_name].Target_service_url, err = url.Parse(service_config.Target_service_addr)
@@ -55,14 +39,7 @@ func LoadSfPool(config env.Config_t, sysLogger *logrus.Entry) error {
 	var err error
 	for sf_name, sf_config := range env.Config.Sf_pool {
 		// preload X509KeyPairs shown by pep to sf
-		env.Config.Sf_pool[sf_name].X509KeyPair_shown_by_pep_to_sf, err = tls.LoadX509KeyPair(
-			sf_config.Cert_shown_by_pep_to_sf,
-			sf_config.Privkey_for_cert_shown_by_pep_to_sf)
-		if err != nil {
-			sysLogger.Fatalf("Critical Error when loading X509KeyPair for service function %s from %s and %s: %v", sf_name, sf_config.Cert_shown_by_pep_to_sf, sf_config.Privkey_for_cert_shown_by_pep_to_sf, err)
-		} else {
-			sysLogger.Debugf("X509KeyPair for service function %s from %s and %s is successfully loaded", sf_name, sf_config.Cert_shown_by_pep_to_sf, sf_config.Privkey_for_cert_shown_by_pep_to_sf)
-		}
+		env.Config.Sf_pool[sf_name].X509KeyPair_shown_by_pep_to_sf = loadX509KeyPair(sysLogger, sf_config.Cert_shown_by_pep_to_sf, sf_config.Privkey_for_cert_shown_by_pep_to_sf, "service function "+sf_name, "")
 
 		// Preparse SF URL
 		env.Config.Sf_pool[sf_name].Target_sf_url, err = url.Parse(sf_config.Target_sf_addr)
@@ -73,6 +50,16 @@ func LoadSfPool(config env.Config_t, sysLogger *logrus.Entry) error {
 		}
 	}
 	return err
+}
+
+func loadX509KeyPair(sysLogger *logrus.Entry, certfile, keyfile, componentName, certAttr string) tls.Certificate {
+	keyPair, err := tls.LoadX509KeyPair(certfile, keyfile)
+	if err != nil {
+		sysLogger.Fatalf("Critical Error when loading %s X509KeyPair for %s from %s and %s: %v", certAttr, componentName, certfile, keyfile, err)
+	} else {
+		sysLogger.Debugf("%s X509KeyPair for %s from %s and %s is successfully loaded", certAttr, componentName, certfile, keyfile)
+	}
+	return keyPair
 }
 
 func InitAllCACertificates(sysLogger *logrus.Entry) {
