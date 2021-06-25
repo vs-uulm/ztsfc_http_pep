@@ -14,7 +14,31 @@ import (
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
 )
 
-func LoadServicePool(config env.Config_t, sysLogger *logrus.Entry) error {
+func InitPepParams(sysLogger *logrus.Entry) {
+
+	// Read CA certs used for signing client certs and are accepted by the PEP
+	for _, acceptedClientCert := range env.Config.Pep.Certs_pep_accepts_when_shown_by_clients {
+		loadCACertificate(sysLogger, acceptedClientCert, "client", env.Config.CA_cert_pool_pep_accepts_from_ext)
+	}
+}
+
+func InitLdapParams(sysLogger *logrus.Entry) {
+
+}
+
+func InitPdpParams(sysLogger *logrus.Entry) {
+
+	// Preload CA certificate and append it to cert pool
+	loadCACertificate(sysLogger, env.Config.Pdp.Cert_pep_accepts_shown_by_pdp, "PDP", env.Config.CA_cert_pool_pep_accepts_from_int)
+}
+
+func InitSfplParams(sysLogger *logrus.Entry) {
+
+	// Preload CA certificate and append it to cert pool
+	loadCACertificate(sysLogger, env.Config.Sfp_logic.Cert_pep_accepts_shown_by_sfpl, "SFP_logic", env.Config.CA_cert_pool_pep_accepts_from_int)
+}
+
+func InitServicePoolParams(sysLogger *logrus.Entry) {
 	var err error
 	for service_name, service_config := range env.Config.Service_pool {
 
@@ -31,13 +55,16 @@ func LoadServicePool(config env.Config_t, sysLogger *logrus.Entry) error {
 		} else {
 			sysLogger.Debugf("target service URL for service %s was successfully parsed", service_name)
 		}
+
+		// Preload CA certificate and append it to cert pool
+		loadCACertificate(sysLogger, service_config.Cert_pep_accepts_when_shown_by_service, "service "+service_name, env.Config.CA_cert_pool_pep_accepts_from_int)
 	}
-	return err
 }
 
-func LoadSfPool(config env.Config_t, sysLogger *logrus.Entry) error {
+func InitSfPoolParams(sysLogger *logrus.Entry) {
 	var err error
 	for sf_name, sf_config := range env.Config.Sf_pool {
+
 		// preload X509KeyPairs shown by pep to sf
 		env.Config.Sf_pool[sf_name].X509KeyPair_shown_by_pep_to_sf = loadX509KeyPair(sysLogger, sf_config.Cert_shown_by_pep_to_sf, sf_config.Privkey_for_cert_shown_by_pep_to_sf, "service function "+sf_name, "")
 
@@ -48,8 +75,10 @@ func LoadSfPool(config env.Config_t, sysLogger *logrus.Entry) error {
 		} else {
 			sysLogger.Debugf("Target URL for service function %s was successfully parsed", sf_name)
 		}
+
+		// Preload CA certificate and append it to cert pool
+		loadCACertificate(sysLogger, sf_config.Cert_pep_accepts_shown_by_sf, "service function "+sf_name, env.Config.CA_cert_pool_pep_accepts_from_int)
 	}
-	return err
 }
 
 func loadX509KeyPair(sysLogger *logrus.Entry, certfile, keyfile, componentName, certAttr string) tls.Certificate {
@@ -62,30 +91,7 @@ func loadX509KeyPair(sysLogger *logrus.Entry, certfile, keyfile, componentName, 
 	return keyPair
 }
 
-func InitAllCACertificates(sysLogger *logrus.Entry) {
-
-	// Read CA certs used for signing client certs and are accepted by the PEP
-	for _, acceptedClientCert := range env.Config.Pep.Certs_pep_accepts_when_shown_by_clients {
-		loadCertificate(sysLogger, acceptedClientCert, "client", env.Config.CA_cert_pool_pep_accepts_from_ext)
-	}
-
-	// Read CA certs used for signing client certs and are accepted by the PEP
-	for service_name, service_config := range env.Config.Service_pool {
-		loadCertificate(sysLogger, service_config.Cert_pep_accepts_when_shown_by_service, "service "+service_name, env.Config.CA_cert_pool_pep_accepts_from_int)
-	}
-
-	for sf_name, sf_config := range env.Config.Sf_pool {
-		loadCertificate(sysLogger, sf_config.Cert_pep_accepts_shown_by_sf, "service function "+sf_name, env.Config.CA_cert_pool_pep_accepts_from_int)
-	}
-
-	// Read certs accepted for PDP
-	loadCertificate(sysLogger, env.Config.Pdp.Cert_pep_accepts_shown_by_pdp, "PDP", env.Config.CA_cert_pool_pep_accepts_from_int)
-
-	// Read certs accepted for SFP logic
-	loadCertificate(sysLogger, env.Config.Sfp_logic.Cert_pep_accepts_shown_by_sfpl, "SFP_logic", env.Config.CA_cert_pool_pep_accepts_from_int)
-}
-
-func loadCertificate(sysLogger *logrus.Entry, certfile string, componentName string, certPool *x509.CertPool) {
+func loadCACertificate(sysLogger *logrus.Entry, certfile string, componentName string, certPool *x509.CertPool) {
 	caRoot, err := ioutil.ReadFile(certfile)
 	if err != nil {
 		sysLogger.Fatalf("Loading %s CA certificate from %s error", componentName, certfile)

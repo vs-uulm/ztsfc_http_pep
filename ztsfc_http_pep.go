@@ -45,29 +45,17 @@ func init() {
 		sysLogger.Debugf("Loading logger configuration from %s - OK", conf_file_path)
 	}
 
-	// Loading all service related information into env.Config
-	err = sf_init.LoadServicePool(env.Config, sysLogger)
-	if err != nil {
-		sysLogger.Fatalf("Loading service pool - ERROR: %v", err)
-	} else {
-		sysLogger.Debug("Loading service pool - OK")
-	}
-
-	// Loading all sf related information into env.Config
-	err = sf_init.LoadSfPool(env.Config, sysLogger)
-	if err != nil {
-		sysLogger.Fatalf("Loading service functions pool - ERROR: %v", err)
-	} else {
-		sysLogger.Debug("Loading service functions pool - OK")
-	}
-
 	// Create Certificate Pools for the CA certificates used by the PEP
 	env.Config.CA_cert_pool_pep_accepts_from_ext = x509.NewCertPool()
 	env.Config.CA_cert_pool_pep_accepts_from_int = x509.NewCertPool()
 
-	// Load all CA certificates
-	sf_init.InitAllCACertificates(sysLogger)
-	sysLogger.Debug("Loading CA certificates pool - OK")
+	// Preload diverse parameters from config
+	sf_init.InitPepParams(sysLogger)
+	sf_init.InitLdapParams(sysLogger)
+	sf_init.InitPdpParams(sysLogger)
+	sf_init.InitSfplParams(sysLogger)
+	sf_init.InitServicePoolParams(sysLogger)
+	sf_init.InitSfPoolParams(sysLogger)
 
 	// Init Reverse Proxies used for the modules
 	proxies.Basic_auth_proxy = proxies.NewBasicAuthProxy()
