@@ -28,11 +28,17 @@ func InitLdapParams(sysLogger *logrus.Entry) {
 
 func InitPdpParams(sysLogger *logrus.Entry) {
 
+	// Preload X509KeyPair and write it to env
+	env.Config.Pdp.X509KeyPair_shown_by_pep_to_pdp = loadX509KeyPair(sysLogger, env.Config.Pdp.Cert_shown_by_pep_to_pdp, env.Config.Pdp.Privkey_for_cert_shown_by_pep_to_pdp, "PDP", "")
+
 	// Preload CA certificate and append it to cert pool
 	loadCACertificate(sysLogger, env.Config.Pdp.Cert_pep_accepts_shown_by_pdp, "PDP", env.Config.CA_cert_pool_pep_accepts_from_int)
 }
 
 func InitSfplParams(sysLogger *logrus.Entry) {
+
+	// Preload X509KeyPair and write it to env
+	env.Config.Sfp_logic.X509KeyPair_shown_by_pep_to_sfpl = loadX509KeyPair(sysLogger, env.Config.Sfp_logic.Cert_shown_by_pep_to_sfpl, env.Config.Sfp_logic.Privkey_for_cert_shown_by_pep_to_sfpl, "SFP_logic", "")
 
 	// Preload CA certificate and append it to cert pool
 	loadCACertificate(sysLogger, env.Config.Sfp_logic.Cert_pep_accepts_shown_by_sfpl, "SFP_logic", env.Config.CA_cert_pool_pep_accepts_from_int)

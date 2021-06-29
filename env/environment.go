@@ -33,6 +33,7 @@ type Pdp_t struct {
 	Privkey_for_cert_shown_by_pep_to_pdp string `yaml:"privkey_for_cert_shown_by_pep_to_pdp"`
 	Cert_pep_accepts_shown_by_pdp        string `yaml:"cert_pep_accepts_shown_by_pdp"`
 	Pdp_client_pool_size                 string `yaml:"pdp_client_pool_size"`
+	X509KeyPair_shown_by_pep_to_pdp      tls.Certificate
 }
 
 type Sfpl_t struct {
@@ -41,6 +42,7 @@ type Sfpl_t struct {
 	Privkey_for_cert_shown_by_pep_to_sfpl string `yaml:"privkey_for_cert_shown_by_pep_to_sfpl"`
 	Cert_pep_accepts_shown_by_sfpl        string `yaml:"cert_pep_accepts_shown_by_sfpl"`
 	sfpl_client_pool_size                 string `yaml:"sfpl_client_pool_size"`
+	X509KeyPair_shown_by_pep_to_sfpl      tls.Certificate
 }
 
 type Service_t struct {
