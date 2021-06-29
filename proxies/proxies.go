@@ -2,11 +2,12 @@ package proxies
 
 import (
 	"crypto/tls"
-	env "local.com/leobrada/ztsfc_http_pep/env"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"time"
+
+	env "local.com/leobrada/ztsfc_http_pep/env"
 )
 
 var (
@@ -58,15 +59,14 @@ func NewBasicAuthProxy() *httputil.ReverseProxy {
 	return proxy
 }
 
-func NewClientPool() []*http.Client {
-	client_pool := make([]*http.Client, 50)
+func NewClientPool(poolSize int, certShownByPEP tls.Certificate) []*http.Client {
+	client_pool := make([]*http.Client, poolSize)
 
-	for i := 0; i < 50; i++ {
+	for i := 0; i < poolSize; i++ {
 		pdp_client := new(http.Client)
 		pdp_client.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
-				// TODO: Replace it by loading the cert for the first SF in the chain
-				Certificates:       []tls.Certificate{env.Config.Sf_pool["dummy"].X509KeyPair_shown_by_pep_to_sf},
+				Certificates:       []tls.Certificate{certShownByPEP},
 				InsecureSkipVerify: true,
 				ClientAuth:         tls.RequireAndVerifyClientCert,
 				ClientCAs:          env.Config.CA_cert_pool_pep_accepts_from_int,

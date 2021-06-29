@@ -59,8 +59,8 @@ func init() {
 
 	// Init Reverse Proxies used for the modules
 	proxies.Basic_auth_proxy = proxies.NewBasicAuthProxy()
-	proxies.Pdp_client_pool = proxies.NewClientPool()
-	proxies.Sfp_logic_client_pool = proxies.NewClientPool()
+	proxies.Pdp_client_pool = proxies.NewClientPool(50, env.Config.Pdp.X509KeyPair_shown_by_pep_to_pdp)
+	proxies.Sfp_logic_client_pool = proxies.NewClientPool(50, env.Config.Sfp_logic.X509KeyPair_shown_by_pep_to_sfpl)
 
 	// TEST
 	//proxies.Service_proxy = proxies.NewServiceProxy()
