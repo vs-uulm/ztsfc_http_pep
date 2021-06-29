@@ -5,11 +5,12 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+
 	//    "crypto/tls"
 	//"strconv"
 	//"strings"
+	env "local.com/leobrada/ztsfc_http_pep/env"
 	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-	//  env "local.com/leobrada/ztsfc_http_pep/env"
 	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 	//    bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 )
@@ -19,7 +20,7 @@ func TransformSFCintoSFP(cpm *metadata.Cp_metadata) {
 
 	//    fmt.Printf("SFC BEFORE SENT TO SFP LOPGIC: %s\n", cpm.SFC)
 
-	sfp_req, err := http.NewRequest("GET", "https://10.4.0.52:8889", nil)
+	sfp_req, err := http.NewRequest("GET", env.Config.Sfp_logic.Target_sfpl_addr, nil)
 	if err != nil {
 		fmt.Printf("Error when sending to sfp logic (1): %v\n", err)
 	}

@@ -9,8 +9,8 @@ import (
 	//   "crypto/tls"
 	"strconv"
 	//"strings"
+	env "local.com/leobrada/ztsfc_http_pep/env"
 	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-	//    env "local.com/leobrada/ztsfc_http_pep/env"
 	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 	//    bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 )
@@ -19,7 +19,7 @@ import (
 func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) {
 	collectAttributes(req, cpm)
 
-	autho_req, _ := http.NewRequest("GET", "https://10.4.0.52:8888", nil)
+	autho_req, _ := http.NewRequest("GET", env.Config.Pdp.Target_pdp_addr, nil)
 	prepareAuthRequest(autho_req, cpm)
 	response, err := proxies.Pdp_client_pool[rand.Int()%50].Do(autho_req)
 
