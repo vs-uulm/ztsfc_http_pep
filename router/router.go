@@ -114,11 +114,15 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	//fmt.Printf("BEFORE JOINING: %s\n", md.SFP)
 
+	serviceConf, ok := env.Config.Service_SNI_map[md.Resource]
+	if !ok {
+		// TODO: catch error
+		return
+	}
 	if len(md.SFP) == 0 {
-		md.SFP = "https://10.5.0.53:443"
-
+		md.SFP = serviceConf.Target_service_addr
 	} else {
-		md.SFP = md.SFP + ",https://10.5.0.53:443"
+		md.SFP = md.SFP + "," + serviceConf.Target_service_addr
 	}
 
 	sfp_slices := strings.Split(md.SFP, ",")
