@@ -66,6 +66,7 @@ func InitServicePoolParams(sysLogger *logrus.Entry) {
 		loadCACertificate(sysLogger, service_config.Cert_pep_accepts_when_shown_by_service, "service "+service_name, env.Config.CA_cert_pool_pep_accepts_from_int)
 
 		// Create a map to directly access service config by SNI
+		env.Config.Service_SNI_map = make(map[string]*env.Service_t)
 		for _, service := range env.Config.Service_pool {
 			env.Config.Service_SNI_map[service.Sni] = service
 		}
