@@ -76,6 +76,7 @@ type Config_t struct {
 	Sf_pool                           map[string]*ServFunction_t `yaml:"sf_pool"`
 	CA_cert_pool_pep_accepts_from_ext *x509.CertPool
 	CA_cert_pool_pep_accepts_from_int *x509.CertPool
+	Service_SNI_map                   map[string]*Service_t
 }
 
 var Config Config_t

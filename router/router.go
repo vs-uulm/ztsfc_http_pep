@@ -3,18 +3,19 @@ package router
 import (
 	"crypto/tls"
 	"fmt"
-	pdp "local.com/leobrada/ztsfc_http_pep/authorization"
-	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
-	env "local.com/leobrada/ztsfc_http_pep/env"
-	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
-	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-	sfpl "local.com/leobrada/ztsfc_http_pep/sfp_logic"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
 	"time"
+
+	pdp "local.com/leobrada/ztsfc_http_pep/authorization"
+	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
+	env "local.com/leobrada/ztsfc_http_pep/env"
+	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
+	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
+	sfpl "local.com/leobrada/ztsfc_http_pep/sfp_logic"
 	//proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 )
 
@@ -41,12 +42,11 @@ func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 		ClientCAs:  env.Config.CA_cert_pool_pep_accepts_from_ext,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// load a suitable certificate that is shown to clients according the request domain/TLS SNI
-			for _, service := range env.Config.Service_pool {
-				if cli.ServerName == service.Sni {
-					return &service.X509KeyPair_shown_by_pep_to_client, nil
-				}
+			service, ok := env.Config.Service_SNI_map[cli.ServerName]
+			if !ok {
+				return nil, fmt.Errorf("Error: Could not serve a suitable certificate for %s\n", cli.ServerName)
 			}
-			return nil, fmt.Errorf("Error: Could not serve a suitable certificate for %s\n", cli.ServerName)
+			return &service.X509KeyPair_shown_by_pep_to_client, nil
 		},
 	}
 

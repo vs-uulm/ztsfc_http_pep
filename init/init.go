@@ -64,6 +64,11 @@ func InitServicePoolParams(sysLogger *logrus.Entry) {
 
 		// Preload CA certificate and append it to cert pool
 		loadCACertificate(sysLogger, service_config.Cert_pep_accepts_when_shown_by_service, "service "+service_name, env.Config.CA_cert_pool_pep_accepts_from_int)
+
+		// Create a map to directly access service config by SNI
+		for _, service := range env.Config.Service_pool {
+			env.Config.Service_SNI_map[service.Sni] = service
+		}
 	}
 }
 
@@ -100,7 +105,7 @@ func loadX509KeyPair(sysLogger *logrus.Entry, certfile, keyfile, componentName, 
 func loadCACertificate(sysLogger *logrus.Entry, certfile string, componentName string, certPool *x509.CertPool) {
 	caRoot, err := ioutil.ReadFile(certfile)
 	if err != nil {
-		sysLogger.Fatalf("Loading %s CA certificate from %s error", componentName, certfile)
+		sysLogger.Fatalf("Loading %s CA certificate from %s error: %v", componentName, certfile, err)
 	} else {
 		sysLogger.Debugf("%s CA certificate from %s is successfully loaded", componentName, certfile)
 	}
