@@ -119,24 +119,24 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		// TODO: catch error
 		return
 	}
+
+	var service_url *url.URL
 	if len(md.SFP) == 0 {
-		md.SFP = serviceConf.Target_service_addr
+		service_url, _ = url.Parse(serviceConf.Target_service_addr)
 	} else {
-		md.SFP = md.SFP + "," + serviceConf.Target_service_addr
+		md.SFP = md.SFP + ", " + serviceConf.Target_service_addr
+		sfp_slices := strings.Split(md.SFP, ",")
+		next_hop := sfp_slices[0]
+		//fmt.Printf("Next Hop: %s\n", next_hop)
+		sfp_slices = sfp_slices[1:]
+		if len(sfp_slices) != 0 {
+			md.SFP = strings.Join(sfp_slices[:], ",")
+			req.Header.Set("sfp", md.SFP)
+		}
+		service_url, _ = url.Parse(next_hop)
 	}
-
-	sfp_slices := strings.Split(md.SFP, ",")
-	next_hop := sfp_slices[0]
-	//fmt.Printf("Next Hop: %s\n", next_hop)
-	sfp_slices = sfp_slices[1:]
-	if len(sfp_slices) != 0 {
-		md.SFP = strings.Join(sfp_slices[:], ",")
-		req.Header.Set("sfp", md.SFP)
-	}
-
 	//    fmt.Printf("AFTER JOINING: %s\n", md.SFP)
 
-	service_url, _ := url.Parse(next_hop)
 	//fmt.Printf("SERVICE_RULM: %s\n", service_url.String())
 	proxy = httputil.NewSingleHostReverseProxy(service_url)
 
