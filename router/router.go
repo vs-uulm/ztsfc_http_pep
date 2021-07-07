@@ -26,9 +26,9 @@ type Router struct {
 	//    md         *metadata.Cp_metadata
 }
 
-func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
+func NewRouter() (*Router, error) {
 	router := new(Router)
-	router.lw = lw
+	router.lw = logwriter.LW
 
 	router.tls_config = &tls.Config{
 		Rand:                   nil,
@@ -61,7 +61,7 @@ func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 		ReadTimeout:  time.Hour * 1,
 		WriteTimeout: time.Hour * 1,
 		Handler:      mux,
-		ErrorLog:     log.New(lw, "", 0),
+		ErrorLog:     log.New(logwriter.LW, "", 0),
 	}
 
 	// Create metadata

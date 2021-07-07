@@ -114,13 +114,13 @@ func loadCACertificate(sysLogger *logrus.Entry, certfile string, componentName s
 	certPool.AppendCertsFromPEM(caRoot)
 }
 
-func SetupCloseHandler(lw *logwriter.LogWriter) {
+func SetupCloseHandler() {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debug("- Ctrl+C pressed in Terminal. Terminating...")
-		lw.Terminate()
+		logwriter.LW.Logger.WithFields(logrus.Fields{"type": "system"}).Debug("- Ctrl+C pressed in Terminal. Terminating...")
+		logwriter.LW.Terminate()
 		os.Exit(0)
 	}()
 }

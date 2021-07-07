@@ -21,7 +21,7 @@ var (
 	ifTextFormatter bool
 
 	// An instance of logwriter based on logrus
-	lw *logwriter.LogWriter
+	//lw *logwriter.LogWriter
 )
 
 func init() {
@@ -33,9 +33,9 @@ func init() {
 	// Operating input parameters
 	flag.Parse()
 
-	lw = logwriter.New(log_file_path, log_level, ifTextFormatter)
-	sysLogger := lw.Logger.WithFields(logrus.Fields{"type": "system"})
-	sf_init.SetupCloseHandler(lw)
+	logwriter.InitLogwriter(log_file_path, log_level, ifTextFormatter)
+	sysLogger := logwriter.LW.Logger.WithFields(logrus.Fields{"type": "system"})
+	sf_init.SetupCloseHandler()
 
 	// Loading all config parameter from config file defined in "conf_file_path"
 	err := env.LoadConfig(conf_file_path, sysLogger)
@@ -73,17 +73,17 @@ func init() {
 
 func main() {
 	// Create new PEP router
-	pep, err := router.NewRouter(lw)
+	pep, err := router.NewRouter()
 	if err != nil {
-		lw.Logger.Fatalf("Fatal error during new router creation: %v", err)
+		logwriter.LW.Logger.Fatalf("Fatal error during new router creation: %v", err)
 	} else {
-		lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debug("New router is successfully created")
+		logwriter.LW.Logger.WithFields(logrus.Fields{"type": "system"}).Debug("New router is successfully created")
 	}
 
 	http.Handle("/", pep)
 
 	err = pep.ListenAndServeTLS()
 	if err != nil {
-		lw.Logger.Fatalf("ListenAndServeTLS Fatal Error: %v", err)
+		logwriter.LW.Logger.Fatalf("ListenAndServeTLS Fatal Error: %v", err)
 	}
 }

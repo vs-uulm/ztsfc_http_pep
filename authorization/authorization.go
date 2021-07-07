@@ -19,7 +19,8 @@ import (
 func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) {
 	collectAttributes(req, cpm)
 
-	autho_req, _ := http.NewRequest("GET", env.Config.Pdp.Target_pdp_addr, nil)
+	autho_req, err := http.NewRequest("GET", env.Config.Pdp.Target_pdp_addr, nil)
+	// TODO: Catch error
 	prepareAuthRequest(autho_req, cpm)
 	response, err := proxies.Pdp_client_pool[rand.Int()%50].Do(autho_req)
 
