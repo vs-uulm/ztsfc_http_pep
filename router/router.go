@@ -16,14 +16,12 @@ import (
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
 	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
 	sfpl "local.com/leobrada/ztsfc_http_pep/sfp_logic"
-	//proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 )
 
 type Router struct {
 	tls_config *tls.Config
 	frontend   *http.Server
 	lw         *logwriter.LogWriter
-	//    md         *metadata.Cp_metadata
 }
 
 func NewRouter() (*Router, error) {
@@ -64,26 +62,19 @@ func NewRouter() (*Router, error) {
 		ErrorLog:     log.New(logwriter.LW, "", 0),
 	}
 
-	// Create metadata
-	//  router.md = new(metadata.Cp_metadata)
-
 	//http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 10000
 	//http.DefaultTransport.(*http.Transport).TLSHandshakeTimeout = 0 * time.Second
 
 	return router, nil
 }
 
-func (router *Router) SetUpSFC() bool {
-	return false
-}
-
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	//    start := time.Now()
-	//md.ClearMetadata()
+	// Used for measuring the time ServeHTTP runs
+	//start := time.Now()
 	md := new(metadata.Cp_metadata)
 
-	// Log all http requests incl. TLS information
-	//logwriter.Log_writer.LogHTTPRequest(req)
+	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
+	logwriter.LW.LogHTTPRequest(req)
 
 	// BASIC AUTHENTICATION
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
@@ -91,6 +82,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Check if user has a valid session already
 	if !bauth.User_sessions_is_valid(req, md) {
 		if !bauth.Basic_auth(w, req) {
+			//      fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
 			return
 		}
 	}
@@ -102,15 +94,16 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		//fmt.Println("Request was rejected due to too low trust score")
 		w.WriteHeader(503)
 		return
-	} else {
-		//fmt.Printf("Request was allowed with following sfc: %v\n", md.SFC)
 	}
+
+	//fmt.Printf("SFC: %s\n", md.SFC)
 
 	// SFP LOGIC
 	sfpl.TransformSFCintoSFP(md)
 
 	// If user could be authenticated, create ReverseProxy variable for the connection to serve
 	var proxy *httputil.ReverseProxy
+	var service_url *url.URL
 
 	//fmt.Printf("BEFORE JOINING: %s\n", md.SFP)
 
@@ -120,7 +113,6 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var service_url *url.URL
 	if len(md.SFP) == 0 {
 		service_url, _ = url.Parse(serviceConf.Target_service_addr)
 	} else {

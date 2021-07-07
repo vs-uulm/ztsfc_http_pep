@@ -35,7 +35,7 @@ func init() {
 
 	logwriter.InitLogwriter(log_file_path, log_level, ifTextFormatter)
 	sysLogger := logwriter.LW.Logger.WithFields(logrus.Fields{"type": "system"})
-	sf_init.SetupCloseHandler()
+	//sf_init.SetupCloseHandler()
 
 	// Loading all config parameter from config file defined in "conf_file_path"
 	err := env.LoadConfig(conf_file_path, sysLogger)
@@ -58,12 +58,10 @@ func init() {
 	sf_init.InitSfPoolParams(sysLogger)
 
 	// Init Reverse Proxies used for the modules
-	proxies.Basic_auth_proxy = proxies.NewBasicAuthProxy()
+	// Basic_auth_proxy currently not needed since BasicAuth is performed as part of the PEP
+	//proxies.Basic_auth_proxy = proxies.NewBasicAuthProxy()
 	proxies.Pdp_client_pool = proxies.NewClientPool(50, env.Config.Pdp.X509KeyPair_shown_by_pep_to_pdp)
 	proxies.Sfp_logic_client_pool = proxies.NewClientPool(50, env.Config.Sfp_logic.X509KeyPair_shown_by_pep_to_sfpl)
-
-	// TEST
-	//proxies.Service_proxy = proxies.NewServiceProxy()
 
 	// Init RSA Keys für JWT
 	bauth.Jwt_pub_key = bauth.ParseRsaPublicKeyFromPemStr("./basic_auth/jwt_test_pub.pem")
@@ -72,6 +70,10 @@ func init() {
 }
 
 func main() {
+	//    defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
+	//    defer profile.Start(profile.BlockProfile, profile.ProfilePath(".")).Stop()
+	//    defer profile.Start(profile.GoroutineProfile, profile.ProfilePath(".")).Stop()
+
 	// Create new PEP router
 	pep, err := router.NewRouter()
 	if err != nil {
