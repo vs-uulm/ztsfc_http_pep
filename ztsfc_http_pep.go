@@ -60,8 +60,8 @@ func init() {
 	// Init Reverse Proxies used for the modules
 	// Basic_auth_proxy currently not needed since BasicAuth is performed as part of the PEP
 	//proxies.Basic_auth_proxy = proxies.NewBasicAuthProxy()
-	proxies.Pdp_client_pool = proxies.NewClientPool(50, env.Config.Pdp.X509KeyPair_shown_by_pep_to_pdp)
-	proxies.Sfp_logic_client_pool = proxies.NewClientPool(50, env.Config.Sfp_logic.X509KeyPair_shown_by_pep_to_sfpl)
+	proxies.Pdp_client_pool = proxies.NewClientPool(env.Config.Pdp.Pdp_client_pool_size, env.Config.Pdp.X509KeyPair_shown_by_pep_to_pdp)
+	proxies.Sfp_logic_client_pool = proxies.NewClientPool(env.Config.Sfp_logic.Sfpl_client_pool_size, env.Config.Sfp_logic.X509KeyPair_shown_by_pep_to_sfpl)
 
 	// Init RSA Keys für JWT
 	bauth.Jwt_pub_key = bauth.ParseRsaPublicKeyFromPemStr("./basic_auth/jwt_test_pub.pem")
