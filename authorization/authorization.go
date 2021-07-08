@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
-	"os"
 	"strconv"
 
 	"local.com/leobrada/ztsfc_http_pep/env"
@@ -12,24 +11,28 @@ import (
 	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 )
 
-func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) {
+func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) error {
 	collectAttributes(req, cpm)
 
 	autho_req, err := http.NewRequest("GET", env.Config.Pdp.Target_pdp_addr, nil)
-	// TODO: Catch error
+	if err != nil {
+		return err
+	}
+
 	prepareAuthRequest(autho_req, cpm)
 	response, err := proxies.Pdp_client_pool[rand.Int()%50].Do(autho_req)
-
 	if err != nil {
-		fmt.Printf("Error when sending to pdp (2): %v\n", err)
-		fmt.Fprintf(os.Stderr, "Error when sending to pdp (2): %v\n", err)
+		return err
+		//fmt.Fprintf(os.Stderr, "Error when sending to pdp (2): %v\n", err)
 	}
 
 	cpm.SFC = response.Header.Get("sfc")
-	cpm.Auth_decision, _ = strconv.ParseBool(response.Header.Get("allow"))
+	cpm.Auth_decision, err = strconv.ParseBool(response.Header.Get("allow"))
+	if err != nil {
+		return fmt.Errorf("Header for auth decision '%s' is not a bool value", response.Header.Get("allow"))
+	}
 
-	cpm.SFC = response.Header.Get("sfc")
-	cpm.Auth_decision, _ = strconv.ParseBool(response.Header.Get("allow"))
+	return nil
 }
 
 func prepareAuthRequest(autho_req *http.Request, cpm *metadata.Cp_metadata) {

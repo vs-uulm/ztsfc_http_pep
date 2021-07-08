@@ -1,45 +1,32 @@
 package authorization
 
 import (
-	"fmt"
 	"math/rand"
 	"net/http"
-	"os"
 
-	//    "crypto/tls"
-	//"strconv"
-	//"strings"
 	env "local.com/leobrada/ztsfc_http_pep/env"
 	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
 	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
-	//    bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 )
 
-//func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) (allow bool, sfc []string) {
-func TransformSFCintoSFP(cpm *metadata.Cp_metadata) {
+func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 
 	//    fmt.Printf("SFC BEFORE SENT TO SFP LOPGIC: %s\n", cpm.SFC)
 
 	sfp_req, err := http.NewRequest("GET", env.Config.Sfp_logic.Target_sfpl_addr, nil)
 	if err != nil {
-		fmt.Printf("Error when sending to sfp logic (1): %v\n", err)
+		return err
 	}
 	prepareSFPRequest(sfp_req, cpm)
+
 	response, err := proxies.Sfp_logic_client_pool[rand.Int()%50].Do(sfp_req)
 	if err != nil {
-		fmt.Printf("Error when sending to sfp logic (2): %v\n", err)
-		fmt.Fprintf(os.Stderr, "Error when sending to sfp logic (2): %v\n", err)
+		return err
+		//fmt.Fprintf(os.Stderr, "Error when sending to sfp logic (2): %v\n", err)
 	}
-
 	cpm.SFP = response.Header.Get("sfp")
 
-	// if response.Header.Get("allow") == "yes" {
-	//     allow = true
-	// } else {
-	//     allow = false
-	// }
-
-	// return allow, sfc
+	return nil
 }
 
 func prepareSFPRequest(req *http.Request, cpm *metadata.Cp_metadata) {
