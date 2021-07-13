@@ -21,12 +21,10 @@ import (
 type Router struct {
 	tls_config *tls.Config
 	frontend   *http.Server
-	lw         *logwriter.LogWriter
 }
 
 func NewRouter() (*Router, error) {
 	router := new(Router)
-	router.lw = logwriter.LW
 
 	router.tls_config = &tls.Config{
 		Rand:                   nil,
@@ -60,6 +58,7 @@ func NewRouter() (*Router, error) {
 		WriteTimeout: time.Hour * 1,
 		Handler:      mux,
 		ErrorLog:     log.New(logwriter.LW, "", 0),
+		//ErrorLog:     log.New(logwriter.LW.Logger.WriterLevel(logrus.ErrorLevel), "", 0),
 	}
 
 	//http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 10000
@@ -121,21 +120,25 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if len(md.SFP) == 0 {
-		serviceURL, _ = url.Parse(serviceConf.Target_service_addr)
+		serviceURL, err = url.Parse(serviceConf.Target_service_addr)
+		if err != nil {
+			logwriter.LW.Logger.WithField("url", serviceConf.Target_service_addr).Error("Could not parse URL for service address")
+			return
+		}
 	} else {
 		md.SFP = md.SFP + ", " + serviceConf.Target_service_addr
-		sfp_slices := strings.Split(md.SFP, ",")
-		next_hop := sfp_slices[0]
-		logwriter.LW.Logger.Debugf("Next Hop: %s", next_hop)
+		sfpSlices := strings.Split(md.SFP, ",")
+		nextHop := sfpSlices[0]
+		logwriter.LW.Logger.Debugf("Next Hop: %s", nextHop)
 
-		sfp_slices = sfp_slices[1:]
-		if len(sfp_slices) != 0 {
-			md.SFP = strings.Join(sfp_slices[:], ",")
+		sfpSlices = sfpSlices[1:]
+		if len(sfpSlices) != 0 {
+			md.SFP = strings.Join(sfpSlices[:], ",")
 			req.Header.Set("sfp", md.SFP)
 		}
-		serviceURL, err = url.Parse(next_hop)
+		serviceURL, err = url.Parse(nextHop)
 		if err != nil {
-			logwriter.LW.Logger.WithField("url", next_hop).Error("Could not parse URL for next hop")
+			logwriter.LW.Logger.WithField("url", nextHop).Error("Could not parse URL for next hop")
 			return
 		}
 	}
@@ -144,7 +147,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	proxy = httputil.NewSingleHostReverseProxy(serviceURL)
 
-	proxy.ErrorLog = log.New(router.lw, "", 0)
+	proxy.ErrorLog = log.New(logwriter.LW, "", 0)
+	//proxy.ErrorLog = log.New(logwriter.LW.Logger.WriterLevel(logrus.ErrorLevel), "", 0)
 
 	// When the PEP is acting as a client; this defines his behavior
 	proxy.Transport = &http.Transport{
