@@ -112,6 +112,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// If user could be authenticated, create ReverseProxy variable for the connection to serve
 	var proxy *httputil.ReverseProxy
 	var serviceURL *url.URL
+	var certShownByPEP tls.Certificate
 
 	serviceConf, ok := env.Config.Service_SNI_map[md.Resource]
 	if !ok {
@@ -120,27 +121,28 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if len(md.SFP) == 0 {
-		serviceURL, err = url.Parse(serviceConf.Target_service_addr)
-		if err != nil {
-			logwriter.LW.Logger.WithField("url", serviceConf.Target_service_addr).Error("Could not parse URL for service address")
-			return
-		}
+		serviceURL = serviceConf.Target_service_url
+
+		certShownByPEP = serviceConf.X509KeyPair_shown_by_pep_to_service
 	} else {
 		md.SFP = md.SFP + ", " + serviceConf.Target_service_addr
 		sfpSlices := strings.Split(md.SFP, ",")
 		nextHop := sfpSlices[0]
 		logwriter.LW.Logger.Debugf("Next Hop: %s", nextHop)
+		nextHopConf, ok := env.Config.Sf_pool[nextHop]
+		if !ok {
+			logwriter.LW.Logger.WithField("sf", nextHop).Error("First SF from the SFP does not exist in config file.")
+			return
+		}
 
 		sfpSlices = sfpSlices[1:]
 		if len(sfpSlices) != 0 {
 			md.SFP = strings.Join(sfpSlices[:], ",")
 			req.Header.Set("sfp", md.SFP)
 		}
-		serviceURL, err = url.Parse(nextHop)
-		if err != nil {
-			logwriter.LW.Logger.WithField("url", nextHop).Error("Could not parse URL for next hop")
-			return
-		}
+		serviceURL = nextHopConf.Target_sf_url
+
+		certShownByPEP = nextHopConf.X509KeyPair_shown_by_pep_to_sf
 	}
 	logwriter.LW.Logger.Debugf("SFP after joining: %s", md.SFP)
 	logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
@@ -155,8 +157,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		IdleConnTimeout:     10 * time.Second,
 		MaxIdleConnsPerHost: 10000,
 		TLSClientConfig: &tls.Config{
-			// TODO: Replace it by loading the cert for the first SF in the chain
-			Certificates:       []tls.Certificate{env.Config.Sf_pool["dummy"].X509KeyPair_shown_by_pep_to_sf},
+			Certificates:       []tls.Certificate{certShownByPEP},
 			InsecureSkipVerify: true,
 			ClientAuth:         tls.RequireAndVerifyClientCert,
 			ClientCAs:          env.Config.CA_cert_pool_pep_accepts_from_int,
