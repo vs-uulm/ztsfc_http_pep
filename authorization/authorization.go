@@ -11,10 +11,16 @@ import (
 	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 )
 
+const (
+	// @author:marie
+	// Last part of the endpoint's request URI of the PDP API
+	requestEndpoint = "/v1/authorization"
+)
+
 func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) error {
 	collectAttributes(req, cpm)
 
-	autho_req, err := http.NewRequest("GET", env.Config.Pdp.Target_pdp_addr, nil)
+	autho_req, err := http.NewRequest("GET", env.Config.Pdp.Target_pdp_addr+requestEndpoint, nil)
 	if err != nil {
 		return err
 	}
@@ -35,16 +41,18 @@ func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) error {
 	return nil
 }
 
-func prepareAuthRequest(autho_req *http.Request, cpm *metadata.Cp_metadata) {
-	autho_req.Header.Set("user", cpm.User)
-	autho_req.Header.Set("pwAuthenticated", strconv.FormatBool(cpm.Pw_authenticated))
-	autho_req.Header.Set("certAuthenticated", strconv.FormatBool(cpm.Cert_authenticated))
-	autho_req.Header.Set("resource", cpm.Resource)
-	autho_req.Header.Set("action", cpm.Action)
-	autho_req.Header.Set("device", cpm.Device)
-	autho_req.Header.Set("requestToday", cpm.RequestToday)
-	autho_req.Header.Set("failedToday", cpm.FailedToday)
-	autho_req.Header.Set("location", cpm.Location)
+func prepareAuthRequest(req *http.Request, cpm *metadata.Cp_metadata) {
+	// @author:marie
+	// send parameters as a query parameter instead of custom header
+	req.URL.Query().Set("user", cpm.User)
+	req.URL.Query().Set("pwAuthenticated", strconv.FormatBool(cpm.Pw_authenticated))
+	req.URL.Query().Set("certAuthenticated", strconv.FormatBool(cpm.Cert_authenticated))
+	req.URL.Query().Set("resource", cpm.Resource)
+	req.URL.Query().Set("action", cpm.Action)
+	req.URL.Query().Set("device", cpm.Device)
+	req.URL.Query().Set("requestToday", cpm.RequestToday)
+	req.URL.Query().Set("failedToday", cpm.FailedToday)
+	req.URL.Query().Set("location", cpm.Location)
 }
 
 func collectAttributes(req *http.Request, cpm *metadata.Cp_metadata) {

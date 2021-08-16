@@ -9,11 +9,15 @@ import (
 	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 )
 
+const (
+	// @author:marie
+	// Last part of the endpoint's request URI of the PDP API
+	requestEndpoint = "/v1/authorization"
+)
+
 func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 
-	//    fmt.Printf("SFC BEFORE SENT TO SFP LOPGIC: %s\n", cpm.SFC)
-
-	sfp_req, err := http.NewRequest("GET", env.Config.Sfp_logic.Target_sfpl_addr, nil)
+	sfp_req, err := http.NewRequest("GET", env.Config.Sfp_logic.Target_sfpl_addr+requestEndpoint, nil)
 	if err != nil {
 		return err
 	}
@@ -22,7 +26,6 @@ func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 	response, err := proxies.Sfp_logic_client_pool[rand.Int()%50].Do(sfp_req)
 	if err != nil {
 		return err
-		//fmt.Fprintf(os.Stderr, "Error when sending to sfp logic (2): %v\n", err)
 	}
 	cpm.SFP = response.Header.Get("sfp")
 
@@ -30,8 +33,10 @@ func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 }
 
 func prepareSFPRequest(req *http.Request, cpm *metadata.Cp_metadata) {
-	//    fmt.Printf("cpm.SFC value: %s\n", cpm.SFC)
-	req.Header.Set("sfc", cpm.SFC)
-	//    fmt.Printf("HTTP Header: %s\n", req.Header.Get("sfc"))
-	//    fmt.Fprintf(os.Stderr, "HTTP Header: %s\n", req.Header.Get("sfc"))
+
+	// @author:marie
+	// send sfc as a query parameter instead of custom header
+	req.URL.Query().Set("sfc", cpm.SFC)
+	// req.Header.Set("sfc", cpm.SFC)
+
 }
