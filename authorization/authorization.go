@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"local.com/leobrada/ztsfc_http_pep/env"
+	"local.com/leobrada/ztsfc_http_pep/logwriter"
 	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
 	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 )
@@ -46,6 +47,7 @@ func PerformAuthorization(clientReq *http.Request, cpm *metadata.Cp_metadata) er
 		return fmt.Errorf("Could not parse json answer from PDP: %v", err)
 	}
 
+	logwriter.LW.Logger.Debugf("Response from PDP: %v", authRes)
 	cpm.SFC = authRes.Sfc
 	cpm.Auth_decision = authRes.Allow
 
