@@ -19,20 +19,20 @@ const (
 )
 
 type authResponse struct {
-	allow bool
-	sfc   []string
+	Allow bool     `json:"allow"`
+	Sfc   []string `json:"sfc"`
 }
 
-func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) error {
-	collectAttributes(req, cpm)
+func PerformAuthorization(clientReq *http.Request, cpm *metadata.Cp_metadata) error {
+	collectAttributes(clientReq, cpm)
 
-	autho_req, err := http.NewRequest("GET", env.Config.Pdp.Target_pdp_addr+requestEndpoint, nil)
+	req, err := http.NewRequest("GET", env.Config.Pdp.Target_pdp_addr+requestEndpoint, nil)
 	if err != nil {
 		return err
 	}
 
-	prepareAuthRequest(autho_req, cpm)
-	resp, err := proxies.Pdp_client_pool[rand.Int()%50].Do(autho_req)
+	prepareAuthRequest(req, cpm)
+	resp, err := proxies.Pdp_client_pool[rand.Int()%50].Do(req)
 	if err != nil {
 		return err
 		//fmt.Fprintf(os.Stderr, "Error when sending to pdp (2): %v\n", err)
@@ -46,8 +46,8 @@ func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) error {
 		return fmt.Errorf("Could not parse json answer from PDP: %v", err)
 	}
 
-	cpm.SFC = authRes.sfc
-	cpm.Auth_decision = authRes.allow
+	cpm.SFC = authRes.Sfc
+	cpm.Auth_decision = authRes.Allow
 
 	return nil
 }

@@ -43,7 +43,7 @@ service_pool:
     cert_pep_accepts_when_shown_by_service: /etc/the_pep/certs/dataPlane_service_certs/nginx_root.crt
 
 sf_pool:
-  dummy:
+  logger:
     target_sf_addr: "https://10.5.0.54:443"
     cert_shown_by_pep_to_sf: /etc/the_pep/certs/dataPlane_pep_certs/server.crt
     privkey_for_cert_shown_by_pep_to_sf: /etc/the_pep/certs/dataPlane_pep_certs/private.key
