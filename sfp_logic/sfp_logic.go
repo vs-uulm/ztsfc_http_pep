@@ -15,7 +15,7 @@ import (
 const (
 	// @author:marie
 	// Last part of the endpoint's request URI of the PDP API
-	requestEndpoint = "/v1/authorization"
+	requestEndpoint = "/v1/sfp"
 )
 
 type sfpResponse struct {
