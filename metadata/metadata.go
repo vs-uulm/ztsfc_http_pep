@@ -11,8 +11,8 @@ type Cp_metadata struct {
 	RequestToday       string
 	FailedToday        string
 	Location           string
-	SFC                string
-	SFP                string
+	SFC                []string
+	SFP                []string
 }
 
 func (cpm *Cp_metadata) ClearMetadata() {
@@ -26,6 +26,6 @@ func (cpm *Cp_metadata) ClearMetadata() {
 	cpm.RequestToday = ""
 	cpm.FailedToday = ""
 	cpm.Location = ""
-	cpm.SFC = ""
-	cpm.SFP = ""
+	cpm.SFC = []string{}
+	cpm.SFP = []string{}
 }

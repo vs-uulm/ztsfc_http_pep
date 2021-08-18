@@ -101,14 +101,6 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	logwriter.LW.Logger.Debugf("Request passed PDP. SFC: %s", md.SFC)
 
-	// SFP LOGIC
-	err = sfpl.TransformSFCintoSFP(md)
-	if err != nil {
-		logwriter.LW.Logger.WithField("issuer", "SFP Logic").Error(err)
-		return
-	}
-	logwriter.LW.Logger.Debugf("Request passed SFP logic. SFP before joining with service url: %s", md.SFP)
-
 	// If user could be authenticated, create ReverseProxy variable for the connection to serve
 	var proxy *httputil.ReverseProxy
 	var serviceURL *url.URL
@@ -120,31 +112,58 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if len(md.SFP) == 0 {
-		serviceURL = serviceConf.Target_service_url
+	// SFP LOGIC
 
+	// @author:marie
+	// only connect to SFP logic, if SFC is not empty
+	if len(md.SFC) == 0 {
+
+		logwriter.LW.Logger.Debug("SFC is empty. Thus, no forwarding to SFP logic")
+		serviceURL = serviceConf.Target_service_url
 		certShownByPEP = serviceConf.X509KeyPair_shown_by_pep_to_service
+
 	} else {
-		md.SFP = md.SFP + ", " + serviceConf.Target_service_addr
-		sfpSlices := strings.Split(md.SFP, ",")
-		nextHop := sfpSlices[0]
+
+		err = sfpl.TransformSFCintoSFP(md)
+		if err != nil {
+			logwriter.LW.Logger.WithField("issuer", "SFP Logic").Error(err)
+			return
+		}
+		logwriter.LW.Logger.Debugf("Request passed SFP logic. SFP before joining with service url: %s", md.SFP)
+
+		// @author:marie
+		// identify next hop, find its config and set serviceURL and cert respectively
+		nextHop := md.SFP[0]
 		logwriter.LW.Logger.Debugf("Next Hop: %s", nextHop)
 		nextHopConf, ok := env.Config.Sf_pool[nextHop]
 		if !ok {
 			logwriter.LW.Logger.WithField("sf", nextHop).Error("First SF from the SFP does not exist in config file.")
 			return
 		}
-
-		sfpSlices = sfpSlices[1:]
-		if len(sfpSlices) != 0 {
-			md.SFP = strings.Join(sfpSlices[:], ",")
-			req.Header.Set("sfp", md.SFP)
-		}
 		serviceURL = nextHopConf.Target_sf_url
-
 		certShownByPEP = nextHopConf.X509KeyPair_shown_by_pep_to_sf
+
+		// @author:marie
+		// translate SF identifiers into ip addresses for remaining SFs
+		var ipAddresses []string
+		for _, sf := range md.SFP[1:] {
+			sfConf, ok := env.Config.Sf_pool[sf]
+			if !ok {
+				logwriter.LW.Logger.WithField("sf", sf).Error("SF id returned by SFP logic has no match in config file")
+				return
+			}
+			ipAddresses = append(ipAddresses, sfConf.Target_sf_addr)
+		}
+
+		// @author:marie
+		// finally append target service to list of SFP addresses, create a string of them and set this as header for following SFs
+		ipAddresses = append(ipAddresses, serviceConf.Target_service_addr)
+		addressesStr := strings.Join(ipAddresses, ",")
+		logwriter.LW.Logger.Debugf("SFP as presented to following SFs: %s", addressesStr)
+
+		req.Header.Set("sfp", addressesStr)
+
 	}
-	logwriter.LW.Logger.Debugf("SFP after joining: %s", md.SFP)
 	logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
 
 	proxy = httputil.NewSingleHostReverseProxy(serviceURL)

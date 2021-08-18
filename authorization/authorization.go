@@ -1,6 +1,7 @@
 package authorization
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -17,6 +18,11 @@ const (
 	requestEndpoint = "/v1/authorization"
 )
 
+type authResponse struct {
+	allow bool
+	sfc   []string
+}
+
 func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) error {
 	collectAttributes(req, cpm)
 
@@ -26,17 +32,22 @@ func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) error {
 	}
 
 	prepareAuthRequest(autho_req, cpm)
-	response, err := proxies.Pdp_client_pool[rand.Int()%50].Do(autho_req)
+	resp, err := proxies.Pdp_client_pool[rand.Int()%50].Do(autho_req)
 	if err != nil {
 		return err
 		//fmt.Fprintf(os.Stderr, "Error when sending to pdp (2): %v\n", err)
 	}
 
-	cpm.SFC = response.Header.Get("sfc")
-	cpm.Auth_decision, err = strconv.ParseBool(response.Header.Get("allow"))
+	// @author:marie
+	// Decode json body received from PDP
+	var authRes authResponse
+	err = json.NewDecoder(resp.Body).Decode(&authRes)
 	if err != nil {
-		return fmt.Errorf("Header for auth decision '%s' is not a bool value", response.Header.Get("allow"))
+		return fmt.Errorf("Could not parse json answer from PDP: %v", err)
 	}
+
+	cpm.SFC = authRes.sfc
+	cpm.Auth_decision = authRes.allow
 
 	return nil
 }

@@ -1,6 +1,8 @@
 package authorization
 
 import (
+	"encoding/json"
+	"fmt"
 	"math/rand"
 	"net/http"
 
@@ -23,11 +25,17 @@ func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 	}
 	prepareSFPRequest(sfp_req, cpm)
 
-	response, err := proxies.Sfp_logic_client_pool[rand.Int()%50].Do(sfp_req)
+	resp, err := proxies.Sfp_logic_client_pool[rand.Int()%50].Do(sfp_req)
 	if err != nil {
 		return err
 	}
-	cpm.SFP = response.Header.Get("sfp")
+
+	// @author:marie
+	// Decode json body received from SFP logic
+	err = json.NewDecoder(resp.Body).Decode(&cpm.SFP)
+	if err != nil {
+		return fmt.Errorf("Could not parse json answer from sfp logic: %v", err)
+	}
 
 	return nil
 }
@@ -35,8 +43,10 @@ func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 func prepareSFPRequest(req *http.Request, cpm *metadata.Cp_metadata) {
 
 	// @author:marie
-	// send sfc as a query parameter instead of custom header
-	req.URL.Query().Set("sfc", cpm.SFC)
+	// send SFC as a query parameter instead of custom header
+	for _, sf := range cpm.SFC {
+		req.URL.Query().Add("sf", sf)
+	}
 	// req.Header.Set("sfc", cpm.SFC)
 
 }
