@@ -21,7 +21,7 @@ const (
 
 type authResponse struct {
 	Allow bool     `json:"allow"`
-	Sfc   []string `json:"sfc"`
+	SFC   []string `json:"sfc"`
 }
 
 func PerformAuthorization(clientReq *http.Request, cpm *metadata.Cp_metadata) error {
@@ -48,7 +48,7 @@ func PerformAuthorization(clientReq *http.Request, cpm *metadata.Cp_metadata) er
 	}
 
 	logwriter.LW.Logger.Debugf("Response from PDP: %v", authRes)
-	cpm.SFC = authRes.Sfc
+	cpm.SFC = authRes.SFC
 	cpm.Auth_decision = authRes.Allow
 
 	return nil

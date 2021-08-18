@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	env "local.com/leobrada/ztsfc_http_pep/env"
+	"local.com/leobrada/ztsfc_http_pep/logwriter"
 	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
 	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 )
@@ -16,6 +17,10 @@ const (
 	// Last part of the endpoint's request URI of the PDP API
 	requestEndpoint = "/v1/authorization"
 )
+
+type sfpResponse struct {
+	SFP []string `json:"sfp"`
+}
 
 func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 
@@ -32,10 +37,14 @@ func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 
 	// @author:marie
 	// Decode json body received from SFP logic
-	err = json.NewDecoder(resp.Body).Decode(&cpm.SFP)
+	var sfpRes sfpResponse
+	err = json.NewDecoder(resp.Body).Decode(&sfpRes)
 	if err != nil {
 		return fmt.Errorf("Could not parse json answer from sfp logic: %v", err)
 	}
+
+	logwriter.LW.Logger.Debugf("Response from PDP: %v", sfpRes)
+	cpm.SFP = sfpRes.SFP
 
 	return nil
 }
