@@ -87,11 +87,7 @@ func (lw LogWriter) Write(p []byte) (n int, err error) {
 		if strings.HasSuffix(output, "\n") {
 			output = strings.TrimSuffix(output, "\n")
 		}
-		//		if strings.HasSuffix(output, "\n") {
-		//			output = strings.TrimSuffix(output, "\n") + ",denied"
-		//	} else {
-		//		output = output + ",denied"
-		//	}
+
 		lw.Logger.WithFields(logrus.Fields{"result": "denied"}).Info(output)
 	} else {
 		output = strings.TrimSuffix(output, ",success")

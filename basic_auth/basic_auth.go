@@ -92,7 +92,6 @@ func perform_passwd_auth(w http.ResponseWriter, req *http.Request) bool {
 		// Create JWT
 		//MySigningKey := parseRsaiPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
 		ss := createJWToken(MySigningKey, username)
-		//fmt.Println(ss)
 
 		ztsfc_cookie := http.Cookie{
 			Name:   "ztsfc_session",
@@ -124,7 +123,6 @@ func createJWToken(mySigningKey *rsa.PrivateKey, username string) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	ss, _ := token.SignedString(mySigningKey)
 
-	// fmt.Printf("%v\n", ss)
 	return ss
 }
 
@@ -221,8 +219,6 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
         </body>
         </html>
         `
-
-	//fmt.Println(msg)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprintf(w, form)
 }

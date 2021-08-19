@@ -47,17 +47,3 @@ func NewServiceInfo(_sf_name string, _dst_url *url.URL, _cert_path string, _key_
 
 	return sf_info, nil
 }
-
-/*
-func (mw *Middleware) (req *http.Request) (error){
-
-}
-
-func (mw *Middleware) Evaluate(req *http.Request) (error){
-
-}
-
-func (mw *Middleware) ServeHTTP(req *http.Request) (error, bool){
-    // TODO: implement
-}
-*/

@@ -35,8 +35,7 @@ func PerformAuthorization(clientReq *http.Request, cpm *metadata.Cp_metadata) er
 	prepareAuthRequest(req, cpm)
 	resp, err := proxies.Pdp_client_pool[rand.Int()%50].Do(req)
 	if err != nil {
-		return err
-		//fmt.Fprintf(os.Stderr, "Error when sending to pdp (2): %v\n", err)
+		return fmt.Errorf("Error when sending to pdp: %v", err)
 	}
 
 	// @author:marie

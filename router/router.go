@@ -61,15 +61,14 @@ func NewRouter() (*Router, error) {
 		//ErrorLog:     log.New(logwriter.LW.Logger.WriterLevel(logrus.ErrorLevel), "", 0),
 	}
 
-	//http.DefaultTransport.(*http.Transport).MaxIdleConnsPerHost = 10000
-	//http.DefaultTransport.(*http.Transport).TLSHandshakeTimeout = 0 * time.Second
-
 	return router, nil
 }
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+
 	// Used for measuring the time ServeHTTP runs
 	//start := time.Now()
+
 	var err error
 	md := new(metadata.Cp_metadata)
 
@@ -82,7 +81,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Check if user has a valid session already
 	if !bauth.User_sessions_is_valid(req, md) {
 		if !bauth.Basic_auth(w, req) {
-			//      fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
+			// Used for measuring the time ServeHTTP runs
+			// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
 			return
 		}
 	}
@@ -129,7 +129,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			logwriter.LW.Logger.WithField("issuer", "SFP Logic").Error(err)
 			return
 		}
-		logwriter.LW.Logger.Debugf("Request passed SFP logic. SFP before joining with service url: %s", md.SFP)
+		logwriter.LW.Logger.Debugf("Request passed SFP logic. SFP: %s", md.SFP)
 
 		if len(md.SFP) == 0 {
 			logwriter.LW.Logger.Error("SFP is empty, even though SFC is not")
@@ -174,7 +174,6 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	proxy = httputil.NewSingleHostReverseProxy(serviceURL)
 
 	proxy.ErrorLog = log.New(logwriter.LW, "", 0)
-	//proxy.ErrorLog = log.New(logwriter.LW.Logger.WriterLevel(logrus.ErrorLevel), "", 0)
 
 	// When the PEP is acting as a client; this defines his behavior
 	proxy.Transport = &http.Transport{
@@ -189,8 +188,9 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	proxy.ServeHTTP(w, req)
-	//proxies.Service_proxy.ServeHTTP(w, req)
-	//  fmt.Printf("SFC: %s with exec time: %v\n", md.SFC, time.Since(start))
+
+	// Used for measuring the time ServeHTTP runs
+	// fmt.Printf("SFC: %s with exec time: %v\n", md.SFC, time.Since(start))
 }
 
 func (router *Router) ListenAndServeTLS() error {

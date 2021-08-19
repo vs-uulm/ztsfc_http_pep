@@ -60,6 +60,5 @@ func prepareSFPRequest(req *http.Request, cpm *metadata.Cp_metadata) {
 		q.Add("sf", sf)
 	}
 	req.URL.RawQuery = q.Encode()
-	// req.Header.Set("sfc", cpm.SFC)
 
 }

@@ -61,7 +61,7 @@ service_pool:
     privkey_for_cert_shown_by_pep_to_service: path/to/some/other/privatekey.key
     cert_pep_accepts_when_shown_by_service: path/to/the/other/components/certificate.crt 
 
-# Section sf_pool defines all service functions which are availible in the Zero
+# Section sf_pool defines all service functions which are available in the Zero
 # Trust SFC network. Provide one entry for each SF.
 # The naming of the components (here "logger", "dpi") is important! Those
 # identifiers must be understood by the PDP and the SFP logic, because they
