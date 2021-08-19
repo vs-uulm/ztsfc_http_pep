@@ -131,6 +131,11 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		logwriter.LW.Logger.Debugf("Request passed SFP logic. SFP before joining with service url: %s", md.SFP)
 
+		if len(md.SFP) == 0 {
+			logwriter.LW.Logger.Error("SFP is empty, even though SFC is not")
+			return
+		}
+
 		// @author:marie
 		// identify next hop, find its config and set serviceURL and cert respectively
 		nextHop := md.SFP[0]

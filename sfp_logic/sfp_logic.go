@@ -24,13 +24,15 @@ type sfpResponse struct {
 
 func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 
-	sfp_req, err := http.NewRequest("GET", env.Config.Sfp_logic.Target_sfpl_addr+requestEndpoint, nil)
+	req, err := http.NewRequest("GET", env.Config.Sfp_logic.Target_sfpl_addr+requestEndpoint, nil)
 	if err != nil {
 		return err
 	}
-	prepareSFPRequest(sfp_req, cpm)
+	prepareSFPRequest(req, cpm)
 
-	resp, err := proxies.Sfp_logic_client_pool[rand.Int()%50].Do(sfp_req)
+	logwriter.LW.Logger.Debugf("Request to sfp logic: %v", req)
+
+	resp, err := proxies.Sfp_logic_client_pool[rand.Int()%50].Do(req)
 	if err != nil {
 		return err
 	}
@@ -43,7 +45,7 @@ func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 		return fmt.Errorf("Could not parse json answer from sfp logic: %v", err)
 	}
 
-	logwriter.LW.Logger.Debugf("Response from PDP: %v", sfpRes)
+	logwriter.LW.Logger.Debugf("Response from SFP logic: %v", sfpRes)
 	cpm.SFP = sfpRes.SFP
 
 	return nil
@@ -53,9 +55,11 @@ func prepareSFPRequest(req *http.Request, cpm *metadata.Cp_metadata) {
 
 	// @author:marie
 	// send SFC as a query parameter instead of custom header
+	q := req.URL.Query()
 	for _, sf := range cpm.SFC {
-		req.URL.Query().Add("sf", sf)
+		q.Add("sf", sf)
 	}
+	req.URL.RawQuery = q.Encode()
 	// req.Header.Set("sfc", cpm.SFC)
 
 }

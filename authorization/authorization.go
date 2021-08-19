@@ -57,15 +57,17 @@ func PerformAuthorization(clientReq *http.Request, cpm *metadata.Cp_metadata) er
 func prepareAuthRequest(req *http.Request, cpm *metadata.Cp_metadata) {
 	// @author:marie
 	// send parameters as a query parameter instead of custom header
-	req.URL.Query().Set("user", cpm.User)
-	req.URL.Query().Set("pwAuthenticated", strconv.FormatBool(cpm.Pw_authenticated))
-	req.URL.Query().Set("certAuthenticated", strconv.FormatBool(cpm.Cert_authenticated))
-	req.URL.Query().Set("resource", cpm.Resource)
-	req.URL.Query().Set("action", cpm.Action)
-	req.URL.Query().Set("device", cpm.Device)
-	req.URL.Query().Set("requestToday", cpm.RequestToday)
-	req.URL.Query().Set("failedToday", cpm.FailedToday)
-	req.URL.Query().Set("location", cpm.Location)
+	q := req.URL.Query()
+	q.Set("user", cpm.User)
+	q.Set("pwAuthenticated", strconv.FormatBool(cpm.Pw_authenticated))
+	q.Set("certAuthenticated", strconv.FormatBool(cpm.Cert_authenticated))
+	q.Set("resource", cpm.Resource)
+	q.Set("action", cpm.Action)
+	q.Set("device", cpm.Device)
+	q.Set("requestToday", cpm.RequestToday)
+	q.Set("failedToday", cpm.FailedToday)
+	q.Set("location", cpm.Location)
+	req.URL.RawQuery = q.Encode()
 }
 
 func collectAttributes(req *http.Request, cpm *metadata.Cp_metadata) {
