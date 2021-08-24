@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 	env "local.com/leobrada/ztsfc_http_pep/env"
-	sf_init "local.com/leobrada/ztsfc_http_pep/init"
+	confInit "local.com/leobrada/ztsfc_http_pep/init"
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
 	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 	router "local.com/leobrada/ztsfc_http_pep/router"
@@ -46,12 +46,12 @@ func init() {
 	env.Config.CA_cert_pool_pep_accepts_from_int = x509.NewCertPool()
 
 	// Preload diverse parameters from config
-	sf_init.InitPepParams(sysLogger)
-	sf_init.InitLdapParams(sysLogger)
-	sf_init.InitPdpParams(sysLogger)
-	sf_init.InitSfplParams(sysLogger)
-	sf_init.InitServicePoolParams(sysLogger)
-	sf_init.InitSfPoolParams(sysLogger)
+	confInit.InitPepParams(sysLogger)
+	confInit.InitLdapParams(sysLogger)
+	confInit.InitPdpParams(sysLogger)
+	confInit.InitSfplParams(sysLogger)
+	confInit.InitServicePoolParams(sysLogger)
+	confInit.InitSfPoolParams(sysLogger)
 
 	// Init Reverse Proxies used for the modules
 	// Basic_auth_proxy currently not needed since BasicAuth is performed as part of the PEP
