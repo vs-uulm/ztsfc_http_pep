@@ -1,3 +1,6 @@
+// Package router contains the main routine of the PEP service. For each client
+// request, it performs basic authentication, authorization, transformation of
+// SFC into SFP and forwarding to other service functions and services.
 package router
 
 import (

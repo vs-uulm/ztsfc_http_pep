@@ -1,3 +1,5 @@
+// Package metadata provides a struct for storing meta data about requests
+// during processing inside the PEP.
 package metadata
 
 type Cp_metadata struct {

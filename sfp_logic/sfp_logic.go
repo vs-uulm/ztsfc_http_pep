@@ -1,4 +1,6 @@
-package authorization
+// Package sfp_logic handles the communication with the SFP Logic.
+// (See https://github.com/vs-uulm/ztsfc_http_sfp_logic)
+package sfp_logic
 
 import (
 	"encoding/json"

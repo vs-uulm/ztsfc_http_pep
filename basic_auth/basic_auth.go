@@ -1,3 +1,5 @@
+// Package basic_auth handles basic authentication for requests to check the
+// identity of the requesting user.
 package basic_auth
 
 import (

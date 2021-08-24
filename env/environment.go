@@ -1,3 +1,4 @@
+// Package env reads the config file and parses it to go datastructures.
 package env
 
 import (

@@ -1,3 +1,5 @@
+// Package authorization handles the communication with the PEP.
+// (See https://github.com/vs-uulm/ztsfc_http_pdp)
 package authorization
 
 import (

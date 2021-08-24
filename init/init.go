@@ -1,3 +1,6 @@
+// Package init validates the parameters from the config file and transforms
+// different values into the adequate data structures.
+// Each section in example_conf.yaml corresponds to a function of this package.
 package init
 
 import (

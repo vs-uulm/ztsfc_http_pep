@@ -1,3 +1,7 @@
+// Package logwriter contains a custom wrapper for logrus
+// (see https://github.com/Sirupsen/logrus).
+// The exported object LW can be used globally for logging through the whole
+// project.
 package logwriter
 
 import (
