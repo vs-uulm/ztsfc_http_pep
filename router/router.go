@@ -67,6 +67,10 @@ func NewRouter() (*Router, error) {
 	return router, nil
 }
 
+// ServeHTTP gets called if a request receives the PEP. The function implements
+// the PEP's main routine: It performs basic authentication, authorization with
+// help of the PEP, transformation from SFCs into SFPs with help of the SFP
+// Logic, and then forwards the package along the SFP.
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// Used for measuring the time ServeHTTP runs

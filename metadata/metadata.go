@@ -2,6 +2,9 @@
 // during processing inside the PEP.
 package metadata
 
+// The struct Cp_metadata is for storing several meta data for a client
+// request. The struct can be passed across the PEP, such that several
+// components can collect different information in here.
 type Cp_metadata struct {
 	Auth_decision      bool
 	User               string
@@ -17,6 +20,8 @@ type Cp_metadata struct {
 	SFP                []string
 }
 
+// ClearMetadata resets all values from a CP_metadata instance to their
+// zero values.
 func (cpm *Cp_metadata) ClearMetadata() {
 	cpm.Auth_decision = false
 	cpm.User = ""

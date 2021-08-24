@@ -31,6 +31,9 @@ const (
 	SFLOGGER_PRINT_EMPTY_FIELDS
 )
 
+// LW is a LogWriter instance for global logging across the PEP.
+// Use it like LW.Logger.Info("this is a logging message") or
+// LW.Logger.WithField("someField", 1).Debug("some message")
 var LW *LogWriter
 
 type LogWriter struct {
@@ -38,7 +41,7 @@ type LogWriter struct {
 	logfile *os.File
 }
 
-// Creates and return a new LogWriter structure
+// Creates and return a new LogWriter instance
 func InitLogwriter(_log_file_path, _log_level string, _ifTextFormatter bool) {
 	var err error
 	LW = new(LogWriter)

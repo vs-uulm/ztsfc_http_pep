@@ -26,6 +26,12 @@ type authResponse struct {
 	SFC   []string `json:"sfc"`
 }
 
+// PerformAuthorization decides for a specific client request, wether it should
+// allowed and if so, under which conditions. Therefore, it communicates with
+// the PDP over HTTPS. The PDP makes the authorization decision and returns it
+// together with an SFC.
+// The functions writes some meta data about the request into cpm and also
+// stores the answers of the PDP in here.
 func PerformAuthorization(clientReq *http.Request, cpm *metadata.Cp_metadata) error {
 	collectAttributes(clientReq, cpm)
 

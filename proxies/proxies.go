@@ -12,6 +12,11 @@ var (
 	Sfp_logic_client_pool []*http.Client
 )
 
+// The function NewClientPool prepares numerous TLS clients for connection with
+// a specific service. The parameter poolSize defines the number of clients;
+// certShownByPEP specifies the certificate which to use to authenticate
+// against the requested service. Returned is the pool in form of a slice of
+// http.Client instances.
 func NewClientPool(poolSize int, certShownByPEP tls.Certificate) []*http.Client {
 	client_pool := make([]*http.Client, poolSize)
 

@@ -1,4 +1,4 @@
-// Package env reads the config file and parses it to go datastructures.
+// Package env reads the config file and parses it to go data structures.
 package env
 
 import (
@@ -11,11 +11,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// The struct Pep_t is for parsing the section 'pep' of the config file.
 type Pep_t struct {
 	Listen_addr                             string   `yaml:"listen_addr"`
 	Certs_pep_accepts_when_shown_by_clients []string `yaml:"certs_pep_accepts_when_shown_by_clients"`
 }
 
+// The struct LDAP_t is for parsing the section 'ldap' of the config file.
 type LDAP_t struct {
 	Base         string   `yaml:"base"`
 	Host         string   `yaml:"host"`
@@ -28,6 +30,7 @@ type LDAP_t struct {
 	Attributes   []string `yaml:"attributes"`
 }
 
+// The struct Pdp_t is for parsing the section 'pdp' of the config file.
 type Pdp_t struct {
 	Target_pdp_addr                      string `yaml:"target_pdp_addr"`
 	Cert_shown_by_pep_to_pdp             string `yaml:"cert_shown_by_pep_to_pdp"`
@@ -37,6 +40,7 @@ type Pdp_t struct {
 	X509KeyPair_shown_by_pep_to_pdp      tls.Certificate
 }
 
+// The struct Sfpl_t is for parsing the section 'sfp_logic' of the config file.
 type Sfpl_t struct {
 	Target_sfpl_addr                      string `yaml:"target_sfpl_addr"`
 	Cert_shown_by_pep_to_sfpl             string `yaml:"cert_shown_by_pep_to_sfpl"`
@@ -46,6 +50,8 @@ type Sfpl_t struct {
 	X509KeyPair_shown_by_pep_to_sfpl      tls.Certificate
 }
 
+// The struct Service_t is for parsing one service from section 'service_pool'
+// of the config file.
 type Service_t struct {
 	Sni                                       string `yaml:"sni"`
 	Target_service_addr                       string `yaml:"target_service_addr"`
@@ -59,6 +65,8 @@ type Service_t struct {
 	Target_service_url                        *url.URL
 }
 
+// The struct ServFunction_t is for parsing one service function from section
+// 'sf_pool' of the config file.
 type ServFunction_t struct {
 	Target_sf_addr                      string `yaml:"target_sf_addr"`
 	Cert_shown_by_pep_to_sf             string `yaml:"cert_shown_by_pep_to_sf"`
@@ -68,6 +76,7 @@ type ServFunction_t struct {
 	Target_sf_url                       *url.URL
 }
 
+// The struct Config_t is for parsing the basic structure of the config file.
 type Config_t struct {
 	Pep                               Pep_t                      `yaml:"pep"`
 	Ldap                              LDAP_t                     `yaml:"ldap"`
@@ -80,6 +89,7 @@ type Config_t struct {
 	Service_SNI_map                   map[string]*Service_t
 }
 
+// Var Config contains all input from the config file and is is globally accessible.
 var Config Config_t
 
 // Parses a configuration yaml file into the global Config variable

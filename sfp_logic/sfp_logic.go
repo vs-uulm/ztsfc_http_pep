@@ -24,6 +24,12 @@ type sfpResponse struct {
 	SFP []string `json:"sfp"`
 }
 
+// TransformSFCintoSFP creates a service function path out of a service
+// function chain. Therefore, it communicates with the SFP Logic over HTTPS.
+// The SFP Logic determines the order of the service functions inside the SFC
+// and then returns the result, the SFP.
+// The functions reads the SFC from cpm and also writes the SFP into this
+// struct.
 func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 
 	req, err := http.NewRequest("GET", env.Config.Sfp_logic.Target_sfpl_addr+requestEndpoint, nil)

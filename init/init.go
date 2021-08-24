@@ -17,6 +17,8 @@ import (
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
 )
 
+// Function initializes the 'pep' section of the config file.
+// It loads the PEP certificate.
 func InitPepParams(sysLogger *logrus.Entry) {
 
 	// Read CA certs used for signing client certs and are accepted by the PEP
@@ -25,10 +27,14 @@ func InitPepParams(sysLogger *logrus.Entry) {
 	}
 }
 
+// Function initializes the 'ldap' section of the config file.
+// Function currently does nothing.
 func InitLdapParams(sysLogger *logrus.Entry) {
 
 }
 
+// Function initializes the 'pdp' section of the config file.
+// It loads the certificates for the given file paths.
 func InitPdpParams(sysLogger *logrus.Entry) {
 
 	// Preload X509KeyPair and write it to env
@@ -38,6 +44,8 @@ func InitPdpParams(sysLogger *logrus.Entry) {
 	loadCACertificate(sysLogger, env.Config.Pdp.Cert_pep_accepts_shown_by_pdp, "PDP", env.Config.CA_cert_pool_pep_accepts_from_int)
 }
 
+// Function initializes the 'sfp_logic' section of the config file.
+// It loads the certificates for the given file paths.
 func InitSfplParams(sysLogger *logrus.Entry) {
 
 	// Preload X509KeyPair and write it to env
@@ -47,6 +55,9 @@ func InitSfplParams(sysLogger *logrus.Entry) {
 	loadCACertificate(sysLogger, env.Config.Sfp_logic.Cert_pep_accepts_shown_by_sfpl, "SFP_logic", env.Config.CA_cert_pool_pep_accepts_from_int)
 }
 
+// Function initializes the 'service_pool' section of the config file.
+// It loads the certificates for the given file paths and preparses the URLs.
+// Additionally, it creates a map to access services by SNI directly.
 func InitServicePoolParams(sysLogger *logrus.Entry) {
 	var err error
 	for service_name, service_config := range env.Config.Service_pool {
@@ -76,6 +87,8 @@ func InitServicePoolParams(sysLogger *logrus.Entry) {
 	}
 }
 
+// Function initializes the 'sf_pool' section of the config file.
+// It loads the certificates for the given file paths and preparses the URLs.
 func InitSfPoolParams(sysLogger *logrus.Entry) {
 	var err error
 	for sf_name, sf_config := range env.Config.Sf_pool {
