@@ -42,7 +42,7 @@ type LogWriter struct {
 }
 
 // Creates and return a new LogWriter instance
-func InitLogwriter(_log_file_path, _log_level string, _ifTextFormatter bool) {
+func InitLogwriter(_logFilePath, _logLevel string, _ifTextFormatter bool) {
 	var err error
 	LW = new(LogWriter)
 
@@ -50,7 +50,7 @@ func InitLogwriter(_log_file_path, _log_level string, _ifTextFormatter bool) {
 	LW.Logger = logrus.New()
 
 	// Set a log level (debug, info, warning, error)
-	switch strings.ToLower(_log_level) {
+	switch strings.ToLower(_logLevel) {
 	case "debug":
 		LW.Logger.SetLevel(logrus.DebugLevel)
 	case "info":
@@ -72,11 +72,11 @@ func InitLogwriter(_log_file_path, _log_level string, _ifTextFormatter bool) {
 		LW.Logger.SetFormatter(&logrus.JSONFormatter{})
 	}
 
-	if strings.ToLower(_log_file_path) == "stdout" {
+	if strings.ToLower(_logFilePath) == "stdout" {
 		LW.Logger.SetOutput(os.Stdout)
 	} else {
 		// Open a file for the logger output
-		LW.logfile, err = os.OpenFile(_log_file_path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		LW.logfile, err = os.OpenFile(_logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -18,19 +18,19 @@ import (
 )
 
 var (
-	Jwt_pub_key  *rsa.PublicKey
+	JwtPubkey    *rsa.PublicKey
 	MySigningKey *rsa.PrivateKey
 )
 
-func User_sessions_is_valid(req *http.Request, cpm *metadata.Cp_metadata) bool {
-	jwt_cookie, err := req.Cookie("ztsfc_session")
+func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
+	jwtCookie, err := req.Cookie("ztsfc_session")
 	if err != nil {
 		return false
 	}
-	ss := jwt_cookie.Value
+	ss := jwtCookie.Value
 
 	token, err := jwt.Parse(ss, func(token *jwt.Token) (interface{}, error) {
-		return Jwt_pub_key, nil
+		return JwtPubkey, nil
 	})
 
 	if err != nil {
@@ -39,22 +39,22 @@ func User_sessions_is_valid(req *http.Request, cpm *metadata.Cp_metadata) bool {
 
 	username := token.Claims.(jwt.MapClaims)["sub"].(string)
 	cpm.User = username
-	cpm.Pw_authenticated = true
-	cpm.Cert_authenticated = perform_x509_auth(req)
+	cpm.PwAuthenticated = true
+	cpm.CertAuthenticated = performX509auth(req)
 
 	return true
 }
 
-func Basic_auth(w http.ResponseWriter, req *http.Request) bool {
+func BasicAuth(w http.ResponseWriter, req *http.Request) bool {
 
-	if perform_passwd_auth(w, req) {
+	if performPasswdAuth(w, req) {
 		return true
 	}
 
 	return false
 }
 
-func perform_passwd_auth(w http.ResponseWriter, req *http.Request) bool {
+func performPasswdAuth(w http.ResponseWriter, req *http.Request) bool {
 	var username, password string
 
 	// TODO: Check for JW Token initially
@@ -66,8 +66,8 @@ func perform_passwd_auth(w http.ResponseWriter, req *http.Request) bool {
 			return false
 		}
 
-		nmbr_of_postvalues := len(req.PostForm)
-		if nmbr_of_postvalues != 2 {
+		nmbrOfPostvalues := len(req.PostForm)
+		if nmbrOfPostvalues != 2 {
 			handleFormReponse("Wrong number of POST form values", w)
 			return false
 		}
@@ -95,13 +95,13 @@ func perform_passwd_auth(w http.ResponseWriter, req *http.Request) bool {
 		//MySigningKey := parseRsaiPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
 		ss := createJWToken(MySigningKey, username)
 
-		ztsfc_cookie := http.Cookie{
+		ztsfcCookie := http.Cookie{
 			Name:   "ztsfc_session",
 			Value:  ss,
 			MaxAge: 1800,
 			Path:   "/",
 		}
-		http.SetCookie(w, &ztsfc_cookie)
+		http.SetCookie(w, &ztsfcCookie)
 
 		// TODO: make it user configurable
 		// TODO: is there a better solution for the content-length  /body length "bug"?
@@ -128,7 +128,7 @@ func createJWToken(mySigningKey *rsa.PrivateKey, username string) string {
 	return ss
 }
 
-func perform_x509_auth(req *http.Request) bool {
+func performX509auth(req *http.Request) bool {
 	// Check if a verified client certificate is present
 	if len(req.TLS.VerifiedChains) > 0 && req.TLS.ServerName == "service1.testbed.informatik.uni-ulm.de" {
 		return true
@@ -138,13 +138,13 @@ func perform_x509_auth(req *http.Request) bool {
 }
 
 func ParseRsaPublicKeyFromPemStr(pubPEMlocation string) *rsa.PublicKey {
-	pub_read_in, err := ioutil.ReadFile(pubPEMlocation)
+	pubReadIn, err := ioutil.ReadFile(pubPEMlocation)
 	if err != nil {
 		fmt.Printf("Could not read from file.\n")
 		return nil
 	}
 
-	block, _ := pem.Decode(pub_read_in)
+	block, _ := pem.Decode(pubReadIn)
 	if block == nil {
 		fmt.Printf("Could not decode the read in block.\n")
 		return nil
@@ -159,8 +159,8 @@ func ParseRsaPublicKeyFromPemStr(pubPEMlocation string) *rsa.PublicKey {
 	return pub.(*rsa.PublicKey)
 }
 
-// Just for LCN paper
-func Perform_moodle_login(w http.ResponseWriter, req *http.Request) bool {
+// Just for LCN paper; function currently not in use
+func PerformMoodleLogin(w http.ResponseWriter, req *http.Request) bool {
 	_, err := req.Cookie("li")
 	if err != nil {
 		// Transform existing http request into log POST form
@@ -168,14 +168,14 @@ func Perform_moodle_login(w http.ResponseWriter, req *http.Request) bool {
 
 		// Set cookie presenting that user is logged in
 		fmt.Printf("Performing Moodle log in...\n")
-		li_cookie := &http.Cookie{
+		liCookie := &http.Cookie{
 			Name:   "li",
 			Value:  "yes",
 			MaxAge: 36000,
 			Path:   "/",
 		}
-		//req.AddCookie(li_cookie)
-		http.SetCookie(w, li_cookie)
+		//req.AddCookie(liCookie)
+		http.SetCookie(w, liCookie)
 		return true
 	}
 
@@ -185,13 +185,13 @@ func Perform_moodle_login(w http.ResponseWriter, req *http.Request) bool {
 }
 
 func ParseRsaPrivateKeyFromPemStr(privPEMlocation string) *rsa.PrivateKey {
-	priv_read_in, err := ioutil.ReadFile(privPEMlocation)
+	privReadIn, err := ioutil.ReadFile(privPEMlocation)
 	if err != nil {
 		fmt.Printf("Could not read from file.\n")
 		return nil
 	}
 
-	block, _ := pem.Decode(priv_read_in)
+	block, _ := pem.Decode(privReadIn)
 	if block == nil {
 		fmt.Printf("Could not decode the read in block.\n")
 		return nil

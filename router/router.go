@@ -77,7 +77,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//start := time.Now()
 
 	var err error
-	md := new(metadata.Cp_metadata)
+	md := new(metadata.CpMetadata)
 
 	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
 	logwriter.LW.LogHTTPRequest(req)
@@ -86,8 +86,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
 	// TODO: return error to client?
 	// Check if user has a valid session already
-	if !bauth.User_sessions_is_valid(req, md) {
-		if !bauth.Basic_auth(w, req) {
+	if !bauth.UserSessionIsValid(req, md) {
+		if !bauth.BasicAuth(w, req) {
 			// Used for measuring the time ServeHTTP runs
 			// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
 			return
@@ -101,7 +101,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if !md.Auth_decision {
+	if !md.AuthDecision {
 		logwriter.LW.Logger.Info("Request was rejected due to too low trust score")
 		w.WriteHeader(503)
 		return

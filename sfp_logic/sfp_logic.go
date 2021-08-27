@@ -30,7 +30,7 @@ type sfpResponse struct {
 // and then returns the result, the SFP.
 // The functions reads the SFC from cpm and also writes the SFP into this
 // struct.
-func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
+func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 
 	req, err := http.NewRequest("GET", env.Config.Sfp_logic.Target_sfpl_addr+requestEndpoint, nil)
 	if err != nil {
@@ -40,7 +40,7 @@ func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 
 	logwriter.LW.Logger.Debugf("Request to sfp logic: %v", req)
 
-	resp, err := proxies.Sfp_logic_client_pool[rand.Int()%50].Do(req)
+	resp, err := proxies.SfpLogicClientPool[rand.Int()%50].Do(req)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func TransformSFCintoSFP(cpm *metadata.Cp_metadata) error {
 	return nil
 }
 
-func prepareSFPRequest(req *http.Request, cpm *metadata.Cp_metadata) {
+func prepareSFPRequest(req *http.Request, cpm *metadata.CpMetadata) {
 
 	// @author:marie
 	// send SFC as a query parameter instead of custom header

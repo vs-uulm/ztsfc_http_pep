@@ -60,24 +60,24 @@ func InitSfplParams(sysLogger *logrus.Entry) {
 // Additionally, it creates a map to access services by SNI directly.
 func InitServicePoolParams(sysLogger *logrus.Entry) {
 	var err error
-	for service_name, service_config := range env.Config.Service_pool {
+	for serviceName, serviceConfig := range env.Config.Service_pool {
 
 		// Preload X509KeyPairs shown by pep to client
-		env.Config.Service_pool[service_name].X509KeyPair_shown_by_pep_to_client = loadX509KeyPair(sysLogger, service_config.Cert_shown_by_pep_to_clients_matching_sni, service_config.Privkey_for_cert_shown_by_pep_to_client, "service "+service_name, "external")
+		env.Config.Service_pool[serviceName].X509KeyPair_shown_by_pep_to_client = loadX509KeyPair(sysLogger, serviceConfig.Cert_shown_by_pep_to_clients_matching_sni, serviceConfig.Privkey_for_cert_shown_by_pep_to_client, "service "+serviceName, "external")
 
 		// Preload X509KeyPairs shown by pep to service
-		env.Config.Service_pool[service_name].X509KeyPair_shown_by_pep_to_service = loadX509KeyPair(sysLogger, service_config.Cert_shown_by_pep_to_service, service_config.Privkey_for_cert_shown_by_pep_to_service, "service "+service_name, "internal")
+		env.Config.Service_pool[serviceName].X509KeyPair_shown_by_pep_to_service = loadX509KeyPair(sysLogger, serviceConfig.Cert_shown_by_pep_to_service, serviceConfig.Privkey_for_cert_shown_by_pep_to_service, "service "+serviceName, "internal")
 
 		// Preparse Service URL
-		env.Config.Service_pool[service_name].Target_service_url, err = url.Parse(service_config.Target_service_addr)
+		env.Config.Service_pool[serviceName].Target_service_url, err = url.Parse(serviceConfig.Target_service_addr)
 		if err != nil {
-			sysLogger.Fatalf("Critical Error when parsing target service URL for service %s: %v", service_name, err)
+			sysLogger.Fatalf("Critical Error when parsing target service URL for service %s: %v", serviceName, err)
 		} else {
-			sysLogger.Debugf("target service URL for service %s was successfully parsed", service_name)
+			sysLogger.Debugf("target service URL for service %s was successfully parsed", serviceName)
 		}
 
 		// Preload CA certificate and append it to cert pool
-		loadCACertificate(sysLogger, service_config.Cert_pep_accepts_when_shown_by_service, "service "+service_name, env.Config.CA_cert_pool_pep_accepts_from_int)
+		loadCACertificate(sysLogger, serviceConfig.Cert_pep_accepts_when_shown_by_service, "service "+serviceName, env.Config.CA_cert_pool_pep_accepts_from_int)
 
 		// Create a map to directly access service config by SNI
 		env.Config.Service_SNI_map = make(map[string]*env.Service_t)
@@ -91,21 +91,21 @@ func InitServicePoolParams(sysLogger *logrus.Entry) {
 // It loads the certificates for the given file paths and preparses the URLs.
 func InitSfPoolParams(sysLogger *logrus.Entry) {
 	var err error
-	for sf_name, sf_config := range env.Config.Sf_pool {
+	for sfName, sfConfig := range env.Config.Sf_pool {
 
 		// preload X509KeyPairs shown by pep to sf
-		env.Config.Sf_pool[sf_name].X509KeyPair_shown_by_pep_to_sf = loadX509KeyPair(sysLogger, sf_config.Cert_shown_by_pep_to_sf, sf_config.Privkey_for_cert_shown_by_pep_to_sf, "service function "+sf_name, "")
+		env.Config.Sf_pool[sfName].X509KeyPair_shown_by_pep_to_sf = loadX509KeyPair(sysLogger, sfConfig.Cert_shown_by_pep_to_sf, sfConfig.Privkey_for_cert_shown_by_pep_to_sf, "service function "+sfName, "")
 
 		// Preparse SF URL
-		env.Config.Sf_pool[sf_name].Target_sf_url, err = url.Parse(sf_config.Target_sf_addr)
+		env.Config.Sf_pool[sfName].Target_sf_url, err = url.Parse(sfConfig.Target_sf_addr)
 		if err != nil {
-			sysLogger.Fatalf("Critical Error when parsing target URL for service function %s: %v", sf_name, err)
+			sysLogger.Fatalf("Critical Error when parsing target URL for service function %s: %v", sfName, err)
 		} else {
-			sysLogger.Debugf("Target URL for service function %s was successfully parsed", sf_name)
+			sysLogger.Debugf("Target URL for service function %s was successfully parsed", sfName)
 		}
 
 		// Preload CA certificate and append it to cert pool
-		loadCACertificate(sysLogger, sf_config.Cert_pep_accepts_shown_by_sf, "service function "+sf_name, env.Config.CA_cert_pool_pep_accepts_from_int)
+		loadCACertificate(sysLogger, sfConfig.Cert_pep_accepts_shown_by_sf, "service function "+sfName, env.Config.CA_cert_pool_pep_accepts_from_int)
 	}
 }
 

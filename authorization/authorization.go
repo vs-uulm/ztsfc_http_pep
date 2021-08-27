@@ -32,7 +32,7 @@ type authResponse struct {
 // together with an SFC.
 // The functions writes some meta data about the request into cpm and also
 // stores the answers of the PDP in here.
-func PerformAuthorization(clientReq *http.Request, cpm *metadata.Cp_metadata) error {
+func PerformAuthorization(clientReq *http.Request, cpm *metadata.CpMetadata) error {
 	collectAttributes(clientReq, cpm)
 
 	req, err := http.NewRequest("GET", env.Config.Pdp.Target_pdp_addr+requestEndpoint, nil)
@@ -41,7 +41,7 @@ func PerformAuthorization(clientReq *http.Request, cpm *metadata.Cp_metadata) er
 	}
 
 	prepareAuthRequest(req, cpm)
-	resp, err := proxies.Pdp_client_pool[rand.Int()%50].Do(req)
+	resp, err := proxies.PdpClientPool[rand.Int()%50].Do(req)
 	if err != nil {
 		return fmt.Errorf("Error when sending to pdp: %v", err)
 	}
@@ -56,18 +56,18 @@ func PerformAuthorization(clientReq *http.Request, cpm *metadata.Cp_metadata) er
 
 	logwriter.LW.Logger.Debugf("Response from PDP: %v", authRes)
 	cpm.SFC = authRes.SFC
-	cpm.Auth_decision = authRes.Allow
+	cpm.AuthDecision = authRes.Allow
 
 	return nil
 }
 
-func prepareAuthRequest(req *http.Request, cpm *metadata.Cp_metadata) {
+func prepareAuthRequest(req *http.Request, cpm *metadata.CpMetadata) {
 	// @author:marie
 	// send parameters as a query parameter instead of custom header
 	q := req.URL.Query()
 	q.Set("user", cpm.User)
-	q.Set("pwAuthenticated", strconv.FormatBool(cpm.Pw_authenticated))
-	q.Set("certAuthenticated", strconv.FormatBool(cpm.Cert_authenticated))
+	q.Set("pwAuthenticated", strconv.FormatBool(cpm.PwAuthenticated))
+	q.Set("certAuthenticated", strconv.FormatBool(cpm.CertAuthenticated))
 	q.Set("resource", cpm.Resource)
 	q.Set("action", cpm.Action)
 	q.Set("device", cpm.Device)
@@ -77,7 +77,7 @@ func prepareAuthRequest(req *http.Request, cpm *metadata.Cp_metadata) {
 	req.URL.RawQuery = q.Encode()
 }
 
-func collectAttributes(req *http.Request, cpm *metadata.Cp_metadata) {
+func collectAttributes(req *http.Request, cpm *metadata.CpMetadata) {
 	collectResource(req, cpm)
 	collectAction(req, cpm)
 	collectDevice(req, cpm)
@@ -86,26 +86,26 @@ func collectAttributes(req *http.Request, cpm *metadata.Cp_metadata) {
 	collectLocation(req, cpm)
 }
 
-func collectResource(req *http.Request, cpm *metadata.Cp_metadata) {
+func collectResource(req *http.Request, cpm *metadata.CpMetadata) {
 	cpm.Resource = req.Host
 }
 
-func collectAction(req *http.Request, cpm *metadata.Cp_metadata) {
+func collectAction(req *http.Request, cpm *metadata.CpMetadata) {
 	cpm.Action = req.Method
 }
 
-func collectDevice(req *http.Request, cpm *metadata.Cp_metadata) {
+func collectDevice(req *http.Request, cpm *metadata.CpMetadata) {
 	cpm.Device = req.Header.Get("device")
 }
 
-func collectRequestToday(req *http.Request, cpm *metadata.Cp_metadata) {
+func collectRequestToday(req *http.Request, cpm *metadata.CpMetadata) {
 	cpm.RequestToday = req.Header.Get("requestToday")
 }
 
-func collectFailedToday(req *http.Request, cpm *metadata.Cp_metadata) {
+func collectFailedToday(req *http.Request, cpm *metadata.CpMetadata) {
 	cpm.FailedToday = req.Header.Get("failedToday")
 }
 
-func collectLocation(req *http.Request, cpm *metadata.Cp_metadata) {
+func collectLocation(req *http.Request, cpm *metadata.CpMetadata) {
 	cpm.Location = req.Header.Get("location")
 }

@@ -15,30 +15,30 @@ import (
 )
 
 var (
-	conf_file_path  string
-	log_file_path   string
-	log_level       string
+	confFilePath    string
+	logFilePath     string
+	logLevel        string
 	ifTextFormatter bool
 )
 
 func init() {
-	flag.StringVar(&log_file_path, "log-to", "./pep.log", "Path to log file. Write 'stdout' to print to stdout")
-	flag.StringVar(&conf_file_path, "c", "./conf.yml", "Path to user defined yml config file")
-	flag.StringVar(&log_level, "log-level", "error", "Log level from the next set: debug, info, warning, error")
+	flag.StringVar(&logFilePath, "log-to", "./pep.log", "Path to log file. Write 'stdout' to print to stdout")
+	flag.StringVar(&confFilePath, "c", "./conf.yml", "Path to user defined yml config file")
+	flag.StringVar(&logLevel, "log-level", "error", "Log level from the next set: debug, info, warning, error")
 	flag.BoolVar(&ifTextFormatter, "text", false, "Use a text format instead of JSON to log messages")
 
 	// Operating input parameters
 	flag.Parse()
 
-	logwriter.InitLogwriter(log_file_path, log_level, ifTextFormatter)
+	logwriter.InitLogwriter(logFilePath, logLevel, ifTextFormatter)
 	sysLogger := logwriter.LW.Logger.WithFields(logrus.Fields{"type": "system"})
 
-	// Loading all config parameter from config file defined in "conf_file_path"
-	err := env.LoadConfig(conf_file_path, sysLogger)
+	// Loading all config parameter from config file defined in "confFilePath"
+	err := env.LoadConfig(confFilePath, sysLogger)
 	if err != nil {
-		sysLogger.Fatalf("Loading logger configuration from %s - ERROR: %v", conf_file_path, err)
+		sysLogger.Fatalf("Loading logger configuration from %s - ERROR: %v", confFilePath, err)
 	} else {
-		sysLogger.Debugf("Loading logger configuration from %s - OK", conf_file_path)
+		sysLogger.Debugf("Loading logger configuration from %s - OK", confFilePath)
 	}
 
 	// Create Certificate Pools for the CA certificates used by the PEP
@@ -55,11 +55,11 @@ func init() {
 
 	// Init Reverse Proxies used for the modules
 	// Basic_auth_proxy currently not needed since BasicAuth is performed as part of the PEP
-	proxies.Pdp_client_pool = proxies.NewClientPool(env.Config.Pdp.Pdp_client_pool_size, env.Config.Pdp.X509KeyPair_shown_by_pep_to_pdp)
-	proxies.Sfp_logic_client_pool = proxies.NewClientPool(env.Config.Sfp_logic.Sfpl_client_pool_size, env.Config.Sfp_logic.X509KeyPair_shown_by_pep_to_sfpl)
+	proxies.PdpClientPool = proxies.NewClientPool(env.Config.Pdp.Pdp_client_pool_size, env.Config.Pdp.X509KeyPair_shown_by_pep_to_pdp)
+	proxies.SfpLogicClientPool = proxies.NewClientPool(env.Config.Sfp_logic.Sfpl_client_pool_size, env.Config.Sfp_logic.X509KeyPair_shown_by_pep_to_sfpl)
 
 	// Init RSA Keys für JWT
-	bauth.Jwt_pub_key = bauth.ParseRsaPublicKeyFromPemStr("./basic_auth/jwt_test_pub.pem")
+	bauth.JwtPubkey = bauth.ParseRsaPublicKeyFromPemStr("./basic_auth/jwt_test_pub.pem")
 	bauth.MySigningKey = bauth.ParseRsaPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
 }
 

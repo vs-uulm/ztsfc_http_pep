@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	Pdp_client_pool       []*http.Client
-	Sfp_logic_client_pool []*http.Client
+	PdpClientPool      []*http.Client
+	SfpLogicClientPool []*http.Client
 )
 
 // The function NewClientPool prepares numerous TLS clients for connection with
@@ -18,11 +18,11 @@ var (
 // against the requested service. Returned is the pool in form of a slice of
 // http.Client instances.
 func NewClientPool(poolSize int, certShownByPEP tls.Certificate) []*http.Client {
-	client_pool := make([]*http.Client, poolSize)
+	clientPool := make([]*http.Client, poolSize)
 
 	for i := 0; i < poolSize; i++ {
-		pdp_client := new(http.Client)
-		pdp_client.Transport = &http.Transport{
+		client := new(http.Client)
+		client.Transport = &http.Transport{
 			TLSClientConfig: &tls.Config{
 				Certificates:       []tls.Certificate{certShownByPEP},
 				InsecureSkipVerify: true,
@@ -30,8 +30,8 @@ func NewClientPool(poolSize int, certShownByPEP tls.Certificate) []*http.Client 
 				ClientCAs:          env.Config.CA_cert_pool_pep_accepts_from_int,
 			},
 		}
-		client_pool[i] = pdp_client
+		clientPool[i] = client
 	}
 
-	return client_pool
+	return clientPool
 }
