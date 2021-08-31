@@ -42,6 +42,16 @@ func InitPdpParams(sysLogger *logrus.Entry) {
 
 	// Preload CA certificate and append it to cert pool
 	loadCACertificate(sysLogger, env.Config.Pdp.Cert_pep_accepts_shown_by_pdp, "PDP", env.Config.CA_cert_pool_pep_accepts_from_int)
+
+	// Use default pool size as pdp pool size if necessary
+	if env.Config.Pdp.Pdp_client_pool_size == 0 {
+		if env.Config.Pep.Default_pool_size != 0 {
+			env.Config.Pdp.Pdp_client_pool_size = env.Config.Pep.Default_pool_size
+			sysLogger.Debugf("pdp client pool size set to default pool size (%d)", env.Config.Pep.Default_pool_size)
+		} else {
+			sysLogger.Fatalf("config provides neither a pdp_client_pool_size nor a default_pool_size")
+		}
+	}
 }
 
 // Function initializes the 'sfp_logic' section of the config file.
@@ -53,6 +63,16 @@ func InitSfplParams(sysLogger *logrus.Entry) {
 
 	// Preload CA certificate and append it to cert pool
 	loadCACertificate(sysLogger, env.Config.Sfp_logic.Cert_pep_accepts_shown_by_sfpl, "SFP_logic", env.Config.CA_cert_pool_pep_accepts_from_int)
+
+	// Use default pool size as sfpl pool size if necessary
+	if env.Config.Sfp_logic.Sfpl_client_pool_size == 0 {
+		if env.Config.Pep.Default_pool_size != 0 {
+			env.Config.Sfp_logic.Sfpl_client_pool_size = env.Config.Pep.Default_pool_size
+			sysLogger.Debugf("sfpl client pool size set to default pool size (%d)", env.Config.Pep.Default_pool_size)
+		} else {
+			sysLogger.Fatalf("config provides neither an sfpl_client_pool_size nor a default_pool_size")
+		}
+	}
 }
 
 // Function initializes the 'service_pool' section of the config file.

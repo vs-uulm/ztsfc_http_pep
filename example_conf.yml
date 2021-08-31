@@ -1,11 +1,14 @@
 # This is an example configuration for the ZTSFC PEP prototype.
 # Copy it to config.yaml and adapt it to your needs.
 
-# Section pep contains basic configuration for the PEP
+# Section pep contains basic configuration for the PEP.
+# The default_pool_size is used for connections to PDP and SFP Logic, if no
+# pool size values are provided in the respective sections
 pep:
   listen_addr: ":443"
   certs_pep_accepts_when_shown_by_clients:
     - ca/key/for/client/certs.crt
+  default_pool_size: 50
 
 # Section ldap contains configuration necessary to connect to an LDAP server
 # performing basic authentication
@@ -27,7 +30,7 @@ ldap:
 # Section pdp contains configuration to connect with the PDP. Those are address
 # and certificate files for mutual TLS. Further, you can define the number of
 # clients which to prepare for PDP communication in order to improve
-# performance
+# performance (if not provided, the PEP's default pool size is used instead)
 pdp:
   target_pdp_addr: "https://127.0.0.1:8888"
   cert_shown_by_pep_to_pdp: path/to/some/publickey.crt
@@ -37,8 +40,9 @@ pdp:
 
 # Section sfp_logic contains configuration to connect with the SFP Logic. Those
 # are address and certificate files for mutual TLS. Further, you can define the
-# number of clients which to prepare for PDP communication in order to improve
-# performance
+# number of clients which to prepare for SFP Logic communication in order to
+# improve performance (if not provided, the PEP's default pool size is used
+# instead)
 sfp_logic:
   target_sfpl_addr: "https://127.0.0.1:8889"
   cert_shown_by_pep_to_sfpl: path/to/some/publickey.crt

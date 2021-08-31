@@ -15,6 +15,7 @@ import (
 type Pep_t struct {
 	Listen_addr                             string   `yaml:"listen_addr"`
 	Certs_pep_accepts_when_shown_by_clients []string `yaml:"certs_pep_accepts_when_shown_by_clients"`
+	Default_pool_size                       int      `yaml:"default_pool_size"`
 }
 
 // The struct LDAP_t is for parsing the section 'ldap' of the config file.
