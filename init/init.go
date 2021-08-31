@@ -8,13 +8,9 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"net/url"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/sirupsen/logrus"
 	env "local.com/leobrada/ztsfc_http_pep/env"
-	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
 )
 
 // Function initializes the 'pep' section of the config file.
@@ -100,6 +96,7 @@ func InitServicePoolParams(sysLogger *logrus.Entry) {
 		loadCACertificate(sysLogger, serviceConfig.Cert_pep_accepts_when_shown_by_service, "service "+serviceName, env.Config.CA_cert_pool_pep_accepts_from_int)
 
 		// Create a map to directly access service config by SNI
+		// @author:marie
 		env.Config.Service_SNI_map = make(map[string]*env.Service_t)
 		for _, service := range env.Config.Service_pool {
 			env.Config.Service_SNI_map[service.Sni] = service
@@ -129,6 +126,8 @@ func InitSfPoolParams(sysLogger *logrus.Entry) {
 	}
 }
 
+// function unifies the loading of X509 key pairs for different components
+// @author:marie
 func loadX509KeyPair(sysLogger *logrus.Entry, certfile, keyfile, componentName, certAttr string) tls.Certificate {
 	keyPair, err := tls.LoadX509KeyPair(certfile, keyfile)
 	if err != nil {
@@ -139,6 +138,8 @@ func loadX509KeyPair(sysLogger *logrus.Entry, certfile, keyfile, componentName, 
 	return keyPair
 }
 
+// function unifies the loading of CA certificates for different components
+// @author:marie
 func loadCACertificate(sysLogger *logrus.Entry, certfile string, componentName string, certPool *x509.CertPool) {
 	caRoot, err := ioutil.ReadFile(certfile)
 	if err != nil {
@@ -148,15 +149,4 @@ func loadCACertificate(sysLogger *logrus.Entry, certfile string, componentName s
 	}
 	// Append a certificate to the pool
 	certPool.AppendCertsFromPEM(caRoot)
-}
-
-func SetupCloseHandler() {
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		logwriter.LW.Logger.WithFields(logrus.Fields{"type": "system"}).Debug("- Ctrl+C pressed in Terminal. Terminating...")
-		logwriter.LW.Terminate()
-		os.Exit(0)
-	}()
 }
