@@ -35,8 +35,10 @@ type authResponse struct {
 func PerformAuthorization(clientReq *http.Request, cpm *metadata.CpMetadata) error {
 	collectAttributes(clientReq, cpm)
 
+	// send request to correct address and API endpoint
+	// @author:marie
 	req, err := http.NewRequest("GET", env.Config.Pdp.Target_pdp_addr+requestEndpoint, nil)
-	if err != nil {
+	if err != nil { // @author:marie catch error
 		return err
 	}
 

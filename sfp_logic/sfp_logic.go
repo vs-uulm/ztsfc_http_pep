@@ -32,8 +32,10 @@ type sfpResponse struct {
 // struct.
 func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 
+	// send request to correct address and API endpoint
+	// @author:marie
 	req, err := http.NewRequest("GET", env.Config.Sfp_logic.Target_sfpl_addr+requestEndpoint, nil)
-	if err != nil {
+	if err != nil { // @author:marie catch error
 		return err
 	}
 	prepareSFPRequest(req, cpm)

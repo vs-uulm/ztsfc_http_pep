@@ -46,6 +46,8 @@ func init() {
 	env.Config.CA_cert_pool_pep_accepts_from_int = x509.NewCertPool()
 
 	// Preload diverse parameters from config
+	// (One function for each section in config.yml)
+	// @author:marie
 	confInit.InitPepParams(sysLogger)
 	confInit.InitLdapParams(sysLogger)
 	confInit.InitPdpParams(sysLogger)

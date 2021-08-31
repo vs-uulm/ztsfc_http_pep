@@ -40,7 +40,8 @@ func NewRouter() (*Router, error) {
 		ClientAuth: tls.VerifyClientCertIfGiven,
 		ClientCAs:  env.Config.CA_cert_pool_pep_accepts_from_ext,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
-			// load a suitable certificate that is shown to clients according the request domain/TLS SNI
+			// use SNI map to load suitable certificate
+			// @author:marie
 			service, ok := env.Config.Service_SNI_map[cli.ServerName]
 			if !ok {
 				return nil, fmt.Errorf("Error: Could not serve a suitable certificate for %s\n", cli.ServerName)
@@ -96,6 +97,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// AUTHORIZATION
 	err = pdp.PerformAuthorization(req, md)
+	// observe errors and abort routine if something goes wrong
+	// @author:marie
 	if err != nil {
 		logwriter.LW.Logger.WithField("issuer", "PDP").Error(err)
 		return
@@ -121,8 +124,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// SFP LOGIC
 
-	// @author:marie
 	// only connect to SFP logic, if SFC is not empty
+	// @author:marie
 	if len(md.SFC) == 0 {
 
 		logwriter.LW.Logger.Debug("SFC is empty. Thus, no forwarding to SFP logic")
@@ -132,6 +135,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	} else {
 
 		err = sfpl.TransformSFCintoSFP(md)
+		// observe errors and abort routine if something goes wrong
+		// @author:marie
 		if err != nil {
 			logwriter.LW.Logger.WithField("issuer", "SFP Logic").Error(err)
 			return
@@ -143,8 +148,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		// @author:marie
 		// identify next hop, find its config and set serviceURL and cert respectively
+		// @author:marie
 		nextHop := md.SFP[0]
 		logwriter.LW.Logger.Debugf("Next Hop: %s", nextHop)
 		nextHopConf, ok := env.Config.Sf_pool[nextHop]
@@ -155,8 +160,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		serviceURL = nextHopConf.Target_sf_url
 		certShownByPEP = nextHopConf.X509KeyPair_shown_by_pep_to_sf
 
-		// @author:marie
 		// translate SF identifiers into ip addresses for remaining SFs
+		// @author:marie
 		var ipAddresses []string
 		for _, sf := range md.SFP[1:] {
 			sfConf, ok := env.Config.Sf_pool[sf]
@@ -167,8 +172,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			ipAddresses = append(ipAddresses, sfConf.Target_sf_addr)
 		}
 
-		// @author:marie
 		// finally append target service to list of SFP addresses, create a string of them and set this as header for following SFs
+		// @author:marie
 		ipAddresses = append(ipAddresses, serviceConf.Target_service_addr)
 		addressesStr := strings.Join(ipAddresses, ",")
 		logwriter.LW.Logger.Debugf("SFP as presented to following SFs: %s", addressesStr)

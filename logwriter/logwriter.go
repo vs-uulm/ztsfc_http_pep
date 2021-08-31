@@ -34,6 +34,7 @@ const (
 // LW is a LogWriter instance for global logging across the PEP.
 // Use it like LW.Logger.Info("this is a logging message") or
 // LW.Logger.WithField("someField", 1).Debug("some message")
+// @author:marie
 var LW *LogWriter
 
 type LogWriter struct {
@@ -43,6 +44,10 @@ type LogWriter struct {
 
 // Creates and return a new LogWriter instance
 func InitLogwriter(_logFilePath, _logLevel string, _ifTextFormatter bool) {
+	// @author:marie
+	// changed this function from a constructor to an init function, because
+	// all packages should access a single global instance.
+
 	var err error
 	LW = new(LogWriter)
 

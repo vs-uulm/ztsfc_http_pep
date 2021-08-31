@@ -226,6 +226,8 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
 }
 
 func userIsInLDAP(userName, password string) bool {
+	// retrieve connection parameters from config file instead of hard coding
+	// @author:marie
 	client := &ldap.LDAPClient{
 		Base:         env.Config.Ldap.Base,
 		Host:         env.Config.Ldap.Host,

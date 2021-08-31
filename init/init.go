@@ -40,6 +40,7 @@ func InitPdpParams(sysLogger *logrus.Entry) {
 	loadCACertificate(sysLogger, env.Config.Pdp.Cert_pep_accepts_shown_by_pdp, "PDP", env.Config.CA_cert_pool_pep_accepts_from_int)
 
 	// Use default pool size as pdp pool size if necessary
+	// @author:marie
 	if env.Config.Pdp.Pdp_client_pool_size == 0 {
 		if env.Config.Pep.Default_pool_size != 0 {
 			env.Config.Pdp.Pdp_client_pool_size = env.Config.Pep.Default_pool_size
@@ -61,6 +62,7 @@ func InitSfplParams(sysLogger *logrus.Entry) {
 	loadCACertificate(sysLogger, env.Config.Sfp_logic.Cert_pep_accepts_shown_by_sfpl, "SFP_logic", env.Config.CA_cert_pool_pep_accepts_from_int)
 
 	// Use default pool size as sfpl pool size if necessary
+	// @author:marie
 	if env.Config.Sfp_logic.Sfpl_client_pool_size == 0 {
 		if env.Config.Pep.Default_pool_size != 0 {
 			env.Config.Sfp_logic.Sfpl_client_pool_size = env.Config.Pep.Default_pool_size
