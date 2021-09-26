@@ -17,3 +17,4 @@ ztsfc_http_pep
 .env
 conf.yml
 *.log
+certs
