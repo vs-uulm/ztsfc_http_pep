@@ -107,7 +107,7 @@ func perform_passwd_auth(w http.ResponseWriter, req *http.Request) bool {
         return false
 
     } else {
-        handleFormReponse("only post methods are accepted in this state", w)
+        handleFormReponse("Pease type in your Credentials", w)
         return false
     }
 }
@@ -206,7 +206,22 @@ func ParseRsaPrivateKeyFromPemStr(privPEMlocation string) (*rsa.PrivateKey) {
 }
 
 func handleFormReponse(msg string, w http.ResponseWriter) {
-    form := `<html>
+    //form := `<html>
+    //    <body>
+    //    <center>
+    //    <form action="/" method="post">
+    //    <label for="fname">Username:</label>
+    //    <input type="text" id="username" name="username"><br><br>
+    //    <label for="lname">Password:</label>
+    //    <input type="password" id="password" name="password"><br><br>
+    //    <input type="submit" value="Submit">
+    //    </form>
+    //    </center>
+    //    </body>
+    //    </html>
+    //    `
+
+    form1 := `<html>
         <body>
         <center>
         <form action="/" method="post">
@@ -216,14 +231,15 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
         <input type="password" id="password" name="password"><br><br>
         <input type="submit" value="Submit">
         </form>
-        </center>
+        `
+    form2 := `</center>
         </body>
         </html>
         `
 
     //fmt.Println(msg)
     w.Header().Set("Content-Type", "text/html; charset=utf-8")
-    fmt.Fprintf(w, form)
+    fmt.Fprintf(w, "%s %s %s", form1, msg, form2)
 }
 
 func userIsInLDAP(userName, password string) bool {

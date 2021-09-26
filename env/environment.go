@@ -1,13 +1,13 @@
 package env
 
 import (
-	"gopkg.in/yaml.v2"
-	"os"
-    "crypto/tls"
-    "crypto/x509"
-    "net/url"
-	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
+	"crypto/tls"
+	"crypto/x509"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
+	"net/url"
+	"os"
 )
 
 type Pep_t struct {
@@ -23,9 +23,9 @@ type Service_t struct {
 	Cert_shown_by_pep_to_service              string `yaml:"cert_shown_by_pep_to_service"`
 	Privkey_for_cert_shown_by_pep_to_service  string `yaml:"privkey_for_cert_shown_by_pep_to_service"`
 	Cert_pep_accepts_when_shown_by_service    string `yaml:"cert_pep_accepts_when_shown_by_service"`
-    X509KeyPair_shown_by_pep_to_client        tls.Certificate
-    X509KeyPair_shown_by_pep_to_service       tls.Certificate
-    Target_service_url                        *url.URL
+	X509KeyPair_shown_by_pep_to_client        tls.Certificate
+	X509KeyPair_shown_by_pep_to_service       tls.Certificate
+	Target_service_url                        *url.URL
 }
 
 type ServFunction_t struct {
@@ -33,16 +33,16 @@ type ServFunction_t struct {
 	Cert_shown_by_pep_to_sf             string `yaml:"cert_shown_by_pep_to_sf"`
 	Privkey_for_cert_shown_by_pep_to_sf string `yaml:"privkey_for_cert_shown_by_pep_to_sf"`
 	Cert_pep_accepts_shown_by_sf        string `yaml:"cert_pep_accepts_shown_by_sf"`
-    X509KeyPair_shown_by_pep_to_sf      tls.Certificate
+	X509KeyPair_shown_by_pep_to_sf      tls.Certificate
 	Target_sf_url                       *url.URL
 }
 
 type Config_t struct {
-	Pep          Pep_t                      `yaml:"pep"`
-	Service_pool map[string]*Service_t      `yaml:"service_pool"`
-	Sf_pool      map[string]*ServFunction_t `yaml:"sf_pool"`
-    CA_cert_pool_pep_accepts_from_ext       *x509.CertPool
-    CA_cert_pool_pep_accepts_from_int       *x509.CertPool
+	Pep                               Pep_t                      `yaml:"pep"`
+	Service_pool                      map[string]*Service_t      `yaml:"service_pool"`
+	Sf_pool                           map[string]*ServFunction_t `yaml:"sf_pool"`
+	CA_cert_pool_pep_accepts_from_ext *x509.CertPool
+	CA_cert_pool_pep_accepts_from_int *x509.CertPool
 }
 
 var Config Config_t
@@ -52,9 +52,9 @@ func LoadConfig(configPath string, lw *logwriter.LogWriter) (err error) {
 	// Open config file
 	file, err := os.Open(configPath)
 	if err != nil {
-		lw.Logger.WithFields(logrus.Fields{"type":"system"}).Fatalf("Open configuration file error: %v", err)
+		lw.Logger.WithFields(logrus.Fields{"type": "system"}).Fatalf("Open configuration file error: %v", err)
 	} else {
-		lw.Logger.WithFields(logrus.Fields{"type":"system"}).Debugf("Configuration file %s exists and is readable", configPath)
+		lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("Configuration file %s exists and is readable", configPath)
 	}
 	defer file.Close()
 
@@ -64,10 +64,10 @@ func LoadConfig(configPath string, lw *logwriter.LogWriter) (err error) {
 	// Start YAML decoding from file
 	err = d.Decode(&Config)
 	if err != nil {
-		lw.Logger.WithFields(logrus.Fields{"type":"system"}).Fatalf("Configuration yaml-->go decoding error: %v", err)
+		lw.Logger.WithFields(logrus.Fields{"type": "system"}).Fatalf("Configuration yaml-->go decoding error: %v", err)
 	} else {
-		lw.Logger.WithFields(logrus.Fields{"type":"system"}).Debugf("Configuration has been successfully decoded")
+		lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("Configuration has been successfully decoded")
 	}
-	
+
 	return
 }

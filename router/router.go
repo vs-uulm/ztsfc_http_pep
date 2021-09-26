@@ -34,8 +34,8 @@ func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 		MaxVersion:             tls.VersionTLS13,
 		SessionTicketsDisabled: true,
 		Certificates:           nil,
-		//ClientAuth:             tls.RequireAndVerifyClientCert,
-		ClientAuth:				tls.VerifyClientCertIfGiven,
+		ClientAuth:             tls.RequireAndVerifyClientCert,
+		//ClientAuth:				tls.VerifyClientCertIfGiven,
 		ClientCAs: env.Config.CA_cert_pool_pep_accepts_from_ext,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// load a suitable certificate that is shown to clients according the request domain/TLS SNI
@@ -70,7 +70,7 @@ func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
     // Used for measuring the time ServeHTTP runs
-    //start := time.Now()
+//    start := time.Now()
     md := new(metadata.Cp_metadata)
 
 	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
@@ -91,12 +91,12 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
     pdp.PerformAuthorization(req, md)
 
     if !md.Auth_decision {
-        //fmt.Println("Request was rejected due to too low trust score")
-        w.WriteHeader(503)
+        fmt.Println("Request was rejected due to too low trust score")
+        w.WriteHeader(403)
         return
     }
 
-    //fmt.Printf("SFC: %s\n", md.SFC)
+    fmt.Printf("SFC: %s\n", md.SFC)
 
     // SFP LOGIC
     sfpl.TransformSFCintoSFP(md)
@@ -221,7 +221,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	proxy.ServeHTTP(w, req)
     //proxies.Service_proxy.ServeHTTP(w, req)
-   //fmt.Printf("'%s', %v\n", md.SFC, time.Since(start))
+  // fmt.Printf("'%s', %v\n", md.SFC, time.Since(start))
 }
 
 func (router *Router) ListenAndServeTLS() error {
