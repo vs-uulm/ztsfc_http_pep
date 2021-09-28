@@ -21,7 +21,14 @@ const (
 )
 
 type sfpResponse struct {
-	SFP []string `json:"sfp"`
+	SFC []string `json:"sfc"`
+	SFP []struct {
+		Name    string `json:"name"`
+		Address string `json:"address"`
+	} `json:"sfp"`
+}
+
+type sfResponse struct {
 }
 
 // TransformSFCintoSFP creates a service function path out of a service
@@ -50,13 +57,19 @@ func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 	// @author:marie
 	// Decode json body received from SFP logic
 	var sfpRes sfpResponse
+
 	err = json.NewDecoder(resp.Body).Decode(&sfpRes)
 	if err != nil {
 		return fmt.Errorf("Could not parse json answer from sfp logic: %v", err)
 	}
 
 	logwriter.LW.Logger.Debugf("Response from SFP logic: %v", sfpRes)
-	cpm.SFP = sfpRes.SFP
+	for _, sf := range sfpRes.SFP {
+		cpm.SFP = append(cpm.SFP, struct {
+			Name    string
+			Address string
+		}{Name: sf.Name, Address: sf.Address})
+	}
 
 	return nil
 }

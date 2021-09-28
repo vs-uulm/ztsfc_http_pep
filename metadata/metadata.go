@@ -17,7 +17,10 @@ type CpMetadata struct {
 	FailedToday       string
 	Location          string
 	SFC               []string
-	SFP               []string
+	SFP               []struct {
+		Name    string
+		Address string
+	}
 }
 
 // ClearMetadata resets all values from a CP_metadata instance to their
@@ -34,5 +37,8 @@ func (cpm *CpMetadata) ClearMetadata() {
 	cpm.FailedToday = ""
 	cpm.Location = ""
 	cpm.SFC = []string{}
-	cpm.SFP = []string{}
+	cpm.SFP = []struct {
+		Name    string
+		Address string
+	}{}
 }

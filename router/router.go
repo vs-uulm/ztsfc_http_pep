@@ -152,24 +152,23 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		// @author:marie
 		nextHop := md.SFP[0]
 		logwriter.LW.Logger.Debugf("Next Hop: %s", nextHop)
-		nextHopConf, ok := env.Config.Sf_pool[nextHop]
+		nextHopConf, ok := env.Config.Sf_pool[nextHop.Name]
 		if !ok {
 			logwriter.LW.Logger.WithField("sf", nextHop).Error("First SF from the SFP does not exist in config file.")
 			return
 		}
-		serviceURL = nextHopConf.Target_sf_url
+		serviceURL, err = url.Parse(nextHop.Address)
+		if err != nil {
+			logwriter.LW.Logger.WithField("address", nextHop.Address).Error("Could not parse address value as URL.")
+		}
 		certShownByPEP = nextHopConf.X509KeyPair_shown_by_pep_to_sf
 
 		// translate SF identifiers into ip addresses for remaining SFs
 		// @author:marie
 		var ipAddresses []string
 		for _, sf := range md.SFP[1:] {
-			sfConf, ok := env.Config.Sf_pool[sf]
-			if !ok {
-				logwriter.LW.Logger.WithField("sf", sf).Error("SF id returned by SFP logic has no match in config file")
-				return
-			}
-			ipAddresses = append(ipAddresses, sfConf.Target_sf_addr)
+
+			ipAddresses = append(ipAddresses, sf.Address)
 		}
 
 		// finally append target service to list of SFP addresses, create a string of them and set this as header for following SFs
