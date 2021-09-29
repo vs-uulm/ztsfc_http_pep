@@ -22,14 +22,14 @@ import (
 )
 
 type Router struct {
-	tls_config *tls.Config
-	frontend   *http.Server
+	tlsConfig *tls.Config
+	frontend  *http.Server
 }
 
 func NewRouter() (*Router, error) {
 	router := new(Router)
 
-	router.tls_config = &tls.Config{
+	router.tlsConfig = &tls.Config{
 		Rand:                   nil,
 		Time:                   nil,
 		MinVersion:             tls.VersionTLS13,
@@ -38,15 +38,15 @@ func NewRouter() (*Router, error) {
 		Certificates:           nil,
 		//ClientAuth:             tls.RequireAndVerifyClientCert,
 		ClientAuth: tls.VerifyClientCertIfGiven,
-		ClientCAs:  env.Config.CA_cert_pool_pep_accepts_from_ext,
+		ClientCAs:  env.Config.CAcertPoolPepAcceptsFromExt,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// use SNI map to load suitable certificate
 			// @author:marie
-			service, ok := env.Config.Service_SNI_map[cli.ServerName]
+			service, ok := env.Config.ServiceSniMap[cli.ServerName]
 			if !ok {
 				return nil, fmt.Errorf("Error: Could not serve a suitable certificate for %s\n", cli.ServerName)
 			}
-			return &service.X509KeyPair_shown_by_pep_to_client, nil
+			return &service.X509KeyPairShownByPepToClient, nil
 		},
 	}
 
@@ -56,8 +56,8 @@ func NewRouter() (*Router, error) {
 
 	// Setting Up the Frontend Server
 	router.frontend = &http.Server{
-		Addr:         env.Config.Pep.Listen_addr,
-		TLSConfig:    router.tls_config,
+		Addr:         env.Config.Pep.ListenAddr,
+		TLSConfig:    router.tlsConfig,
 		ReadTimeout:  time.Hour * 1,
 		WriteTimeout: time.Hour * 1,
 		Handler:      mux,
@@ -116,7 +116,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var serviceURL *url.URL
 	var certShownByPEP tls.Certificate
 
-	serviceConf, ok := env.Config.Service_SNI_map[md.Resource]
+	serviceConf, ok := env.Config.ServiceSniMap[md.Resource]
 	if !ok {
 		logwriter.LW.Logger.WithField("sni", md.Resource).Error("Requested SNI has no match in config file.")
 		return
@@ -129,8 +129,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if len(md.SFC) == 0 {
 
 		logwriter.LW.Logger.Debug("SFC is empty. Thus, no forwarding to SFP logic")
-		serviceURL = serviceConf.Target_service_url
-		certShownByPEP = serviceConf.X509KeyPair_shown_by_pep_to_service
+		serviceURL = serviceConf.TargetServiceUrl
+		certShownByPEP = serviceConf.X509KeyPairShownByPepToService
 
 	} else {
 
@@ -152,7 +152,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		// @author:marie
 		nextHop := md.SFP[0]
 		logwriter.LW.Logger.Debugf("Next Hop: %s", nextHop)
-		nextHopConf, ok := env.Config.Sf_pool[nextHop.Name]
+		nextHopConf, ok := env.Config.SfPool[nextHop.Name]
 		if !ok {
 			logwriter.LW.Logger.WithField("sf", nextHop).Error("First SF from the SFP does not exist in config file.")
 			return
@@ -161,7 +161,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			logwriter.LW.Logger.WithField("address", nextHop.Address).Error("Could not parse address value as URL.")
 		}
-		certShownByPEP = nextHopConf.X509KeyPair_shown_by_pep_to_sf
+		certShownByPEP = nextHopConf.X509KeyPairShownByPepToSf
 
 		// translate SF identifiers into ip addresses for remaining SFs
 		// @author:marie
@@ -173,7 +173,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 		// finally append target service to list of SFP addresses, create a string of them and set this as header for following SFs
 		// @author:marie
-		ipAddresses = append(ipAddresses, serviceConf.Target_service_addr)
+		ipAddresses = append(ipAddresses, serviceConf.TargetServiceAddr)
 		addressesStr := strings.Join(ipAddresses, ",")
 		logwriter.LW.Logger.Debugf("SFP as presented to following SFs: %s", addressesStr)
 
@@ -194,7 +194,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			Certificates:       []tls.Certificate{certShownByPEP},
 			InsecureSkipVerify: true,
 			ClientAuth:         tls.RequireAndVerifyClientCert,
-			ClientCAs:          env.Config.CA_cert_pool_pep_accepts_from_int,
+			ClientCAs:          env.Config.CAcertPoolPepAcceptsFromInt,
 		},
 	}
 

@@ -23,7 +23,7 @@ type CpMetadata struct {
 	}
 }
 
-// ClearMetadata resets all values from a CP_metadata instance to their
+// ClearMetadata resets all values from a CpMetadata instance to their
 // zero values.
 func (cpm *CpMetadata) ClearMetadata() {
 	cpm.AuthDecision = false

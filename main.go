@@ -42,8 +42,8 @@ func init() {
 	}
 
 	// Create Certificate Pools for the CA certificates used by the PEP
-	env.Config.CA_cert_pool_pep_accepts_from_ext = x509.NewCertPool()
-	env.Config.CA_cert_pool_pep_accepts_from_int = x509.NewCertPool()
+	env.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
+	env.Config.CAcertPoolPepAcceptsFromInt = x509.NewCertPool()
 
 	// Preload diverse parameters from config
 	// (One function for each section in config.yml)
@@ -57,8 +57,8 @@ func init() {
 
 	// Init Reverse Proxies used for the modules
 	// Basic_auth_proxy currently not needed since BasicAuth is performed as part of the PEP
-	proxies.PdpClientPool = proxies.NewClientPool(env.Config.Pdp.Pdp_client_pool_size, env.Config.Pdp.X509KeyPair_shown_by_pep_to_pdp)
-	proxies.SfpLogicClientPool = proxies.NewClientPool(env.Config.Sfp_logic.Sfpl_client_pool_size, env.Config.Sfp_logic.X509KeyPair_shown_by_pep_to_sfpl)
+	proxies.PdpClientPool = proxies.NewClientPool(env.Config.Pdp.PdpClientPoolSize, env.Config.Pdp.X509KeyPairShownByPepToPdp)
+	proxies.SfpLogicClientPool = proxies.NewClientPool(env.Config.SfpLogic.SfplClientPoolSize, env.Config.SfpLogic.X509KeyPairShownByPepToSfpl)
 
 	// Init RSA Keys für JWT
 	bauth.JwtPubkey = bauth.ParseRsaPublicKeyFromPemStr("./basic_auth/jwt_test_pub.pem")

@@ -27,7 +27,7 @@ func NewClientPool(poolSize int, certShownByPEP tls.Certificate) []*http.Client 
 				Certificates:       []tls.Certificate{certShownByPEP},
 				InsecureSkipVerify: true,
 				ClientAuth:         tls.RequireAndVerifyClientCert,
-				ClientCAs:          env.Config.CA_cert_pool_pep_accepts_from_int,
+				ClientCAs:          env.Config.CAcertPoolPepAcceptsFromInt,
 			},
 		}
 		clientPool[i] = client

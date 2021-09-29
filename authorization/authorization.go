@@ -37,7 +37,7 @@ func PerformAuthorization(clientReq *http.Request, cpm *metadata.CpMetadata) err
 
 	// send request to correct address and API endpoint
 	// @author:marie
-	req, err := http.NewRequest("GET", env.Config.Pdp.Target_pdp_addr+requestEndpoint, nil)
+	req, err := http.NewRequest("GET", env.Config.Pdp.TargetPdpAddr+requestEndpoint, nil)
 	if err != nil { // @author:marie catch error
 		return err
 	}

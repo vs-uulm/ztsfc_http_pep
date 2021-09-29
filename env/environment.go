@@ -11,15 +11,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// The struct Pep_t is for parsing the section 'pep' of the config file.
-type Pep_t struct {
-	Listen_addr                             string   `yaml:"listen_addr"`
-	Certs_pep_accepts_when_shown_by_clients []string `yaml:"certs_pep_accepts_when_shown_by_clients"`
-	Default_pool_size                       int      `yaml:"default_pool_size"`
+// The struct PepT is for parsing the section 'pep' of the config file.
+type PepT struct {
+	ListenAddr                        string   `yaml:"listen_addr"`
+	CertsPepAcceptsWhenShownByClients []string `yaml:"certs_pep_accepts_when_shown_by_clients"`
+	DefaultPoolSize                   int      `yaml:"default_pool_size"`
 }
 
-// The struct LDAP_t is for parsing the section 'ldap' of the config file.
-type LDAP_t struct {
+// The struct LdapT is for parsing the section 'ldap' of the config file.
+type LdapT struct {
 	Base         string   `yaml:"base"`
 	Host         string   `yaml:"host"`
 	Port         int      `yaml:"port"`
@@ -31,67 +31,67 @@ type LDAP_t struct {
 	Attributes   []string `yaml:"attributes"`
 }
 
-// The struct Pdp_t is for parsing the section 'pdp' of the config file.
-type Pdp_t struct {
-	Target_pdp_addr                      string `yaml:"target_pdp_addr"`
-	Cert_shown_by_pep_to_pdp             string `yaml:"cert_shown_by_pep_to_pdp"`
-	Privkey_for_cert_shown_by_pep_to_pdp string `yaml:"privkey_for_cert_shown_by_pep_to_pdp"`
-	Cert_pep_accepts_shown_by_pdp        string `yaml:"cert_pep_accepts_shown_by_pdp"`
-	Pdp_client_pool_size                 int    `yaml:"pdp_client_pool_size"`
-	X509KeyPair_shown_by_pep_to_pdp      tls.Certificate
+// The struct PdpT is for parsing the section 'pdp' of the config file.
+type PdpT struct {
+	TargetPdpAddr                 string `yaml:"target_pdp_addr"`
+	CertShownByPepToPdp           string `yaml:"cert_shown_by_pep_to_pdp"`
+	PrivkeyForCertShownByPepToPdp string `yaml:"privkey_for_cert_shown_by_pep_to_pdp"`
+	CertPepAcceptsShownByPdp      string `yaml:"cert_pep_accepts_shown_by_pdp"`
+	PdpClientPoolSize             int    `yaml:"pdp_client_pool_size"`
+	X509KeyPairShownByPepToPdp    tls.Certificate
 }
 
-// The struct Sfpl_t is for parsing the section 'sfp_logic' of the config file.
-type Sfpl_t struct {
-	Target_sfpl_addr                      string `yaml:"target_sfpl_addr"`
-	Cert_shown_by_pep_to_sfpl             string `yaml:"cert_shown_by_pep_to_sfpl"`
-	Privkey_for_cert_shown_by_pep_to_sfpl string `yaml:"privkey_for_cert_shown_by_pep_to_sfpl"`
-	Cert_pep_accepts_shown_by_sfpl        string `yaml:"cert_pep_accepts_shown_by_sfpl"`
-	Sfpl_client_pool_size                 int    `yaml:"sfpl_client_pool_size"`
-	X509KeyPair_shown_by_pep_to_sfpl      tls.Certificate
+// The struct SfplT is for parsing the section 'sfp_logic' of the config file.
+type SfplT struct {
+	TargetSfplAddr                 string `yaml:"target_sfpl_addr"`
+	CertShownByPepToSfpl           string `yaml:"cert_shown_by_pep_to_sfpl"`
+	PrivkeyForCertShownByPepToSfpl string `yaml:"privkey_for_cert_shown_by_pep_to_sfpl"`
+	CertPepAcceptsShownBySfpl      string `yaml:"cert_pep_accepts_shown_by_sfpl"`
+	SfplClientPoolSize             int    `yaml:"sfpl_client_pool_size"`
+	X509KeyPairShownByPepToSfpl    tls.Certificate
 }
 
-// The struct Service_t is for parsing one service from section 'service_pool'
+// The struct ServiceT is for parsing one service from section 'service_pool'
 // of the config file.
-type Service_t struct {
-	Sni                                       string `yaml:"sni"`
-	Target_service_addr                       string `yaml:"target_service_addr"`
-	Cert_shown_by_pep_to_clients_matching_sni string `yaml:"cert_shown_by_pep_to_clients_matching_sni"`
-	Privkey_for_cert_shown_by_pep_to_client   string `yaml:"privkey_for_cert_shown_by_pep_to_client"`
-	Cert_shown_by_pep_to_service              string `yaml:"cert_shown_by_pep_to_service"`
-	Privkey_for_cert_shown_by_pep_to_service  string `yaml:"privkey_for_cert_shown_by_pep_to_service"`
-	Cert_pep_accepts_when_shown_by_service    string `yaml:"cert_pep_accepts_when_shown_by_service"`
-	X509KeyPair_shown_by_pep_to_client        tls.Certificate
-	X509KeyPair_shown_by_pep_to_service       tls.Certificate
-	Target_service_url                        *url.URL
+type ServiceT struct {
+	Sni                                string `yaml:"sni"`
+	TargetServiceAddr                  string `yaml:"target_service_addr"`
+	CertShownByPepToClientsMatchingSni string `yaml:"cert_shown_by_pep_to_clients_matching_sni"`
+	PrivkeyForCertShownByPepToClient   string `yaml:"privkey_for_cert_shown_by_pep_to_client"`
+	CertShownByPepToService            string `yaml:"cert_shown_by_pep_to_service"`
+	PrivkeyForCertShownByPepToService  string `yaml:"privkey_for_cert_shown_by_pep_to_service"`
+	CertPepAcceptsWhenShownByService   string `yaml:"cert_pep_accepts_when_shown_by_service"`
+	X509KeyPairShownByPepToClient      tls.Certificate
+	X509KeyPairShownByPepToService     tls.Certificate
+	TargetServiceUrl                   *url.URL
 }
 
-// The struct ServFunction_t is for parsing one service function from section
+// The struct ServFunctionT is for parsing one service function from section
 // 'sf_pool' of the config file.
-type ServFunction_t struct {
-	Target_sf_addr                      string `yaml:"target_sf_addr"`
-	Cert_shown_by_pep_to_sf             string `yaml:"cert_shown_by_pep_to_sf"`
-	Privkey_for_cert_shown_by_pep_to_sf string `yaml:"privkey_for_cert_shown_by_pep_to_sf"`
-	Cert_pep_accepts_shown_by_sf        string `yaml:"cert_pep_accepts_shown_by_sf"`
-	X509KeyPair_shown_by_pep_to_sf      tls.Certificate
-	Target_sf_url                       *url.URL
+type ServFunctionT struct {
+	TargetSfAddr                 string `yaml:"target_sf_addr"`
+	CertShownByPepToSf           string `yaml:"cert_shown_by_pep_to_sf"`
+	PrivkeyForCertShownByPepToSf string `yaml:"privkey_for_cert_shown_by_pep_to_sf"`
+	CertPepAcceptsShownBySf      string `yaml:"cert_pep_accepts_shown_by_sf"`
+	X509KeyPairShownByPepToSf    tls.Certificate
+	TargetSfUrl                  *url.URL
 }
 
-// The struct Config_t is for parsing the basic structure of the config file.
-type Config_t struct {
-	Pep                               Pep_t                      `yaml:"pep"`
-	Ldap                              LDAP_t                     `yaml:"ldap"`
-	Pdp                               Pdp_t                      `yaml:"pdp"`
-	Sfp_logic                         Sfpl_t                     `yaml:"sfp_logic"`
-	Service_pool                      map[string]*Service_t      `yaml:"service_pool"`
-	Sf_pool                           map[string]*ServFunction_t `yaml:"sf_pool"`
-	CA_cert_pool_pep_accepts_from_ext *x509.CertPool
-	CA_cert_pool_pep_accepts_from_int *x509.CertPool
-	Service_SNI_map                   map[string]*Service_t
+// The struct ConfigT is for parsing the basic structure of the config file.
+type ConfigT struct {
+	Pep                         PepT                      `yaml:"pep"`
+	Ldap                        LdapT                     `yaml:"ldap"`
+	Pdp                         PdpT                      `yaml:"pdp"`
+	SfpLogic                    SfplT                     `yaml:"sfp_logic"`
+	ServicePool                 map[string]*ServiceT      `yaml:"service_pool"`
+	SfPool                      map[string]*ServFunctionT `yaml:"sf_pool"`
+	CAcertPoolPepAcceptsFromExt *x509.CertPool
+	CAcertPoolPepAcceptsFromInt *x509.CertPool
+	ServiceSniMap               map[string]*ServiceT
 }
 
 // Var Config contains all input from the config file and is is globally accessible.
-var Config Config_t
+var Config ConfigT
 
 // Parses a configuration yaml file into the global Config variable
 func LoadConfig(configPath string, sysLogger *logrus.Entry) (err error) {
