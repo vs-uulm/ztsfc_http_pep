@@ -28,9 +28,6 @@ type sfpResponse struct {
 	} `json:"sfp"`
 }
 
-type sfResponse struct {
-}
-
 // TransformSFCintoSFP creates a service function path out of a service
 // function chain. Therefore, it communicates with the SFP Logic over HTTPS.
 // The SFP Logic determines the order of the service functions inside the SFC
