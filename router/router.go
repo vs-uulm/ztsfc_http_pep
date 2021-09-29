@@ -180,7 +180,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		req.Header.Set("sfp", addressesStr)
 
 	}
-	logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
+	// logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
+	logwriter.LW.Logger.Debugf("Service URL: %s", serviceConf.TargetServiceAddr)
 
 	proxy = httputil.NewSingleHostReverseProxy(serviceURL)
 
