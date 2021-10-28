@@ -1,126 +1,154 @@
+// Package init validates the parameters from the config file and transforms
+// different values into the adequate data structures.
+// Each section in example_conf.yml corresponds to a function of this package.
 package init
 
 import (
 	"crypto/tls"
-	"github.com/sirupsen/logrus"
+	"crypto/x509"
 	"io/ioutil"
-	env "local.com/leobrada/ztsfc_http_pep/env"
-	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
 	"net/url"
-	"os"
-	"os/signal"
-	"syscall"
+
+	"github.com/sirupsen/logrus"
+	env "local.com/leobrada/ztsfc_http_pep/env"
 )
 
-func LoadServicePool(config env.Config_t, lw *logwriter.LogWriter) error {
+// Function initializes the 'pep' section of the config file.
+// It loads the PEP certificate.
+func InitPepParams(sysLogger *logrus.Entry) {
+
+	// Read CA certs used for signing client certs and are accepted by the PEP
+	for _, acceptedClientCert := range env.Config.Pep.CertsPepAcceptsWhenShownByClients {
+		loadCACertificate(sysLogger, acceptedClientCert, "client", env.Config.CAcertPoolPepAcceptsFromExt)
+	}
+}
+
+// Function initializes the 'ldap' section of the config file.
+// Function currently does nothing.
+func InitLdapParams(sysLogger *logrus.Entry) {
+
+}
+
+// Function initializes the 'pdp' section of the config file.
+// It loads the certificates for the given file paths.
+func InitPdpParams(sysLogger *logrus.Entry) {
+
+	// Preload X509KeyPair and write it to env
+	env.Config.Pdp.X509KeyPairShownByPepToPdp = loadX509KeyPair(sysLogger, env.Config.Pdp.CertShownByPepToPdp, env.Config.Pdp.PrivkeyForCertShownByPepToPdp, "PDP", "")
+
+	// Preload CA certificate and append it to cert pool
+	loadCACertificate(sysLogger, env.Config.Pdp.CertPepAcceptsShownByPdp, "PDP", env.Config.CAcertPoolPepAcceptsFromInt)
+
+	// Use default pool size as pdp pool size if necessary
+	// @author:marie
+	if env.Config.Pdp.PdpClientPoolSize == 0 {
+		if env.Config.Pep.DefaultPoolSize != 0 {
+			env.Config.Pdp.PdpClientPoolSize = env.Config.Pep.DefaultPoolSize
+			sysLogger.Debugf("pdp client pool size set to default pool size (%d)", env.Config.Pep.DefaultPoolSize)
+		} else {
+			sysLogger.Fatalf("config provides neither a pdp_client_pool_size nor a default_pool_size")
+		}
+	}
+}
+
+// Function initializes the 'sfp_logic' section of the config file.
+// It loads the certificates for the given file paths.
+func InitSfplParams(sysLogger *logrus.Entry) {
+
+	// Preload X509KeyPair and write it to env
+	env.Config.SfpLogic.X509KeyPairShownByPepToSfpl = loadX509KeyPair(sysLogger, env.Config.SfpLogic.CertShownByPepToSfpl, env.Config.SfpLogic.PrivkeyForCertShownByPepToSfpl, "SFP_logic", "")
+
+	// Preload CA certificate and append it to cert pool
+	loadCACertificate(sysLogger, env.Config.SfpLogic.CertPepAcceptsShownBySfpl, "SFP_logic", env.Config.CAcertPoolPepAcceptsFromInt)
+
+	// Use default pool size as sfpl pool size if necessary
+	// @author:marie
+	if env.Config.SfpLogic.SfplClientPoolSize == 0 {
+		if env.Config.Pep.DefaultPoolSize != 0 {
+			env.Config.SfpLogic.SfplClientPoolSize = env.Config.Pep.DefaultPoolSize
+			sysLogger.Debugf("sfpl client pool size set to default pool size (%d)", env.Config.Pep.DefaultPoolSize)
+		} else {
+			sysLogger.Fatalf("config provides neither an sfpl_client_pool_size nor a default_pool_size")
+		}
+	}
+}
+
+// Function initializes the 'service_pool' section of the config file.
+// It loads the certificates for the given file paths and preparses the URLs.
+// Additionally, it creates a map to access services by SNI directly.
+func InitServicePoolParams(sysLogger *logrus.Entry) {
 	var err error
-	for service_name, service_config := range env.Config.Service_pool {
+	for serviceName, serviceConfig := range env.Config.ServicePool {
 
 		// Preload X509KeyPairs shown by pep to client
-		env.Config.Service_pool[service_name].X509KeyPair_shown_by_pep_to_client, err =
-			tls.LoadX509KeyPair(
-				service_config.Cert_shown_by_pep_to_clients_matching_sni,
-				service_config.Privkey_for_cert_shown_by_pep_to_client)
-		if err != nil {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Fatalf("Critical Error when loading external X509KeyPair for service %s from %s and %s: %v", service_name, service_config.Cert_shown_by_pep_to_clients_matching_sni, service_config.Privkey_for_cert_shown_by_pep_to_client, err)
-		} else {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("External X509KeyPair for service %s from %s and %s is successfully loaded", service_name, service_config.Cert_shown_by_pep_to_clients_matching_sni, service_config.Privkey_for_cert_shown_by_pep_to_client)
-		}
+		env.Config.ServicePool[serviceName].X509KeyPairShownByPepToClient = loadX509KeyPair(sysLogger, serviceConfig.CertShownByPepToClientsMatchingSni, serviceConfig.PrivkeyForCertShownByPepToClient, "service "+serviceName, "external")
 
 		// Preload X509KeyPairs shown by pep to service
-		env.Config.Service_pool[service_name].X509KeyPair_shown_by_pep_to_service, err =
-			tls.LoadX509KeyPair(
-				service_config.Cert_shown_by_pep_to_service,
-				service_config.Privkey_for_cert_shown_by_pep_to_service)
-		if err != nil {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Fatalf("Critical Error when loading internal X509KeyPair for service %s from %s and %s: %v", service_name, service_config.Cert_shown_by_pep_to_service, service_config.Privkey_for_cert_shown_by_pep_to_service, err)
-		} else {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("Internal X509KeyPair for service %s from %s and %s is successfully loaded", service_name, service_config.Cert_shown_by_pep_to_clients_matching_sni, service_config.Privkey_for_cert_shown_by_pep_to_client)
-		}
+		env.Config.ServicePool[serviceName].X509KeyPairShownByPepToService = loadX509KeyPair(sysLogger, serviceConfig.CertShownByPepToService, serviceConfig.PrivkeyForCertShownByPepToService, "service "+serviceName, "internal")
 
 		// Preparse Service URL
-		env.Config.Service_pool[service_name].Target_service_url, err = url.Parse(service_config.Target_service_addr)
+		env.Config.ServicePool[serviceName].TargetServiceUrl, err = url.Parse(serviceConfig.TargetServiceAddr)
 		if err != nil {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Fatalf("Critical Error when parsing target service URL for service %s: %v", service_name, err)
+			sysLogger.Fatalf("Critical Error when parsing target service URL for service %s: %v", serviceName, err)
 		} else {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("target service URL for service %s was successfully parsed", service_name)
+			sysLogger.Debugf("target service URL for service %s was successfully parsed", serviceName)
+		}
+
+		// Preload CA certificate and append it to cert pool
+		loadCACertificate(sysLogger, serviceConfig.CertPepAcceptsWhenShownByService, "service "+serviceName, env.Config.CAcertPoolPepAcceptsFromInt)
+
+		// Create a map to directly access service config by SNI
+		// @author:marie
+		env.Config.ServiceSniMap = make(map[string]*env.ServiceT)
+		for _, service := range env.Config.ServicePool {
+			env.Config.ServiceSniMap[service.Sni] = service
 		}
 	}
-	return err
 }
 
-func LoadSfPool(config env.Config_t, lw *logwriter.LogWriter) error {
+// Function initializes the 'sf_pool' section of the config file.
+// It loads the certificates for the given file paths and preparses the URLs.
+func InitSfPoolParams(sysLogger *logrus.Entry) {
 	var err error
-	for sf_name, sf_config := range env.Config.Sf_pool {
+	for sfName, sfConfig := range env.Config.SfPool {
+
 		// preload X509KeyPairs shown by pep to sf
-		env.Config.Sf_pool[sf_name].X509KeyPair_shown_by_pep_to_sf, err = tls.LoadX509KeyPair(
-			sf_config.Cert_shown_by_pep_to_sf,
-			sf_config.Privkey_for_cert_shown_by_pep_to_sf)
-		if err != nil {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Fatalf("Critical Error when loading X509KeyPair for service function %s from %s and %s: %v", sf_name, sf_config.Cert_shown_by_pep_to_sf, sf_config.Privkey_for_cert_shown_by_pep_to_sf, err)
-		} else {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("X509KeyPair for service function %s from %s and %s is successfully loaded", sf_name, sf_config.Cert_shown_by_pep_to_sf, sf_config.Privkey_for_cert_shown_by_pep_to_sf)
-		}
+		env.Config.SfPool[sfName].X509KeyPairShownByPepToSf = loadX509KeyPair(sysLogger, sfConfig.CertShownByPepToSf, sfConfig.PrivkeyForCertShownByPepToSf, "service function "+sfName, "")
 
 		// Preparse SF URL
-		env.Config.Sf_pool[sf_name].Target_sf_url, err = url.Parse(sf_config.Target_sf_addr)
+		env.Config.SfPool[sfName].TargetSfUrl, err = url.Parse(sfConfig.TargetSfAddr)
 		if err != nil {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Fatalf("Critical Error when parsing target URL for service function %s: %v", sf_name, err)
+			sysLogger.Fatalf("Critical Error when parsing target URL for service function %s: %v", sfName, err)
 		} else {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("Target URL for service function %s was successfully parsed", sf_name)
+			sysLogger.Debugf("Target URL for service function %s was successfully parsed", sfName)
 		}
+
+		// Preload CA certificate and append it to cert pool
+		loadCACertificate(sysLogger, sfConfig.CertPepAcceptsShownBySf, "service function "+sfName, env.Config.CAcertPoolPepAcceptsFromInt)
 	}
-	return err
 }
 
-func InitAllCACertificates(lw *logwriter.LogWriter) error {
-	var caRoot []byte
-	var err error
-
-	// Read CA certs used for signing client certs and are accepted by the PEP
-	for _, acceptedClientCert := range env.Config.Pep.Certs_pep_accepts_when_shown_by_clients {
-		caRoot, err = ioutil.ReadFile(acceptedClientCert)
-		if err != nil {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Fatalf("Loading client CA certificate from %s error", acceptedClientCert)
-		} else {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("Client CA certificate from %s is successfully loaded", acceptedClientCert)
-		}
-		// Append a certificate to the pool
-		env.Config.CA_cert_pool_pep_accepts_from_ext.AppendCertsFromPEM(caRoot)
+// function unifies the loading of X509 key pairs for different components
+// @author:marie
+func loadX509KeyPair(sysLogger *logrus.Entry, certfile, keyfile, componentName, certAttr string) tls.Certificate {
+	keyPair, err := tls.LoadX509KeyPair(certfile, keyfile)
+	if err != nil {
+		sysLogger.Fatalf("Critical Error when loading %s X509KeyPair for %s from %s and %s: %v", certAttr, componentName, certfile, keyfile, err)
+	} else {
+		sysLogger.Debugf("%s X509KeyPair for %s from %s and %s is successfully loaded", certAttr, componentName, certfile, keyfile)
 	}
-
-	// Read CA certs used for signing client certs and are accepted by the PEP
-	for service_name, service_config := range env.Config.Service_pool {
-		caRoot, err = ioutil.ReadFile(service_config.Cert_pep_accepts_when_shown_by_service)
-		if err != nil {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Fatalf("Loading service %s CA certificate from %s error", service_name, service_config.Cert_pep_accepts_when_shown_by_service)
-		} else {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("Service %s CA certificate from %s is successfully loaded", service_name, service_config.Cert_pep_accepts_when_shown_by_service)
-		}
-		// Append a certificate to the pool
-		env.Config.CA_cert_pool_pep_accepts_from_int.AppendCertsFromPEM(caRoot)
-	}
-
-	for sf_name, sf_config := range env.Config.Sf_pool {
-		caRoot, err = ioutil.ReadFile(sf_config.Cert_pep_accepts_shown_by_sf)
-		if err != nil {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Fatalf("Loading service function %s CA certificate from %s error", sf_name, sf_config.Cert_pep_accepts_shown_by_sf)
-		} else {
-			lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debugf("Service function %s CA certificate from %s is successfully loaded", sf_name, sf_config.Cert_pep_accepts_shown_by_sf)
-		}
-		// Append a certificate to the pool
-		env.Config.CA_cert_pool_pep_accepts_from_int.AppendCertsFromPEM(caRoot)
-	}
-	return err
+	return keyPair
 }
 
-func SetupCloseHandler(lw *logwriter.LogWriter) {
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		lw.Logger.WithFields(logrus.Fields{"type": "system"}).Debug("- Ctrl+C pressed in Terminal. Terminating...")
-		lw.Terminate()
-		os.Exit(0)
-	}()
+// function unifies the loading of CA certificates for different components
+// @author:marie
+func loadCACertificate(sysLogger *logrus.Entry, certfile string, componentName string, certPool *x509.CertPool) {
+	caRoot, err := ioutil.ReadFile(certfile)
+	if err != nil {
+		sysLogger.Fatalf("Loading %s CA certificate from %s error: %v", componentName, certfile, err)
+	} else {
+		sysLogger.Debugf("%s CA certificate from %s is successfully loaded", componentName, certfile)
+	}
+	// Append a certificate to the pool
+	certPool.AppendCertsFromPEM(caRoot)
 }

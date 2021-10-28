@@ -1,49 +1,84 @@
-package authorization
+// Package sfp_logic handles the communication with the SFP Logic.
+// (See https://github.com/vs-uulm/ztsfc_http_sfp_logic)
+package sfp_logic
 
 import (
-    "os"
-    "fmt"
-    "net/http"
-    "math/rand"
-//    "crypto/tls"
-    //"strconv"
-    //"strings"
-    metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-  //  env "local.com/leobrada/ztsfc_http_pep/env"
-    proxies "local.com/leobrada/ztsfc_http_pep/proxies"
-//    bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
+	"encoding/json"
+	"fmt"
+	"math/rand"
+	"net/http"
+
+	env "local.com/leobrada/ztsfc_http_pep/env"
+	"local.com/leobrada/ztsfc_http_pep/logwriter"
+	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
+	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
 )
 
-//func PerformAuthorization(req *http.Request, cpm *metadata.Cp_metadata) (allow bool, sfc []string) {
-func TransformSFCintoSFP(cpm *metadata.Cp_metadata) {
+const (
+	// @author:marie
+	// Last part of the endpoint's request URI of the PDP API
+	requestEndpoint = "/v1/sfp"
+)
 
-//    fmt.Printf("SFC BEFORE SENT TO SFP LOPGIC: %s\n", cpm.SFC)
-
-    sfp_req, err := http.NewRequest("GET", "https://10.4.0.52:8889", nil)
-    if err != nil {
-        fmt.Printf("Error when sending to sfp logic (1): %v\n", err)
-    }
-    prepareSFPRequest(sfp_req, cpm)
-    response, err := proxies.Sfp_logic_client_pool[rand.Int()%50].Do(sfp_req)
-    if err != nil {
-        fmt.Printf("Error when sending to sfp logic (2): %v\n", err)
-        fmt.Fprintf(os.Stderr, "Error when sending to sfp logic (2): %v\n", err)
-    }
-
-    cpm.SFP = response.Header.Get("sfp")
-
-   // if response.Header.Get("allow") == "yes" {
-   //     allow = true
-   // } else {
-   //     allow = false
-   // }
-
-   // return allow, sfc
+type sfpResponse struct {
+	SFC []string `json:"sfc"`
+	SFP []struct {
+		Name    string `json:"name"`
+		Address string `json:"address"`
+	} `json:"sfp"`
 }
 
-func prepareSFPRequest(req *http.Request, cpm *metadata.Cp_metadata) {
-//    fmt.Printf("cpm.SFC value: %s\n", cpm.SFC)
-    req.Header.Set("sfc", cpm.SFC)
-//    fmt.Printf("HTTP Header: %s\n", req.Header.Get("sfc"))
-//    fmt.Fprintf(os.Stderr, "HTTP Header: %s\n", req.Header.Get("sfc"))
+// TransformSFCintoSFP creates a service function path out of a service
+// function chain. Therefore, it communicates with the SFP Logic over HTTPS.
+// The SFP Logic determines the order of the service functions inside the SFC
+// and then returns the result, the SFP.
+// The functions reads the SFC from cpm and also writes the SFP into this
+// struct.
+func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
+
+	// send request to correct address and API endpoint
+	// @author:marie
+	req, err := http.NewRequest("GET", env.Config.SfpLogic.TargetSfplAddr+requestEndpoint, nil)
+	if err != nil { // @author:marie catch error
+		return err
+	}
+	prepareSFPRequest(req, cpm)
+
+	logwriter.LW.Logger.Debugf("Request to sfp logic: %v", req)
+
+	resp, err := proxies.SfpLogicClientPool[rand.Int()%50].Do(req)
+	if err != nil {
+		return err
+	}
+
+	// @author:marie
+	// Decode json body received from SFP logic
+	var sfpRes sfpResponse
+
+	err = json.NewDecoder(resp.Body).Decode(&sfpRes)
+	if err != nil {
+		return fmt.Errorf("Could not parse json answer from sfp logic: %v", err)
+	}
+
+	logwriter.LW.Logger.Debugf("Response from SFP logic: %v", sfpRes)
+	for _, sf := range sfpRes.SFP {
+		cpm.SFP = append(cpm.SFP, struct {
+			Name    string
+			Address string
+		}{Name: sf.Name, Address: sf.Address})
+	}
+
+	return nil
+}
+
+func prepareSFPRequest(req *http.Request, cpm *metadata.CpMetadata) {
+
+	// @author:marie
+	// send SFC as a query parameter instead of custom header
+	q := req.URL.Query()
+	for _, sf := range cpm.SFC {
+		q.Add("sf", sf)
+	}
+	req.URL.RawQuery = q.Encode()
+
 }

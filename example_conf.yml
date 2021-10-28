@@ -1,21 +1,83 @@
+# This is an example configuration for the ZTSFC PEP prototype.
+# Copy it to config.yaml and adapt it to your needs.
+
+# Section pep contains basic configuration for the PEP.
+# The default_pool_size is used for connections to PDP and SFP Logic, if no
+# pool size values are provided in the respective sections
 pep:
   listen_addr: ":443"
   certs_pep_accepts_when_shown_by_clients:
-    - /etc/the_pep/certs/external_client_certs/CA_root_1.crt
+    - ca/key/for/client/certs.crt
+  default_pool_size: 50
 
+# Section ldap contains configuration necessary to connect to an LDAP server
+# performing basic authentication
+ldap:
+  base: "ou=people,dc=planetexpress,dc=com"
+  host: "127.0.0.1"
+  port: 10389
+  use_ssl: false
+  bind_dn: "cn=admin,dc=planetexpress,dc=com"
+  bind_password: "GoodNewsEveryone"
+  user_filter: "(uid=%s)"
+  group_filter: "(memberUid=%s)"
+  attributes:
+    - "givenName"
+    - "sn"
+    - "mail"
+    - "uid"
+
+# Section pdp contains configuration to connect with the PDP. Those are address
+# and certificate files for mutual TLS. Further, you can define the number of
+# clients which to prepare for PDP communication in order to improve
+# performance (if not provided, the PEP's default pool size is used instead)
+pdp:
+  target_pdp_addr: "https://127.0.0.1:8888"
+  cert_shown_by_pep_to_pdp: path/to/some/publickey.crt
+  privkey_for_cert_shown_by_pep_to_pdp: path/to/some/privatekey.key
+  cert_pep_accepts_shown_by_pdp: path/to/the/other/components/certificate.crt 
+  pdp_client_pool_size: 50
+
+# Section sfp_logic contains configuration to connect with the SFP Logic. Those
+# are address and certificate files for mutual TLS. Further, you can define the
+# number of clients which to prepare for SFP Logic communication in order to
+# improve performance (if not provided, the PEP's default pool size is used
+# instead)
+sfp_logic:
+  target_sfpl_addr: "https://127.0.0.1:8889"
+  cert_shown_by_pep_to_sfpl: path/to/some/publickey.crt
+  privkey_for_cert_shown_by_pep_to_sfpl: path/to/some/privatekey.key
+  cert_pep_accepts_shown_by_sfpl: path/to/the/other/components/certificate.crt 
+  sfpl_client_pool_size: 50
+
+# Section service_pool defines all services which are accessible through the 
+# PEP. Provide one entry for each service.
+# sni is the URL, under which the service can be reached. For each
+# service, the PEP needs certificates for both the communication with clients,
+# which wish to access the service, and the service using mutual TLS
 service_pool:
-  nginx:
-    sni: service1.testbed.informatik.uni-ulm.de
-    target_service_addr: "https://10.5.0.53:443"
-    cert_shown_by_pep_to_clients_matching_sni: /etc/letsencrypt/live/service1.testbed.informatik.uni-ulm.de/fullchain.pem
-    privkey_for_cert_shown_by_pep_to_client: /etc/letsencrypt/live/service1.testbed.informatik.uni-ulm.de/privkey.pem
-    cert_shown_by_pep_to_service: /etc/the_pep/certs/dataPlane_pep_certs/server.crt
-    privkey_for_cert_shown_by_pep_to_service: /etc/the_pep/certs/dataPlane_pep_certs/private.key
-    cert_pep_accepts_when_shown_by_service: /etc/the_pep/certs/dataPlane_service_certs/nginx_root.crt
+  webserver:
+    sni: webservice.our-protected-system.com
+    target_service_addr: "https://127.0.0.1:443"
+    cert_shown_by_pep_to_clients_matching_sni: path/to/some/publickey.crt
+    privkey_for_cert_shown_by_pep_to_client: path/to/some/privatekey.key
+    cert_shown_by_pep_to_service: path/to/some/other/publickey.crt
+    privkey_for_cert_shown_by_pep_to_service: path/to/some/other/privatekey.key
+    cert_pep_accepts_when_shown_by_service: path/to/the/other/components/certificate.crt 
 
+# Section sf_pool defines all service functions which are available in the Zero
+# Trust SFC network. Provide one entry for each SF.
+# The naming of the components (here "logger", "dpi") is important! Those
+# identifiers must be understood by the PDP and the SFP logic, because they
+# exchange this IDs
 sf_pool:
-  dummy:
-    target_sf_addr: "https://10.5.0.54:443"
-    cert_shown_by_pep_to_sf: /etc/the_pep/certs/dataPlane_pep_certs/server.crt
-    privkey_for_cert_shown_by_pep_to_sf: /etc/the_pep/certs/dataPlane_pep_certs/private.key
-    cert_pep_accepts_shown_by_sf: /etc/the_pep/certs/external_client_certs/CA_root_1.crt
+  logger:
+    target_sf_addr: "https://127.0.0.1:8887"
+    cert_shown_by_pep_to_sf: path/to/some/publickey.crt
+    privkey_for_cert_shown_by_pep_to_sf: path/to/some/privatekey.key
+    cert_pep_accepts_shown_by_sf: path/to/the/other/components/certificate.crt 
+  dpi:
+    target_sf_addr: "https://127.0.0.1:8886"
+    cert_shown_by_pep_to_sf: path/to/some/publickey.crt
+    privkey_for_cert_shown_by_pep_to_sf: path/to/some/privatekey.key
+    cert_pep_accepts_shown_by_sf: path/to/the/other/components/certificate.crt 

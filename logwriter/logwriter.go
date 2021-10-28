@@ -1,12 +1,17 @@
+// Package logwriter contains a custom wrapper for logrus
+// (see https://github.com/Sirupsen/logrus).
+// The exported object LW can be used globally for logging through the whole
+// project.
 package logwriter
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -26,58 +31,64 @@ const (
 	SFLOGGER_PRINT_EMPTY_FIELDS
 )
 
-var Log_writer *LogWriter
+// LW is a LogWriter instance for global logging across the PEP.
+// Use it like LW.Logger.Info("this is a logging message") or
+// LW.Logger.WithField("someField", 1).Debug("some message")
+// @author:marie
+var LW *LogWriter
 
 type LogWriter struct {
 	Logger  *logrus.Logger
 	logfile *os.File
 }
 
-// Creates and return a new LogWriter structure
-func New(_log_file_path, _log_level string, _ifTextFormatter bool) *LogWriter {
+// Creates and return a new LogWriter instance
+func InitLogwriter(_logFilePath, _logLevel string, _ifTextFormatter bool) {
+	// @author:marie
+	// changed this function from a constructor to an init function, because
+	// all packages should access a single global instance.
+
 	var err error
-	Log_writer = new(LogWriter)
+	LW = new(LogWriter)
 
 	// Create a new instance of logrus logger
-	Log_writer.Logger = logrus.New()
+	LW.Logger = logrus.New()
 
 	// Set a log level (debug, info, warning, error)
-	switch strings.ToLower(_log_level) {
+	switch strings.ToLower(_logLevel) {
 	case "debug":
-		Log_writer.Logger.SetLevel(logrus.DebugLevel)
+		LW.Logger.SetLevel(logrus.DebugLevel)
 	case "info":
-		Log_writer.Logger.SetLevel(logrus.InfoLevel)
+		LW.Logger.SetLevel(logrus.InfoLevel)
 	case "warning":
-		Log_writer.Logger.SetLevel(logrus.WarnLevel)
+		LW.Logger.SetLevel(logrus.WarnLevel)
 	case "error":
-		Log_writer.Logger.SetLevel(logrus.ErrorLevel)
+		LW.Logger.SetLevel(logrus.ErrorLevel)
 	case "":
-		Log_writer.Logger.SetLevel(logrus.ErrorLevel)
+		LW.Logger.SetLevel(logrus.ErrorLevel)
 	default:
 		log.Fatal("Wrong log level value. Supported values are info, warning, error (default)")
 	}
 
 	// Set a JSON log formatter if necessary
 	if _ifTextFormatter {
-		Log_writer.Logger.SetFormatter(&logrus.TextFormatter{})
+		LW.Logger.SetFormatter(&logrus.TextFormatter{})
 	} else {
-		Log_writer.Logger.SetFormatter(&logrus.JSONFormatter{})
+		LW.Logger.SetFormatter(&logrus.JSONFormatter{})
 	}
 
-	if strings.ToLower(_log_file_path) == "stdout" {
-		Log_writer.Logger.SetOutput(os.Stdout)
+	if strings.ToLower(_logFilePath) == "stdout" {
+		LW.Logger.SetOutput(os.Stdout)
 	} else {
 		// Open a file for the logger output
-		Log_writer.logfile, err = os.OpenFile(_log_file_path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		LW.logfile, err = os.OpenFile(_logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		// Redirect the logger output to the file
-		Log_writer.Logger.SetOutput(Log_writer.logfile)
+		LW.Logger.SetOutput(LW.logfile)
 	}
-
-	return Log_writer
 }
 
 // Function for calling by http.Server ErrorLog
@@ -87,15 +98,11 @@ func (lw LogWriter) Write(p []byte) (n int, err error) {
 	if !strings.Contains(output, ",success") {
 		if strings.HasSuffix(output, "\n") {
 			output = strings.TrimSuffix(output, "\n")
-        }
-//		if strings.HasSuffix(output, "\n") {
-//			output = strings.TrimSuffix(output, "\n") + ",denied"
-	//	} else {
-	//		output = output + ",denied"
-	//	}
+		}
+
 		lw.Logger.WithFields(logrus.Fields{"result": "denied"}).Info(output)
 	} else {
-        output = strings.TrimSuffix(output, ",success")
+		output = strings.TrimSuffix(output, ",success")
 		lw.Logger.WithFields(logrus.Fields{"result": "success"}).Info(output)
 	}
 	return 1, nil
@@ -104,7 +111,7 @@ func (lw LogWriter) Write(p []byte) (n int, err error) {
 // The LogHTTPRequest() function prints HTTP request details into the log file
 // TODO Rename the function!
 func (lw *LogWriter) LogHTTPRequest(req *http.Request) {
-    // TODO: MAKE THIS BETTER
+	// TODO: MAKE THIS BETTER
 	lw.Write([]byte(fmt.Sprintf("%s,%s,%s,%t,%t,%s,success",
 		req.RemoteAddr,
 		req.TLS.ServerName,
