@@ -19,3 +19,4 @@ conf.yml
 *.log
 certs
 main
+*.pprof
