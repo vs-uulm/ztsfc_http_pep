@@ -68,11 +68,18 @@ func NewRouter() (*Router, error) {
 	return router, nil
 }
 
+func addHSTSHeader(w http.ResponseWriter) {
+    w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+}
+
 // ServeHTTP gets called if a request receives the PEP. The function implements
 // the PEP's main routine: It performs basic authentication, authorization with
 // help of the PEP, transformation from SFCs into SFPs with help of the SFP
 // Logic, and then forwards the package along the SFP.
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+
+    // Add HSTS Header
+    addHSTSHeader(w)
 
 	// Used for measuring the time ServeHTTP runs
 	//start := time.Now()
