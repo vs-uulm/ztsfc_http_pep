@@ -12,6 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	env "local.com/leobrada/ztsfc_http_pep/env"
+    bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 )
 
 func InitDefaultValues(sysLogger *logrus.Entry) {
@@ -47,6 +48,35 @@ func InitPepParams(sysLogger *logrus.Entry) {
 	for _, acceptedClientCert := range env.Config.Pep.CertsPepAcceptsWhenShownByClients {
 		loadCACertificate(sysLogger, acceptedClientCert, "client", env.Config.CAcertPoolPepAcceptsFromExt)
 	}
+}
+
+func InitBasicAuth(sysLogger *logrus.Entry) {
+    initSession(sysLogger)
+}
+
+func initSession(sysLogger *logrus.Entry) {
+    section := "session"
+    fields := ""
+
+    if env.Config.BasicAuth.Session.Path_to_jwt_pub_key == "" {
+        fields += "path_to_jwt_pub_key,"
+    } else {
+        sysLogger.Debugf("JWT Public Key is searched for here: %s", env.Config.BasicAuth.Session.Path_to_jwt_pub_key)
+    }
+
+    if env.Config.BasicAuth.Session.Path_to_jwt_signing_key == "" {
+        fields += "path_to_jwt_signing_key,"
+    } else {
+        sysLogger.Debugf("JWT Signing Key is searched for here: %s", env.Config.BasicAuth.Session.Path_to_jwt_signing_key)
+    }
+
+    if fields != "" {
+        fields = strings.TrimSuffix(fields, ",")
+        handleFatalf(sysLogger, section, fields)
+    }
+
+    env.Config.BasicAuth.Session.JwtPubKey = bauth.ParseRsaPublicKeyFromPemStr(sysLogger, env.Config.BasicAuth.Session.Path_to_jwt_pub_key)
+    env.Config.BasicAuth.Session.MySigningKey = bauth.ParseRsaPrivateKeyFromPemStr(sysLogger, env.Config.BasicAuth.Session.Path_to_jwt_signing_key)
 }
 
 // Function initializes the 'ldap' section of the config file.
@@ -214,7 +244,7 @@ func InitServicePoolParams(sysLogger *logrus.Entry) {
 		if err != nil {
 			sysLogger.Fatalf("Critical Error when parsing target service URL for service %s: %v", serviceName, err)
 		} else {
-			sysLogger.Debugf("target service URL for service %s was successfully parsed", serviceName)
+			sysLogger.Debugf("Target service URL for service %s was successfully parsed", serviceName)
 		}
 
 		// Preload CA certificate and append it to cert pool
