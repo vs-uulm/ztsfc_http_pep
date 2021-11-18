@@ -83,6 +83,7 @@ type ConfigT struct {
 	Ldap                        LdapT                     `yaml:"ldap"`
 	Pdp                         PdpT                      `yaml:"pdp"`
 	SfpLogic                    SfplT                     `yaml:"sfp_logic"`
+    // TODO: Use Structs of ServiceT and ServFunctionT instead of pointers to the structs?
 	ServicePool                 map[string]*ServiceT      `yaml:"service_pool"`
 	SfPool                      map[string]*ServFunctionT `yaml:"sf_pool"`
 	CAcertPoolPepAcceptsFromExt *x509.CertPool

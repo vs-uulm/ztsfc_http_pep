@@ -10,15 +10,15 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"strings"
+//	"strings"
 	"time"
 
-	pdp "local.com/leobrada/ztsfc_http_pep/authorization"
-	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
+//	pdp "local.com/leobrada/ztsfc_http_pep/authorization"
+//	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 	env "local.com/leobrada/ztsfc_http_pep/env"
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
-	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-	sfpl "local.com/leobrada/ztsfc_http_pep/sfp_logic"
+//	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
+//	sfpl "local.com/leobrada/ztsfc_http_pep/sfp_logic"
 )
 
 type Router struct {
@@ -84,8 +84,9 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Used for measuring the time ServeHTTP runs
 	//start := time.Now()
 
-	var err error
-	md := new(metadata.CpMetadata)
+	//var err error
+    // RM FOR PRODUCTIVE
+	//md := new(metadata.CpMetadata)
 
 	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
 	logwriter.LW.LogHTTPRequest(req)
@@ -94,100 +95,108 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
 	// TODO: return error to client?
 	// Check if user has a valid session already
-	if !bauth.UserSessionIsValid(req, md) {
-		if !bauth.BasicAuth(w, req) {
-			// Used for measuring the time ServeHTTP runs
-			// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
-			return
-		}
-	}
+    // RM FOR PRODUCTIVE
+	//if !bauth.UserSessionIsValid(req, md) {
+	//	if !bauth.BasicAuth(w, req) {
+	//		// Used for measuring the time ServeHTTP runs
+	//		// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
+	//		return
+	//	}
+	//}
 
 	// AUTHORIZATION
-	err = pdp.PerformAuthorization(req, md)
+    // RM FOR PRODUCTIVE
+	//err = pdp.PerformAuthorization(req, md)
 	// observe errors and abort routine if something goes wrong
 	// @author:marie
-	if err != nil {
-		logwriter.LW.Logger.WithField("issuer", "PDP").Error(err)
-		return
-	}
+	//if err != nil {
+	//	logwriter.LW.Logger.WithField("issuer", "PDP").Error(err)
+	//	return
+	//}
 
-	if !md.AuthDecision {
-		logwriter.LW.Logger.Info("Request was rejected due to too low trust score")
-		w.WriteHeader(503)
-		return
-	}
-	logwriter.LW.Logger.Debugf("Request passed PDP. SFC: %s", md.SFC)
+    // RM FOR PRODUCTIVE
+	//if !md.AuthDecision {
+	//	logwriter.LW.Logger.Info("Request was rejected due to too low trust score")
+	//	w.WriteHeader(503)
+	//	return
+	//}
+	//logwriter.LW.Logger.Debugf("Request passed PDP. SFC: %s", md.SFC)
 
 	// If user could be authenticated, create ReverseProxy variable for the connection to serve
 	var proxy *httputil.ReverseProxy
 	var serviceURL *url.URL
 	var certShownByPEP tls.Certificate
 
-	serviceConf, ok := env.Config.ServiceSniMap[md.Resource]
+	//serviceConf, ok := env.Config.ServiceSniMap[md.Resource]
+	serviceConf, ok := env.Config.ServiceSniMap[req.Host]
 	if !ok {
-		logwriter.LW.Logger.WithField("sni", md.Resource).Error("Requested SNI has no match in config file.")
+		//logwriter.LW.Logger.WithField("sni", md.Resource).Error("Requested SNI has no match in config file.")
+		logwriter.LW.Logger.WithField("sni", req.Host).Error("Requested SNI has no match in config file.")
 		return
 	}
 
 	// SFP LOGIC
-
+    // TODO: Check what happens if sf_pool in conf.yml is empty
 	// only connect to SFP logic, if SFC is not empty
 	// @author:marie
-	if len(md.SFC) == 0 {
+	//if len(md.SFC) == 0 {
 
-		logwriter.LW.Logger.Debug("SFC is empty. Thus, no forwarding to SFP logic")
-		serviceURL = serviceConf.TargetServiceUrl
-		certShownByPEP = serviceConf.X509KeyPairShownByPepToService
+	//	logwriter.LW.Logger.Debug("SFC is empty. Thus, no forwarding to SFP logic")
+	//	serviceURL = serviceConf.TargetServiceUrl
+	//	certShownByPEP = serviceConf.X509KeyPairShownByPepToService
 
-	} else {
+	//} else {
 
-		err = sfpl.TransformSFCintoSFP(md)
-		// observe errors and abort routine if something goes wrong
-		// @author:marie
-		if err != nil {
-			logwriter.LW.Logger.WithField("issuer", "SFP Logic").Error(err)
-			return
-		}
-		logwriter.LW.Logger.Debugf("Request passed SFP logic. SFP: %s", md.SFP)
+	//	err = sfpl.TransformSFCintoSFP(md)
+	//	// observe errors and abort routine if something goes wrong
+	//	// @author:marie
+	//	if err != nil {
+	//		logwriter.LW.Logger.WithField("issuer", "SFP Logic").Error(err)
+	//		return
+	//	}
+	//	logwriter.LW.Logger.Debugf("Request passed SFP logic. SFP: %s", md.SFP)
 
-		if len(md.SFP) == 0 {
-			logwriter.LW.Logger.Error("SFP is empty, even though SFC is not")
-			return
-		}
+	//	if len(md.SFP) == 0 {
+	//		logwriter.LW.Logger.Error("SFP is empty, even though SFC is not")
+	//		return
+	//	}
 
-		// identify next hop, find its config and set serviceURL and cert respectively
-		// @author:marie
-		nextHop := md.SFP[0]
-		logwriter.LW.Logger.Debugf("Next Hop: %s", nextHop)
-		nextHopConf, ok := env.Config.SfPool[nextHop.Name]
-		if !ok {
-			logwriter.LW.Logger.WithField("sf", nextHop).Error("First SF from the SFP does not exist in config file.")
-			return
-		}
-		serviceURL, err = url.Parse(nextHop.Address)
-		if err != nil {
-			logwriter.LW.Logger.WithField("address", nextHop.Address).Error("Could not parse address value as URL.")
-		}
-		certShownByPEP = nextHopConf.X509KeyPairShownByPepToSf
+	//	// identify next hop, find its config and set serviceURL and cert respectively
+	//	// @author:marie
+	//	nextHop := md.SFP[0]
+	//	logwriter.LW.Logger.Debugf("Next Hop: %s", nextHop)
+	//	nextHopConf, ok := env.Config.SfPool[nextHop.Name]
+	//	if !ok {
+	//		logwriter.LW.Logger.WithField("sf", nextHop).Error("First SF from the SFP does not exist in config file.")
+	//		return
+	//	}
+	//	serviceURL, err = url.Parse(nextHop.Address)
+	//	if err != nil {
+	//		logwriter.LW.Logger.WithField("address", nextHop.Address).Error("Could not parse address value as URL.")
+	//	}
+	//	certShownByPEP = nextHopConf.X509KeyPairShownByPepToSf
 
-		// translate SF identifiers into ip addresses for remaining SFs
-		// @author:marie
-		var ipAddresses []string
-		for _, sf := range md.SFP[1:] {
+	//	// translate SF identifiers into ip addresses for remaining SFs
+	//	// @author:marie
+	//	var ipAddresses []string
+	//	for _, sf := range md.SFP[1:] {
 
-			ipAddresses = append(ipAddresses, sf.Address)
-		}
+	//		ipAddresses = append(ipAddresses, sf.Address)
+	//	}
 
-		// finally append target service to list of SFP addresses, create a string of them and set this as header for following SFs
-		// @author:marie
-		ipAddresses = append(ipAddresses, serviceConf.TargetServiceAddr)
-		addressesStr := strings.Join(ipAddresses, ",")
-		logwriter.LW.Logger.Debugf("SFP as presented to following SFs: %s", addressesStr)
+	//	// finally append target service to list of SFP addresses, create a string of them and set this as header for following SFs
+	//	// @author:marie
+	//	ipAddresses = append(ipAddresses, serviceConf.TargetServiceAddr)
+	//	addressesStr := strings.Join(ipAddresses, ",")
+	//	logwriter.LW.Logger.Debugf("SFP as presented to following SFs: %s", addressesStr)
 
-		req.Header.Set("sfp", addressesStr)
+	//	req.Header.Set("sfp", addressesStr)
 
-	}
-	// logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
+	//}
+	//logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
+	serviceURL = serviceConf.TargetServiceUrl
+    logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
+	certShownByPEP = serviceConf.X509KeyPairShownByPepToService
 	logwriter.LW.Logger.Debugf("Service URL: %s", serviceConf.TargetServiceAddr)
 
 	proxy = httputil.NewSingleHostReverseProxy(serviceURL)

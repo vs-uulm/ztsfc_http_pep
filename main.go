@@ -47,7 +47,7 @@ func init() {
 
 	// Preload diverse parameters from config
 	// (One function for each section in config.yml)
-	// @author:marie
+    confInit.InitDefaultValues(sysLogger)
 	confInit.InitPepParams(sysLogger)
 	confInit.InitLdapParams(sysLogger)
 	confInit.InitPdpParams(sysLogger)
