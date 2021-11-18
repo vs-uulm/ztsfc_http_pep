@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/sirupsen/logrus"
-//	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 	env "local.com/leobrada/ztsfc_http_pep/env"
 	confInit "local.com/leobrada/ztsfc_http_pep/init"
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
@@ -60,11 +59,6 @@ func init() {
 	// Basic_auth_proxy currently not needed since BasicAuth is performed as part of the PEP
 	proxies.PdpClientPool = proxies.NewClientPool(env.Config.Pdp.PdpClientPoolSize, env.Config.Pdp.X509KeyPairShownByPepToPdp)
 	proxies.SfpLogicClientPool = proxies.NewClientPool(env.Config.SfpLogic.SfplClientPoolSize, env.Config.SfpLogic.X509KeyPairShownByPepToSfpl)
-
-	// Init RSA Keys für JWT
-    // TODO: Put the paths to the JWT related things into the conf file
-	//bauth.JwtPubkey = bauth.ParseRsaPublicKeyFromPemStr("./basic_auth/jwt_test_pub.pem")
-	//bauth.MySigningKey = bauth.ParseRsaPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
 }
 
 func main() {

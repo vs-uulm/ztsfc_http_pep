@@ -41,7 +41,6 @@ func NewRouter() (*Router, error) {
 		ClientCAs:  env.Config.CAcertPoolPepAcceptsFromExt,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// use SNI map to load suitable certificate
-			// @author:marie
 			service, ok := env.Config.ServiceSniMap[cli.ServerName]
 			if !ok {
 				return nil, fmt.Errorf("Error: Could not serve a suitable certificate for %s\n", cli.ServerName)
@@ -62,7 +61,6 @@ func NewRouter() (*Router, error) {
 		WriteTimeout: time.Hour * 1,
 		Handler:      mux,
 		ErrorLog:     log.New(logwriter.LW, "", 0),
-		//ErrorLog:     log.New(logwriter.LW.Logger.WriterLevel(logrus.ErrorLevel), "", 0),
 	}
 
 	return router, nil
