@@ -11,16 +11,17 @@ import (
 	"net/http"
 	"time"
 
+    "github.com/sirupsen/logrus"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jtblin/go-ldap-client"
-	"local.com/leobrada/ztsfc_http_pep/env"
+	env "local.com/leobrada/ztsfc_http_pep/env"
 	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
 )
 
-var (
-	JwtPubkey    *rsa.PublicKey
-	MySigningKey *rsa.PrivateKey
-)
+//var (
+//	env.Config.BasicAuth.Session.JwtPubKey    *rsa.PublicKey
+//	env.Config.BasicAuth.Session.MySigningKey *rsa.PrivateKey
+//)
 
 func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
 	jwtCookie, err := req.Cookie("ztsfc_session")
@@ -30,7 +31,7 @@ func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
 	ss := jwtCookie.Value
 
 	token, err := jwt.Parse(ss, func(token *jwt.Token) (interface{}, error) {
-		return JwtPubkey, nil
+		return env.Config.BasicAuth.Session.JwtPubKey, nil
 	})
 
 	if err != nil {
@@ -92,8 +93,8 @@ func performPasswdAuth(w http.ResponseWriter, req *http.Request) bool {
 		}
 
 		// Create JWT
-		//MySigningKey := parseRsaiPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
-		ss := createJWToken(MySigningKey, username)
+		//env.Config.BasicAuth.Session.MySigningKey := parseRsaiPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
+		ss := createJWToken(env.Config.BasicAuth.Session.MySigningKey, username)
 
 		ztsfcCookie := http.Cookie{
 			Name:   "ztsfc_session",
@@ -137,10 +138,10 @@ func performX509auth(req *http.Request) bool {
 	return false
 }
 
-func ParseRsaPublicKeyFromPemStr(pubPEMlocation string) *rsa.PublicKey {
-	pubReadIn, err := ioutil.ReadFile(pubPEMlocation)
+func ParseRsaPublicKeyFromPemStr(sysLogger *logrus.Entry, pubPEMLocation string) *rsa.PublicKey {
+	pubReadIn, err := ioutil.ReadFile(pubPEMLocation)
 	if err != nil {
-		fmt.Printf("Could not read from file.\n")
+        sysLogger.Fatalf("JWT Public Key: Could not read from file '%s'", pubPEMLocation)
 		return nil
 	}
 
@@ -184,10 +185,10 @@ func PerformMoodleLogin(w http.ResponseWriter, req *http.Request) bool {
 
 }
 
-func ParseRsaPrivateKeyFromPemStr(privPEMlocation string) *rsa.PrivateKey {
-	privReadIn, err := ioutil.ReadFile(privPEMlocation)
+func ParseRsaPrivateKeyFromPemStr(sysLogger *logrus.Entry, privPEMLocation string) *rsa.PrivateKey {
+	privReadIn, err := ioutil.ReadFile(privPEMLocation)
 	if err != nil {
-		fmt.Printf("Could not read from file.\n")
+        sysLogger.Fatalf("JWT Signing Key: Could not read from file '%s'", privPEMLocation)
 		return nil
 	}
 

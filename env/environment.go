@@ -2,6 +2,7 @@
 package env
 
 import (
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"net/url"
@@ -16,6 +17,17 @@ type PepT struct {
 	ListenAddr                        string   `yaml:"listen_addr"`
 	CertsPepAcceptsWhenShownByClients []string `yaml:"certs_pep_accepts_when_shown_by_clients"`
 	DefaultPoolSize                   int      `yaml:"default_pool_size"`
+}
+
+type BasicAuthT struct {
+	Session SessionT `yaml:"session"`
+}
+
+type SessionT struct {
+	Path_to_jwt_pub_key     string `yaml:"path_to_jwt_pub_key"`
+	Path_to_jwt_signing_key string `yaml:"path_to_jwt_signing_key"`
+	JwtPubKey               *rsa.PublicKey
+	MySigningKey            *rsa.PrivateKey
 }
 
 // The struct LdapT is for parsing the section 'ldap' of the config file.
@@ -79,10 +91,12 @@ type ServFunctionT struct {
 
 // The struct ConfigT is for parsing the basic structure of the config file.
 type ConfigT struct {
-	Pep                         PepT                      `yaml:"pep"`
-	Ldap                        LdapT                     `yaml:"ldap"`
-	Pdp                         PdpT                      `yaml:"pdp"`
-	SfpLogic                    SfplT                     `yaml:"sfp_logic"`
+	Pep       PepT       `yaml:"pep"`
+	BasicAuth BasicAuthT `yaml:"basic_auth"`
+	Ldap      LdapT      `yaml:"ldap"`
+	Pdp       PdpT       `yaml:"pdp"`
+	SfpLogic  SfplT      `yaml:"sfp_logic"`
+	// TODO: Use Structs of ServiceT and ServFunctionT instead of pointers to the structs?
 	ServicePool                 map[string]*ServiceT      `yaml:"service_pool"`
 	SfPool                      map[string]*ServFunctionT `yaml:"sf_pool"`
 	CAcertPoolPepAcceptsFromExt *x509.CertPool
