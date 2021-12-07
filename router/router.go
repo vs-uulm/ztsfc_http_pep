@@ -14,10 +14,10 @@ import (
 	"time"
 
 //	pdp "local.com/leobrada/ztsfc_http_pep/authorization"
-//	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
+	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 	env "local.com/leobrada/ztsfc_http_pep/env"
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
-//	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
+	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
 //	sfpl "local.com/leobrada/ztsfc_http_pep/sfp_logic"
 )
 
@@ -84,7 +84,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	//var err error
     // RM FOR PRODUCTIVE
-	//md := new(metadata.CpMetadata)
+	md := new(metadata.CpMetadata)
 
 	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
 	logwriter.LW.LogHTTPRequest(req)
@@ -94,13 +94,13 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// TODO: return error to client?
 	// Check if user has a valid session already
     // RM FOR PRODUCTIVE
-	//if !bauth.UserSessionIsValid(req, md) {
-	//	if !bauth.BasicAuth(w, req) {
-	//		// Used for measuring the time ServeHTTP runs
-	//		// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
-	//		return
-	//	}
-	//}
+	if !bauth.UserSessionIsValid(req, md) {
+		if !bauth.BasicAuth(w, req) {
+			// Used for measuring the time ServeHTTP runs
+			// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
+			return
+		}
+	}
 
 	// AUTHORIZATION
     // RM FOR PRODUCTIVE

@@ -18,11 +18,6 @@ import (
 	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
 )
 
-//var (
-//	env.Config.BasicAuth.Session.JwtPubKey    *rsa.PublicKey
-//	env.Config.BasicAuth.Session.MySigningKey *rsa.PrivateKey
-//)
-
 func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
 	jwtCookie, err := req.Cookie("ztsfc_session")
 	if err != nil {
@@ -229,6 +224,7 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
 func userIsInLDAP(userName, password string) bool {
 	// retrieve connection parameters from config file instead of hard coding
 	// @author:marie
+
 	client := &ldap.LDAPClient{
 		Base:         env.Config.Ldap.Base,
 		Host:         env.Config.Ldap.Host,
