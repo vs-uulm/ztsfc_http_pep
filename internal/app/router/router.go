@@ -10,15 +10,16 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-//	"strings"
+
+	//	"strings"
 	"time"
 
-//	pdp "local.com/leobrada/ztsfc_http_pep/authorization"
-	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
-	env "local.com/leobrada/ztsfc_http_pep/env"
-	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
-	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-//	sfpl "local.com/leobrada/ztsfc_http_pep/sfp_logic"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/basic_auth"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/env"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
+	//	pdp "local.com/leobrada/ztsfc_http_pep/authorization"
+	//	sfpl "local.com/leobrada/ztsfc_http_pep/sfp_logic"
 )
 
 type Router struct {
@@ -67,7 +68,7 @@ func NewRouter() (*Router, error) {
 }
 
 func addHSTSHeader(w http.ResponseWriter) {
-    w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 }
 
 // ServeHTTP gets called if a request receives the PEP. The function implements
@@ -76,14 +77,14 @@ func addHSTSHeader(w http.ResponseWriter) {
 // Logic, and then forwards the package along the SFP.
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
-    // Add HSTS Header
-    addHSTSHeader(w)
+	// Add HSTS Header
+	addHSTSHeader(w)
 
 	// Used for measuring the time ServeHTTP runs
 	//start := time.Now()
 
 	//var err error
-    // RM FOR PRODUCTIVE
+	// RM FOR PRODUCTIVE
 	md := new(metadata.CpMetadata)
 
 	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
@@ -93,9 +94,9 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
 	// TODO: return error to client?
 	// Check if user has a valid session already
-    // RM FOR PRODUCTIVE
-	if !bauth.UserSessionIsValid(req, md) {
-		if !bauth.BasicAuth(w, req) {
+	// RM FOR PRODUCTIVE
+	if !basic_auth.UserSessionIsValid(req, md) {
+		if !basic_auth.BasicAuth(w, req) {
 			// Used for measuring the time ServeHTTP runs
 			// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
 			return
@@ -103,7 +104,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// AUTHORIZATION
-    // RM FOR PRODUCTIVE
+	// RM FOR PRODUCTIVE
 	//err = pdp.PerformAuthorization(req, md)
 	// observe errors and abort routine if something goes wrong
 	// @author:marie
@@ -112,7 +113,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//	return
 	//}
 
-    // RM FOR PRODUCTIVE
+	// RM FOR PRODUCTIVE
 	//if !md.AuthDecision {
 	//	logwriter.LW.Logger.Info("Request was rejected due to too low trust score")
 	//	w.WriteHeader(503)
@@ -134,7 +135,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// SFP LOGIC
-    // TODO: Check what happens if sf_pool in conf.yml is empty
+	// TODO: Check what happens if sf_pool in conf.yml is empty
 	// only connect to SFP logic, if SFC is not empty
 	// @author:marie
 	//if len(md.SFC) == 0 {
@@ -193,7 +194,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//}
 	//logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
 	serviceURL = serviceConf.TargetServiceUrl
-    logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
+	logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
 	certShownByPEP = serviceConf.X509KeyPairShownByPepToService
 	logwriter.LW.Logger.Debugf("Service URL: %s", serviceConf.TargetServiceAddr)
 

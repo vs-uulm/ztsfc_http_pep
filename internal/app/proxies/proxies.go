@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"net/http"
 
-	env "local.com/leobrada/ztsfc_http_pep/env"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/env"
 )
 
 var (

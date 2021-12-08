@@ -11,11 +11,11 @@ import (
 	"net/http"
 	"time"
 
-    "github.com/sirupsen/logrus"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jtblin/go-ldap-client"
-	env "local.com/leobrada/ztsfc_http_pep/env"
-	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
+	"github.com/sirupsen/logrus"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/env"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 )
 
 func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
@@ -136,7 +136,7 @@ func performX509auth(req *http.Request) bool {
 func ParseRsaPublicKeyFromPemStr(sysLogger *logrus.Entry, pubPEMLocation string) *rsa.PublicKey {
 	pubReadIn, err := ioutil.ReadFile(pubPEMLocation)
 	if err != nil {
-        sysLogger.Fatalf("JWT Public Key: Could not read from file '%s'", pubPEMLocation)
+		sysLogger.Fatalf("JWT Public Key: Could not read from file '%s'", pubPEMLocation)
 		return nil
 	}
 
@@ -183,7 +183,7 @@ func PerformMoodleLogin(w http.ResponseWriter, req *http.Request) bool {
 func ParseRsaPrivateKeyFromPemStr(sysLogger *logrus.Entry, privPEMLocation string) *rsa.PrivateKey {
 	privReadIn, err := ioutil.ReadFile(privPEMLocation)
 	if err != nil {
-        sysLogger.Fatalf("JWT Signing Key: Could not read from file '%s'", privPEMLocation)
+		sysLogger.Fatalf("JWT Signing Key: Could not read from file '%s'", privPEMLocation)
 		return nil
 	}
 

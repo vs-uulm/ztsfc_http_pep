@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"local.com/leobrada/ztsfc_http_pep/env"
-	"local.com/leobrada/ztsfc_http_pep/logwriter"
-	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/env"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/proxies"
 )
 
 const (
