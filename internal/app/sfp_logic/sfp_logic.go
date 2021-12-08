@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/env"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/proxies"
@@ -38,7 +38,7 @@ func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 
 	// send request to correct address and API endpoint
 	// @author:marie
-	req, err := http.NewRequest("GET", env.Config.SfpLogic.TargetSfplAddr+requestEndpoint, nil)
+	req, err := http.NewRequest("GET", config.Config.SfpLogic.TargetSfplAddr+requestEndpoint, nil)
 	if err != nil { // @author:marie catch error
 		return err
 	}

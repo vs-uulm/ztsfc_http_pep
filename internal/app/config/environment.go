@@ -1,5 +1,5 @@
 // Package env reads the config file and parses it to go data structures.
-package env
+package config
 
 import (
 	"crypto/rsa"

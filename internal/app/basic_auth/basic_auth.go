@@ -14,7 +14,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jtblin/go-ldap-client"
 	"github.com/sirupsen/logrus"
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/env"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 )
 
@@ -26,7 +26,7 @@ func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
 	ss := jwtCookie.Value
 
 	token, err := jwt.Parse(ss, func(token *jwt.Token) (interface{}, error) {
-		return env.Config.BasicAuth.Session.JwtPubKey, nil
+		return config.Config.BasicAuth.Session.JwtPubKey, nil
 	})
 
 	if err != nil {
@@ -88,8 +88,8 @@ func performPasswdAuth(w http.ResponseWriter, req *http.Request) bool {
 		}
 
 		// Create JWT
-		//env.Config.BasicAuth.Session.MySigningKey := parseRsaiPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
-		ss := createJWToken(env.Config.BasicAuth.Session.MySigningKey, username)
+		//config.Config.BasicAuth.Session.MySigningKey := parseRsaiPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
+		ss := createJWToken(config.Config.BasicAuth.Session.MySigningKey, username)
 
 		ztsfcCookie := http.Cookie{
 			Name:   "ztsfc_session",
@@ -226,15 +226,15 @@ func userIsInLDAP(userName, password string) bool {
 	// @author:marie
 
 	client := &ldap.LDAPClient{
-		Base:         env.Config.Ldap.Base,
-		Host:         env.Config.Ldap.Host,
-		Port:         env.Config.Ldap.Port,
-		UseSSL:       env.Config.Ldap.UseSSL,
-		BindDN:       env.Config.Ldap.BindDN,
-		BindPassword: env.Config.Ldap.BindPassword,
-		UserFilter:   env.Config.Ldap.UserFilter,
-		GroupFilter:  env.Config.Ldap.GroupFilter,
-		Attributes:   env.Config.Ldap.Attributes,
+		Base:         config.Config.Ldap.Base,
+		Host:         config.Config.Ldap.Host,
+		Port:         config.Config.Ldap.Port,
+		UseSSL:       config.Config.Ldap.UseSSL,
+		BindDN:       config.Config.Ldap.BindDN,
+		BindPassword: config.Config.Ldap.BindPassword,
+		UserFilter:   config.Config.Ldap.UserFilter,
+		GroupFilter:  config.Config.Ldap.GroupFilter,
+		Attributes:   config.Config.Ldap.Attributes,
 	}
 	// It is the responsibility of the caller to close the connection
 	defer client.Close()

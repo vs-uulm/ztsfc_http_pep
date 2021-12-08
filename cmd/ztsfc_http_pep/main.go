@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/sirupsen/logrus"
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/env"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	confInit "github.com/vs-uulm/ztsfc_http_pep/internal/app/init"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/proxies"
@@ -33,7 +33,7 @@ func init() {
 	sysLogger := logwriter.LW.Logger.WithFields(logrus.Fields{"type": "system"})
 
 	// Loading all config parameter from config file defined in "confFilePath"
-	err := env.LoadConfig(confFilePath, sysLogger)
+	err := config.LoadConfig(confFilePath, sysLogger)
 	if err != nil {
 		sysLogger.Fatalf("Loading logger configuration from %s - ERROR: %v", confFilePath, err)
 	} else {
@@ -41,8 +41,8 @@ func init() {
 	}
 
 	// Create Certificate Pools for the CA certificates used by the PEP
-	env.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
-	env.Config.CAcertPoolPepAcceptsFromInt = x509.NewCertPool()
+	config.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
+	config.Config.CAcertPoolPepAcceptsFromInt = x509.NewCertPool()
 
 	// Preload diverse parameters from config
 	// (One function for each section in config.yml)
@@ -57,8 +57,8 @@ func init() {
 
 	// Init Reverse Proxies used for the modules
 	// Basic_auth_proxy currently not needed since BasicAuth is performed as part of the PEP
-	proxies.PdpClientPool = proxies.NewClientPool(env.Config.Pdp.PdpClientPoolSize, env.Config.Pdp.X509KeyPairShownByPepToPdp)
-	proxies.SfpLogicClientPool = proxies.NewClientPool(env.Config.SfpLogic.SfplClientPoolSize, env.Config.SfpLogic.X509KeyPairShownByPepToSfpl)
+	proxies.PdpClientPool = proxies.NewClientPool(config.Config.Pdp.PdpClientPoolSize, config.Config.Pdp.X509KeyPairShownByPepToPdp)
+	proxies.SfpLogicClientPool = proxies.NewClientPool(config.Config.SfpLogic.SfplClientPoolSize, config.Config.SfpLogic.X509KeyPairShownByPepToSfpl)
 }
 
 func main() {

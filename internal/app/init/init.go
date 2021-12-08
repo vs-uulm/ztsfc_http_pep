@@ -12,14 +12,14 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/basic_auth"
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/env"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 )
 
 func InitDefaultValues(sysLogger *logrus.Entry) {
 
 	// Initialize a DefaultPoolSize if its not set
-	if env.Config.Pep.DefaultPoolSize == 0 {
-		env.Config.Pep.DefaultPoolSize = 50
+	if config.Config.Pep.DefaultPoolSize == 0 {
+		config.Config.Pep.DefaultPoolSize = 50
 	}
 
 }
@@ -31,11 +31,11 @@ func InitPepParams(sysLogger *logrus.Entry) {
 	fields := ""
 
 	// TODO: Check if the field make sense as well!
-	if env.Config.Pep.ListenAddr == "" {
+	if config.Config.Pep.ListenAddr == "" {
 		fields += "listen_addr,"
 	}
 
-	if env.Config.Pep.CertsPepAcceptsWhenShownByClients == nil {
+	if config.Config.Pep.CertsPepAcceptsWhenShownByClients == nil {
 		fields += "certs_pep_accepts_when_shown_by_clients,"
 	}
 
@@ -45,8 +45,8 @@ func InitPepParams(sysLogger *logrus.Entry) {
 	}
 
 	// Read CA certs used for signing client certs and are accepted by the PEP
-	for _, acceptedClientCert := range env.Config.Pep.CertsPepAcceptsWhenShownByClients {
-		loadCACertificate(sysLogger, acceptedClientCert, "client", env.Config.CAcertPoolPepAcceptsFromExt)
+	for _, acceptedClientCert := range config.Config.Pep.CertsPepAcceptsWhenShownByClients {
+		loadCACertificate(sysLogger, acceptedClientCert, "client", config.Config.CAcertPoolPepAcceptsFromExt)
 	}
 }
 
@@ -58,16 +58,16 @@ func initSession(sysLogger *logrus.Entry) {
 	section := "session"
 	fields := ""
 
-	if env.Config.BasicAuth.Session.Path_to_jwt_pub_key == "" {
+	if config.Config.BasicAuth.Session.Path_to_jwt_pub_key == "" {
 		fields += "path_to_jwt_pub_key,"
 	} else {
-		sysLogger.Debugf("JWT Public Key is searched for here: %s", env.Config.BasicAuth.Session.Path_to_jwt_pub_key)
+		sysLogger.Debugf("JWT Public Key is searched for here: %s", config.Config.BasicAuth.Session.Path_to_jwt_pub_key)
 	}
 
-	if env.Config.BasicAuth.Session.Path_to_jwt_signing_key == "" {
+	if config.Config.BasicAuth.Session.Path_to_jwt_signing_key == "" {
 		fields += "path_to_jwt_signing_key,"
 	} else {
-		sysLogger.Debugf("JWT Signing Key is searched for here: %s", env.Config.BasicAuth.Session.Path_to_jwt_signing_key)
+		sysLogger.Debugf("JWT Signing Key is searched for here: %s", config.Config.BasicAuth.Session.Path_to_jwt_signing_key)
 	}
 
 	if fields != "" {
@@ -75,8 +75,8 @@ func initSession(sysLogger *logrus.Entry) {
 		handleFatalf(sysLogger, section, fields)
 	}
 
-	env.Config.BasicAuth.Session.JwtPubKey = basic_auth.ParseRsaPublicKeyFromPemStr(sysLogger, env.Config.BasicAuth.Session.Path_to_jwt_pub_key)
-	env.Config.BasicAuth.Session.MySigningKey = basic_auth.ParseRsaPrivateKeyFromPemStr(sysLogger, env.Config.BasicAuth.Session.Path_to_jwt_signing_key)
+	config.Config.BasicAuth.Session.JwtPubKey = basic_auth.ParseRsaPublicKeyFromPemStr(sysLogger, config.Config.BasicAuth.Session.Path_to_jwt_pub_key)
+	config.Config.BasicAuth.Session.MySigningKey = basic_auth.ParseRsaPrivateKeyFromPemStr(sysLogger, config.Config.BasicAuth.Session.Path_to_jwt_signing_key)
 }
 
 // Function initializes the 'ldap' section of the config file.
@@ -92,22 +92,22 @@ func InitPdpParams(sysLogger *logrus.Entry) {
 	fields := ""
 
 	// TODO: Check if the field make sense as well!
-	if env.Config.Pdp.TargetPdpAddr == "" {
+	if config.Config.Pdp.TargetPdpAddr == "" {
 		fields += "target_pdp_addr,"
 	}
 
 	// TODO: Check if the field make sense as well!
-	if env.Config.Pdp.CertShownByPepToPdp == "" {
+	if config.Config.Pdp.CertShownByPepToPdp == "" {
 		fields += "cert_shown_by_pep_to_pdp,"
 	}
 
 	// TODO: Check if the field make sense as well!
-	if env.Config.Pdp.PrivkeyForCertShownByPepToPdp == "" {
+	if config.Config.Pdp.PrivkeyForCertShownByPepToPdp == "" {
 		fields += "privkey_for_cert_shown_by_pep_to_pdp,"
 	}
 
 	// TODO: Check if the field make sense as well!
-	if env.Config.Pdp.CertPepAcceptsShownByPdp == "" {
+	if config.Config.Pdp.CertPepAcceptsShownByPdp == "" {
 		fields += "cert_pep_accepts_shown_by_pdp,"
 	}
 
@@ -117,15 +117,15 @@ func InitPdpParams(sysLogger *logrus.Entry) {
 	}
 
 	// Preload X509KeyPair and write it to env
-	env.Config.Pdp.X509KeyPairShownByPepToPdp = loadX509KeyPair(sysLogger, env.Config.Pdp.CertShownByPepToPdp, env.Config.Pdp.PrivkeyForCertShownByPepToPdp, "PDP", "")
+	config.Config.Pdp.X509KeyPairShownByPepToPdp = loadX509KeyPair(sysLogger, config.Config.Pdp.CertShownByPepToPdp, config.Config.Pdp.PrivkeyForCertShownByPepToPdp, "PDP", "")
 
 	// Preload CA certificate and append it to cert pool
-	loadCACertificate(sysLogger, env.Config.Pdp.CertPepAcceptsShownByPdp, "PDP", env.Config.CAcertPoolPepAcceptsFromInt)
+	loadCACertificate(sysLogger, config.Config.Pdp.CertPepAcceptsShownByPdp, "PDP", config.Config.CAcertPoolPepAcceptsFromInt)
 
 	// Use default pool size as pdp pool size if necessary
-	if env.Config.Pdp.PdpClientPoolSize == 0 {
-		env.Config.Pdp.PdpClientPoolSize = env.Config.Pep.DefaultPoolSize
-		sysLogger.Debugf("PDP client pool size set to default pool size (%d)", env.Config.Pep.DefaultPoolSize)
+	if config.Config.Pdp.PdpClientPoolSize == 0 {
+		config.Config.Pdp.PdpClientPoolSize = config.Config.Pep.DefaultPoolSize
+		sysLogger.Debugf("PDP client pool size set to default pool size (%d)", config.Config.Pep.DefaultPoolSize)
 	}
 }
 
@@ -136,22 +136,22 @@ func InitSfplParams(sysLogger *logrus.Entry) {
 	fields := ""
 
 	// TODO: Check if the field make sense as well!
-	if env.Config.SfpLogic.TargetSfplAddr == "" {
+	if config.Config.SfpLogic.TargetSfplAddr == "" {
 		fields += "target_sfpl_addr,"
 	}
 
 	// TODO: Check if the field make sense as well!
-	if env.Config.SfpLogic.CertShownByPepToSfpl == "" {
+	if config.Config.SfpLogic.CertShownByPepToSfpl == "" {
 		fields += "cert_shown_by_pep_to_sfpl,"
 	}
 
 	// TODO: Check if the field make sense as well!
-	if env.Config.SfpLogic.PrivkeyForCertShownByPepToSfpl == "" {
+	if config.Config.SfpLogic.PrivkeyForCertShownByPepToSfpl == "" {
 		fields += "privkey_for_cert_shown_by_pep_to_sfpl,"
 	}
 
 	// TODO: Check if the field make sense as well!
-	if env.Config.SfpLogic.CertPepAcceptsShownBySfpl == "" {
+	if config.Config.SfpLogic.CertPepAcceptsShownBySfpl == "" {
 		fields += "cert_pep_accepts_shown_by_sfpl,"
 	}
 
@@ -161,15 +161,15 @@ func InitSfplParams(sysLogger *logrus.Entry) {
 	}
 
 	// Preload X509KeyPair and write it to env
-	env.Config.SfpLogic.X509KeyPairShownByPepToSfpl = loadX509KeyPair(sysLogger, env.Config.SfpLogic.CertShownByPepToSfpl, env.Config.SfpLogic.PrivkeyForCertShownByPepToSfpl, "SFP_logic", "")
+	config.Config.SfpLogic.X509KeyPairShownByPepToSfpl = loadX509KeyPair(sysLogger, config.Config.SfpLogic.CertShownByPepToSfpl, config.Config.SfpLogic.PrivkeyForCertShownByPepToSfpl, "SFP_logic", "")
 
 	// Preload CA certificate and append it to cert pool
-	loadCACertificate(sysLogger, env.Config.SfpLogic.CertPepAcceptsShownBySfpl, "SFP_logic", env.Config.CAcertPoolPepAcceptsFromInt)
+	loadCACertificate(sysLogger, config.Config.SfpLogic.CertPepAcceptsShownBySfpl, "SFP_logic", config.Config.CAcertPoolPepAcceptsFromInt)
 
 	// Use default pool size as sfpl pool size if necessary
-	if env.Config.SfpLogic.SfplClientPoolSize == 0 {
-		env.Config.SfpLogic.SfplClientPoolSize = env.Config.Pep.DefaultPoolSize
-		sysLogger.Debugf("SFPL client pool size set to default pool size (%d)", env.Config.Pep.DefaultPoolSize)
+	if config.Config.SfpLogic.SfplClientPoolSize == 0 {
+		config.Config.SfpLogic.SfplClientPoolSize = config.Config.Pep.DefaultPoolSize
+		sysLogger.Debugf("SFPL client pool size set to default pool size (%d)", config.Config.Pep.DefaultPoolSize)
 	}
 }
 
@@ -179,11 +179,11 @@ func InitSfplParams(sysLogger *logrus.Entry) {
 func InitServicePoolParams(sysLogger *logrus.Entry) {
 	var err error
 
-	if env.Config.ServicePool == nil {
+	if config.Config.ServicePool == nil {
 		sysLogger.Fatalf("Service Pool field 'service_pool' is empty. No Service is defined")
 	}
 
-	for serviceName, serviceConfig := range env.Config.ServicePool {
+	for serviceName, serviceConfig := range config.Config.ServicePool {
 		fields := ""
 
 		if serviceConfig == nil {
@@ -234,13 +234,13 @@ func InitServicePoolParams(sysLogger *logrus.Entry) {
 		}
 
 		// Preload X509KeyPairs shown by pep to client
-		env.Config.ServicePool[serviceName].X509KeyPairShownByPepToClient = loadX509KeyPair(sysLogger, serviceConfig.CertShownByPepToClientsMatchingSni, serviceConfig.PrivkeyForCertShownByPepToClient, "service "+serviceName, "external")
+		config.Config.ServicePool[serviceName].X509KeyPairShownByPepToClient = loadX509KeyPair(sysLogger, serviceConfig.CertShownByPepToClientsMatchingSni, serviceConfig.PrivkeyForCertShownByPepToClient, "service "+serviceName, "external")
 
 		// Preload X509KeyPairs shown by pep to service
-		env.Config.ServicePool[serviceName].X509KeyPairShownByPepToService = loadX509KeyPair(sysLogger, serviceConfig.CertShownByPepToService, serviceConfig.PrivkeyForCertShownByPepToService, "service "+serviceName, "internal")
+		config.Config.ServicePool[serviceName].X509KeyPairShownByPepToService = loadX509KeyPair(sysLogger, serviceConfig.CertShownByPepToService, serviceConfig.PrivkeyForCertShownByPepToService, "service "+serviceName, "internal")
 
 		// Preparse Service URL
-		env.Config.ServicePool[serviceName].TargetServiceUrl, err = url.Parse(serviceConfig.TargetServiceAddr)
+		config.Config.ServicePool[serviceName].TargetServiceUrl, err = url.Parse(serviceConfig.TargetServiceAddr)
 		if err != nil {
 			sysLogger.Fatalf("Critical Error when parsing target service URL for service %s: %v", serviceName, err)
 		} else {
@@ -248,12 +248,12 @@ func InitServicePoolParams(sysLogger *logrus.Entry) {
 		}
 
 		// Preload CA certificate and append it to cert pool
-		loadCACertificate(sysLogger, serviceConfig.CertPepAcceptsWhenShownByService, "service "+serviceName, env.Config.CAcertPoolPepAcceptsFromInt)
+		loadCACertificate(sysLogger, serviceConfig.CertPepAcceptsWhenShownByService, "service "+serviceName, config.Config.CAcertPoolPepAcceptsFromInt)
 
 		// Create a map to directly access service config by SNI
-		env.Config.ServiceSniMap = make(map[string]*env.ServiceT)
-		for _, service := range env.Config.ServicePool {
-			env.Config.ServiceSniMap[service.Sni] = service
+		config.Config.ServiceSniMap = make(map[string]*config.ServiceT)
+		for _, service := range config.Config.ServicePool {
+			config.Config.ServiceSniMap[service.Sni] = service
 		}
 	}
 }
@@ -263,11 +263,11 @@ func InitServicePoolParams(sysLogger *logrus.Entry) {
 func InitSfPoolParams(sysLogger *logrus.Entry) {
 	var err error
 
-	if env.Config.SfPool == nil {
+	if config.Config.SfPool == nil {
 		sysLogger.Debugf("Service Pool field 'sf_pool' is empty. No SF is defined")
 	}
 
-	for sfName, sfConfig := range env.Config.SfPool {
+	for sfName, sfConfig := range config.Config.SfPool {
 		fields := ""
 
 		// This case is TRUE if a SF section such as logger is completely empty; in this case sfConfig is a nil pointer
@@ -303,10 +303,10 @@ func InitSfPoolParams(sysLogger *logrus.Entry) {
 		}
 
 		// preload X509KeyPairs shown by pep to sf
-		env.Config.SfPool[sfName].X509KeyPairShownByPepToSf = loadX509KeyPair(sysLogger, sfConfig.CertShownByPepToSf, sfConfig.PrivkeyForCertShownByPepToSf, "service function "+sfName, "")
+		config.Config.SfPool[sfName].X509KeyPairShownByPepToSf = loadX509KeyPair(sysLogger, sfConfig.CertShownByPepToSf, sfConfig.PrivkeyForCertShownByPepToSf, "service function "+sfName, "")
 
 		// Preparse SF URL
-		env.Config.SfPool[sfName].TargetSfUrl, err = url.Parse(sfConfig.TargetSfAddr)
+		config.Config.SfPool[sfName].TargetSfUrl, err = url.Parse(sfConfig.TargetSfAddr)
 		if err != nil {
 			sysLogger.Fatalf("Critical Error when parsing target URL for service function %s: %v", sfName, err)
 		} else {
@@ -314,7 +314,7 @@ func InitSfPoolParams(sysLogger *logrus.Entry) {
 		}
 
 		// Preload CA certificate and append it to cert pool
-		loadCACertificate(sysLogger, sfConfig.CertPepAcceptsShownBySf, "service function "+sfName, env.Config.CAcertPoolPepAcceptsFromInt)
+		loadCACertificate(sysLogger, sfConfig.CertPepAcceptsShownBySf, "service function "+sfName, config.Config.CAcertPoolPepAcceptsFromInt)
 	}
 }
 

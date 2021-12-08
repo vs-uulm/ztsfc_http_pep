@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"net/http"
 
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/env"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 )
 
 var (
@@ -27,7 +27,7 @@ func NewClientPool(poolSize int, certShownByPEP tls.Certificate) []*http.Client 
 				Certificates:       []tls.Certificate{certShownByPEP},
 				InsecureSkipVerify: true,
 				ClientAuth:         tls.RequireAndVerifyClientCert,
-				ClientCAs:          env.Config.CAcertPoolPepAcceptsFromInt,
+				ClientCAs:          config.Config.CAcertPoolPepAcceptsFromInt,
 			},
 		}
 		clientPool[i] = client

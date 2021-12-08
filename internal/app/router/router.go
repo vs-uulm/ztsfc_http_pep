@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/basic_auth"
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/env"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 	//	pdp "local.com/leobrada/ztsfc_http_pep/authorization"
@@ -39,10 +39,10 @@ func NewRouter() (*Router, error) {
 		Certificates:           nil,
 		//ClientAuth:             tls.RequireAndVerifyClientCert,
 		ClientAuth: tls.VerifyClientCertIfGiven,
-		ClientCAs:  env.Config.CAcertPoolPepAcceptsFromExt,
+		ClientCAs:  config.Config.CAcertPoolPepAcceptsFromExt,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// use SNI map to load suitable certificate
-			service, ok := env.Config.ServiceSniMap[cli.ServerName]
+			service, ok := config.Config.ServiceSniMap[cli.ServerName]
 			if !ok {
 				return nil, fmt.Errorf("Error: Could not serve a suitable certificate for %s\n", cli.ServerName)
 			}
@@ -56,7 +56,7 @@ func NewRouter() (*Router, error) {
 
 	// Setting Up the Frontend Server
 	router.frontend = &http.Server{
-		Addr:         env.Config.Pep.ListenAddr,
+		Addr:         config.Config.Pep.ListenAddr,
 		TLSConfig:    router.tlsConfig,
 		ReadTimeout:  time.Hour * 1,
 		WriteTimeout: time.Hour * 1,
@@ -126,8 +126,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var serviceURL *url.URL
 	var certShownByPEP tls.Certificate
 
-	//serviceConf, ok := env.Config.ServiceSniMap[md.Resource]
-	serviceConf, ok := env.Config.ServiceSniMap[req.Host]
+	//serviceConf, ok := config.Config.ServiceSniMap[md.Resource]
+	serviceConf, ok := config.Config.ServiceSniMap[req.Host]
 	if !ok {
 		//logwriter.LW.Logger.WithField("sni", md.Resource).Error("Requested SNI has no match in config file.")
 		logwriter.LW.Logger.WithField("sni", req.Host).Error("Requested SNI has no match in config file.")
@@ -164,7 +164,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//	// @author:marie
 	//	nextHop := md.SFP[0]
 	//	logwriter.LW.Logger.Debugf("Next Hop: %s", nextHop)
-	//	nextHopConf, ok := env.Config.SfPool[nextHop.Name]
+	//	nextHopConf, ok := config.Config.SfPool[nextHop.Name]
 	//	if !ok {
 	//		logwriter.LW.Logger.WithField("sf", nextHop).Error("First SF from the SFP does not exist in config file.")
 	//		return
@@ -210,7 +210,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			Certificates:       []tls.Certificate{certShownByPEP},
 			InsecureSkipVerify: true,
 			ClientAuth:         tls.RequireAndVerifyClientCert,
-			ClientCAs:          env.Config.CAcertPoolPepAcceptsFromInt,
+			ClientCAs:          config.Config.CAcertPoolPepAcceptsFromInt,
 		},
 	}
 

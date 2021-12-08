@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/env"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/proxies"
@@ -37,7 +37,7 @@ func PerformAuthorization(clientReq *http.Request, cpm *metadata.CpMetadata) err
 
 	// send request to correct address and API endpoint
 	// @author:marie
-	req, err := http.NewRequest("GET", env.Config.Pdp.TargetPdpAddr+requestEndpoint, nil)
+	req, err := http.NewRequest("GET", config.Config.Pdp.TargetPdpAddr+requestEndpoint, nil)
 	if err != nil { // @author:marie catch error
 		return err
 	}
