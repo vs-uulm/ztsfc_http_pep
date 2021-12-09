@@ -13,8 +13,8 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jtblin/go-ldap-client"
-	"github.com/sirupsen/logrus"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 )
 
@@ -42,12 +42,7 @@ func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
 }
 
 func BasicAuth(w http.ResponseWriter, req *http.Request) bool {
-
-	if performPasswdAuth(w, req) {
-		return true
-	}
-
-	return false
+	return performPasswdAuth(w, req)
 }
 
 func performPasswdAuth(w http.ResponseWriter, req *http.Request) bool {
@@ -102,7 +97,7 @@ func performPasswdAuth(w http.ResponseWriter, req *http.Request) bool {
 		// TODO: make it user configurable
 		// TODO: is there a better solution for the content-length  /body length "bug"?
 		req.ContentLength = 0
-		http.Redirect(w, req, "https://"+req.Host+req.URL.String(), 303)
+		http.Redirect(w, req, "https://"+req.Host+req.URL.String(), http.StatusSeeOther) // 303
 		return false
 
 	} else {
@@ -133,7 +128,7 @@ func performX509auth(req *http.Request) bool {
 	return false
 }
 
-func ParseRsaPublicKeyFromPemStr(sysLogger *logrus.Entry, pubPEMLocation string) *rsa.PublicKey {
+func ParseRsaPublicKeyFromPemStr(sysLogger *logwriter.LogWriter, pubPEMLocation string) *rsa.PublicKey {
 	pubReadIn, err := ioutil.ReadFile(pubPEMLocation)
 	if err != nil {
 		sysLogger.Fatalf("JWT Public Key: Could not read from file '%s'", pubPEMLocation)
@@ -180,7 +175,7 @@ func PerformMoodleLogin(w http.ResponseWriter, req *http.Request) bool {
 
 }
 
-func ParseRsaPrivateKeyFromPemStr(sysLogger *logrus.Entry, privPEMLocation string) *rsa.PrivateKey {
+func ParseRsaPrivateKeyFromPemStr(sysLogger *logwriter.LogWriter, privPEMLocation string) *rsa.PrivateKey {
 	privReadIn, err := ioutil.ReadFile(privPEMLocation)
 	if err != nil {
 		sysLogger.Fatalf("JWT Signing Key: Could not read from file '%s'", privPEMLocation)
@@ -218,7 +213,7 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
         </html>
         `
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprintf(w, form)
+	fmt.Fprint(w, form)
 }
 
 func userIsInLDAP(userName, password string) bool {

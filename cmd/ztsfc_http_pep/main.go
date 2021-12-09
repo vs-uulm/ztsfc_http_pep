@@ -14,31 +14,28 @@ import (
 )
 
 var (
-	confFilePath    string
-	logFilePath     string
-	logLevel        string
-	ifTextFormatter bool
+	confFilePath string
+	sysLogger    logwriter.LogWriter
 )
 
 func init() {
-	flag.StringVar(&logFilePath, "log-to", "./pep.log", "Path to log file. Write 'stdout' to print to stdout")
-	flag.StringVar(&confFilePath, "c", "./conf.yml", "Path to user defined yml config file")
-	flag.StringVar(&logLevel, "log-level", "error", "Log level from the next set: debug, info, warning, error")
-	flag.BoolVar(&ifTextFormatter, "text", false, "Use a text format instead of JSON to log messages")
-
 	// Operating input parameters
+	flag.StringVar(&confFilePath, "c", "", "Path to user defined yml config file")
 	flag.Parse()
 
-	logwriter.InitLogwriter(logFilePath, logLevel, ifTextFormatter)
-	sysLogger := logwriter.LW.Logger.WithFields(logrus.Fields{"type": "system"})
-
 	// Loading all config parameter from config file defined in "confFilePath"
-	err := config.LoadConfig(confFilePath, sysLogger)
+	err := config.LoadConfig(confFilePath)
 	if err != nil {
-		sysLogger.Fatalf("Loading logger configuration from %s - ERROR: %v", confFilePath, err)
-	} else {
-		sysLogger.Debugf("Loading logger configuration from %s - OK", confFilePath)
+		return
 	}
+
+	// Create an instance of the system logger
+	sysLogger, err := logwriter.New(config.Config.SysLogger.LogFilePath,
+		config.Config.SysLogger.LogLevel,
+		config.Config.SysLogger.IfTextFormatter,
+		logrus.Fields{"type": "system"},
+	)
+	sysLogger.Debugf("loading logger configuration from %s - OK", confFilePath)
 
 	// Create Certificate Pools for the CA certificates used by the PEP
 	config.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
@@ -47,6 +44,7 @@ func init() {
 	// Preload diverse parameters from config
 	// (One function for each section in config.yml)
 	confInit.InitDefaultValues(sysLogger)
+	confInit.InitSysLoggerParams(sysLogger)
 	confInit.InitPepParams(sysLogger)
 	confInit.InitBasicAuth(sysLogger)
 	confInit.InitLdapParams(sysLogger)
@@ -71,15 +69,16 @@ func main() {
 	// Create new PEP router
 	pep, err := router.NewRouter()
 	if err != nil {
-		logwriter.LW.Logger.Fatalf("Fatal error during new router creation: %v", err)
-	} else {
-		logwriter.LW.Logger.WithFields(logrus.Fields{"type": "system"}).Debug("New router is successfully created")
+		sysLogger.Fatalf("unable to create a new router: %s", err.Error())
 	}
+	sysLogger.Debug("new router is successfully created")
+
+	pep.SetLogWriter(&sysLogger)
 
 	http.Handle("/", pep)
 
 	err = pep.ListenAndServeTLS()
 	if err != nil {
-		logwriter.LW.Logger.Fatalf("ListenAndServeTLS Fatal Error: %v", err)
+		sysLogger.Fatalf("ListenAndServeTLS() Fatal Error: %s", err.Error())
 	}
 }

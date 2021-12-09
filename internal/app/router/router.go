@@ -25,6 +25,7 @@ import (
 type Router struct {
 	tlsConfig *tls.Config
 	frontend  *http.Server
+	logWriter *logwriter.LogWriter
 }
 
 func NewRouter() (*Router, error) {
@@ -44,7 +45,7 @@ func NewRouter() (*Router, error) {
 			// use SNI map to load suitable certificate
 			service, ok := config.Config.ServiceSniMap[cli.ServerName]
 			if !ok {
-				return nil, fmt.Errorf("Error: Could not serve a suitable certificate for %s\n", cli.ServerName)
+				return nil, fmt.Errorf("error: could not serve a suitable certificate for %s", cli.ServerName)
 			}
 			return &service.X509KeyPairShownByPepToClient, nil
 		},
@@ -61,10 +62,15 @@ func NewRouter() (*Router, error) {
 		ReadTimeout:  time.Hour * 1,
 		WriteTimeout: time.Hour * 1,
 		Handler:      mux,
-		ErrorLog:     log.New(logwriter.LW, "", 0),
+		ErrorLog:     log.New(router.logWriter.GetWriter(), "", 0),
+		// ErrorLog:     log.New(logwriter.LW, "", 0),
 	}
 
 	return router, nil
+}
+
+func (router *Router) SetLogWriter(lw *logwriter.LogWriter) {
+	router.logWriter = lw
 }
 
 func addHSTSHeader(w http.ResponseWriter) {
@@ -88,7 +94,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	md := new(metadata.CpMetadata)
 
 	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
-	logwriter.LW.LogHTTPRequest(req)
+	router.logWriter.LogHTTPRequest(req)
 
 	// BASIC AUTHENTICATION
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
@@ -105,6 +111,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// AUTHORIZATION
 	// RM FOR PRODUCTIVE
+	// pdp.SetLogWriter(router.logWriter)
 	//err = pdp.PerformAuthorization(req, md)
 	// observe errors and abort routine if something goes wrong
 	// @author:marie
@@ -129,8 +136,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//serviceConf, ok := config.Config.ServiceSniMap[md.Resource]
 	serviceConf, ok := config.Config.ServiceSniMap[req.Host]
 	if !ok {
-		//logwriter.LW.Logger.WithField("sni", md.Resource).Error("Requested SNI has no match in config file.")
-		logwriter.LW.Logger.WithField("sni", req.Host).Error("Requested SNI has no match in config file.")
+		router.logWriter.WithField("sni", req.Host).Error("Requested SNI has no match in config file.")
 		return
 	}
 
@@ -145,7 +151,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//	certShownByPEP = serviceConf.X509KeyPairShownByPepToService
 
 	//} else {
-
+	//  sfp1.SetLogWriter(router.logWriter)
 	//	err = sfpl.TransformSFCintoSFP(md)
 	//	// observe errors and abort routine if something goes wrong
 	//	// @author:marie
@@ -194,13 +200,13 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//}
 	//logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
 	serviceURL = serviceConf.TargetServiceUrl
-	logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
+	router.logWriter.Debugf("Service URL: %s", serviceURL.String())
 	certShownByPEP = serviceConf.X509KeyPairShownByPepToService
-	logwriter.LW.Logger.Debugf("Service URL: %s", serviceConf.TargetServiceAddr)
+	router.logWriter.Debugf("Service URL: %s", serviceConf.TargetServiceAddr)
 
 	proxy = httputil.NewSingleHostReverseProxy(serviceURL)
 
-	proxy.ErrorLog = log.New(logwriter.LW, "", 0)
+	proxy.ErrorLog = log.New(router.logWriter.GetWriter(), "", 0)
 
 	// When the PEP is acting as a client; this defines his behavior
 	proxy.Transport = &http.Transport{

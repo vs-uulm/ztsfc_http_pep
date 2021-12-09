@@ -10,12 +10,12 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/sirupsen/logrus"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/basic_auth"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 )
 
-func InitDefaultValues(sysLogger *logrus.Entry) {
+func InitDefaultValues(sysLogger *logwriter.LogWriter) {
 
 	// Initialize a DefaultPoolSize if its not set
 	if config.Config.Pep.DefaultPoolSize == 0 {
@@ -24,9 +24,23 @@ func InitDefaultValues(sysLogger *logrus.Entry) {
 
 }
 
+func InitSysLoggerParams(sysLogger *logwriter.LogWriter) {
+	if config.Config.SysLogger.LogLevel == "" {
+		config.Config.SysLogger.LogLevel = "error"
+	}
+
+	if config.Config.SysLogger.LogFilePath == "" {
+		config.Config.SysLogger.LogFilePath = "./pep.log"
+	}
+
+	if config.Config.SysLogger.IfTextFormatter == "" {
+		config.Config.SysLogger.IfTextFormatter = "json"
+	}
+}
+
 // Function initializes the 'pep' section of the config file.
 // It loads the PEP certificate.
-func InitPepParams(sysLogger *logrus.Entry) {
+func InitPepParams(sysLogger *logwriter.LogWriter) {
 	section := "pep"
 	fields := ""
 
@@ -50,11 +64,11 @@ func InitPepParams(sysLogger *logrus.Entry) {
 	}
 }
 
-func InitBasicAuth(sysLogger *logrus.Entry) {
+func InitBasicAuth(sysLogger *logwriter.LogWriter) {
 	initSession(sysLogger)
 }
 
-func initSession(sysLogger *logrus.Entry) {
+func initSession(sysLogger *logwriter.LogWriter) {
 	section := "session"
 	fields := ""
 
@@ -81,13 +95,13 @@ func initSession(sysLogger *logrus.Entry) {
 
 // Function initializes the 'ldap' section of the config file.
 // Function currently does nothing.
-func InitLdapParams(sysLogger *logrus.Entry) {
+func InitLdapParams(sysLogger *logwriter.LogWriter) {
 
 }
 
 // Function initializes the 'pdp' section of the config file.
 // It loads the certificates for the given file paths.
-func InitPdpParams(sysLogger *logrus.Entry) {
+func InitPdpParams(sysLogger *logwriter.LogWriter) {
 	section := "pdp"
 	fields := ""
 
@@ -131,7 +145,7 @@ func InitPdpParams(sysLogger *logrus.Entry) {
 
 // Function initializes the 'sfp_logic' section of the config file.
 // It loads the certificates for the given file paths.
-func InitSfplParams(sysLogger *logrus.Entry) {
+func InitSfplParams(sysLogger *logwriter.LogWriter) {
 	section := "sfp_logic"
 	fields := ""
 
@@ -176,7 +190,7 @@ func InitSfplParams(sysLogger *logrus.Entry) {
 // Function initializes the 'service_pool' section of the config file.
 // It loads the certificates for the given file paths and preparses the URLs.
 // Additionally, it creates a map to access services by SNI directly.
-func InitServicePoolParams(sysLogger *logrus.Entry) {
+func InitServicePoolParams(sysLogger *logwriter.LogWriter) {
 	var err error
 
 	if config.Config.ServicePool == nil {
@@ -260,7 +274,7 @@ func InitServicePoolParams(sysLogger *logrus.Entry) {
 
 // Function initializes the 'sf_pool' section of the config file.
 // It loads the certificates for the given file paths and preparses the URLs.
-func InitSfPoolParams(sysLogger *logrus.Entry) {
+func InitSfPoolParams(sysLogger *logwriter.LogWriter) {
 	var err error
 
 	if config.Config.SfPool == nil {
@@ -319,7 +333,7 @@ func InitSfPoolParams(sysLogger *logrus.Entry) {
 }
 
 // function unifies the loading of X509 key pairs for different components
-func loadX509KeyPair(sysLogger *logrus.Entry, certfile, keyfile, componentName, certAttr string) tls.Certificate {
+func loadX509KeyPair(sysLogger *logwriter.LogWriter, certfile, keyfile, componentName, certAttr string) tls.Certificate {
 	keyPair, err := tls.LoadX509KeyPair(certfile, keyfile)
 	if err != nil {
 		sysLogger.Fatalf("Critical Error when loading %s X509KeyPair for %s from %s and %s: %v", certAttr, componentName, certfile, keyfile, err)
@@ -330,7 +344,7 @@ func loadX509KeyPair(sysLogger *logrus.Entry, certfile, keyfile, componentName, 
 }
 
 // function unifies the loading of CA certificates for different components
-func loadCACertificate(sysLogger *logrus.Entry, certfile string, componentName string, certPool *x509.CertPool) {
+func loadCACertificate(sysLogger *logwriter.LogWriter, certfile string, componentName string, certPool *x509.CertPool) {
 	caRoot, err := ioutil.ReadFile(certfile)
 	if err != nil {
 		sysLogger.Fatalf("Loading %s CA certificate from %s error: %v", componentName, certfile, err)
@@ -341,6 +355,6 @@ func loadCACertificate(sysLogger *logrus.Entry, certfile string, componentName s
 	certPool.AppendCertsFromPEM(caRoot)
 }
 
-func handleFatalf(sysLogger *logrus.Entry, section, fields string) {
+func handleFatalf(sysLogger *logwriter.LogWriter, section, fields string) {
 	sysLogger.Fatalf("For section '%s' the necessary field(s) '%s' is/are not present.", section, fields)
 }

@@ -5,8 +5,8 @@
 package logwriter
 
 import (
-	"fmt"
-	"log"
+	"crypto/tls"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -35,75 +35,138 @@ const (
 // Use it like LW.Logger.Info("this is a logging message") or
 // LW.Logger.WithField("someField", 1).Debug("some message")
 // @author:marie
-var LW *LogWriter
-
 type LogWriter struct {
-	Logger  *logrus.Logger
-	logfile *os.File
+	logger *logrus.Entry
 }
 
-// Creates and return a new LogWriter instance
-func InitLogwriter(_logFilePath, _logLevel string, _ifTextFormatter bool) {
-	// @author:marie
-	// changed this function from a constructor to an init function, because
-	// all packages should access a single global instance.
+// // Creates and return a new LogWriter instance
+// func InitLogwriter(_logFilePath, _logLevel string, _ifTextFormatter bool) {
+// 	// @author:marie
+// 	// changed this function from a constructor to an init function, because
+// 	// all packages should access a single global instance.
 
-	var err error
-	LW = new(LogWriter)
+// 	var err error
+// 	LW = new(LogWriter)
 
-	// Create a new instance of logrus logger
-	LW.Logger = logrus.New()
+// 	// Create a new instance of logrus logger
+// 	LW.Logger = logrus.New()
 
-	// Set a log level (debug, info, warning, error)
-	switch strings.ToLower(_logLevel) {
-	case "debug":
-		LW.Logger.SetLevel(logrus.DebugLevel)
-	case "info":
-		LW.Logger.SetLevel(logrus.InfoLevel)
-	case "warning":
-		LW.Logger.SetLevel(logrus.WarnLevel)
-	case "error":
-		LW.Logger.SetLevel(logrus.ErrorLevel)
-	case "":
-		LW.Logger.SetLevel(logrus.ErrorLevel)
+// 	// Set a log level (debug, info, warning, error)
+// 	switch strings.ToLower(_logLevel) {
+// 	case "debug":
+// 		LW.Logger.SetLevel(logrus.DebugLevel)
+// 	case "info":
+// 		LW.Logger.SetLevel(logrus.InfoLevel)
+// 	case "warning":
+// 		LW.Logger.SetLevel(logrus.WarnLevel)
+// 	case "error":
+// 		LW.Logger.SetLevel(logrus.ErrorLevel)
+// 	case "":
+// 		LW.Logger.SetLevel(logrus.ErrorLevel)
+// 	default:
+// 		log.Fatal("Wrong log level value. Supported values are info, warning, error (default)")
+// 	}
+
+// 	// Set a JSON log formatter if necessary
+// 	if _ifTextFormatter {
+// 		LW.Logger.SetFormatter(&logrus.TextFormatter{})
+// 	} else {
+// 		LW.Logger.SetFormatter(&logrus.JSONFormatter{})
+// 	}
+
+// 	if strings.ToLower(_logFilePath) == "stdout" {
+// 		LW.Logger.SetOutput(os.Stdout)
+// 	} else {
+// 		// Open a file for the logger output
+// 		LW.logfile, err = os.OpenFile(_logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
+
+// 		// Redirect the logger output to the file
+// 		LW.Logger.SetOutput(LW.logfile)
+// 	}
+// }
+
+// New() creates and return a new logrus.Logger instance
+func New(_logFilePath, _logLevel, _ifTextFormatter string, _fields logrus.Fields) (*LogWriter, error) {
+	var (
+		err   error
+		level logrus.Level
+	)
+
+	// Create a new instance of the logrus logger
+	l := logrus.New()
+
+	// Set the system logger logging level
+	level, err = logrus.ParseLevel(_logLevel)
+	if err != nil {
+		l.Errorf("unable to set the logger level %s", _logLevel)
+		return nil, err
+	}
+	l.SetLevel(level)
+	l.Debugf("system logger logging level is set to %s", _logLevel)
+
+	// Set the system logger formatter
+	switch strings.ToLower(_ifTextFormatter) {
+	case "text":
+		l.SetFormatter(&logrus.TextFormatter{})
+	case "json":
+		l.SetFormatter(&logrus.JSONFormatter{})
 	default:
-		log.Fatal("Wrong log level value. Supported values are info, warning, error (default)")
+		l.Errorf("unable to set logging level %s. Supported values are JSON (default) and text", _ifTextFormatter)
+		return nil, err
 	}
 
-	// Set a JSON log formatter if necessary
-	if _ifTextFormatter {
-		LW.Logger.SetFormatter(&logrus.TextFormatter{})
-	} else {
-		LW.Logger.SetFormatter(&logrus.JSONFormatter{})
-	}
-
+	// Set the os.Stdout or a file for writing the system log messages
 	if strings.ToLower(_logFilePath) == "stdout" {
-		LW.Logger.SetOutput(os.Stdout)
+		l.SetOutput(os.Stdout)
 	} else {
 		// Open a file for the logger output
-		LW.logfile, err = os.OpenFile(_logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		file, err := os.OpenFile(_logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Fatal(err)
+			l.Errorf("unable to open file %s to write logging messages", _logFilePath)
+			return nil, err
 		}
 
 		// Redirect the logger output to the file
-		LW.Logger.SetOutput(LW.logfile)
+		l.SetOutput(file)
 	}
+
+	// Create a LogWriter struct and bind it to the configured logger
+	lw := &LogWriter{
+		logger: l.WithFields(_fields),
+	}
+	return lw, nil
 }
 
-// Function for calling by http.Server ErrorLog
-func (lw LogWriter) Write(p []byte) (n int, err error) {
+// // Function for calling by http.Server ErrorLog
+// func (lw LogWriter) Write(p []byte) (n int, err error) {
+// 	// Customization of the line to be logged
+// 	output := string(p)
+// 	if !strings.Contains(output, ",success") {
+// 		if strings.HasSuffix(output, "\n") {
+// 			output = strings.TrimSuffix(output, "\n")
+// 		}
+
+// 		lw.Logger.WithFields(logrus.Fields{"result": "denied"}).Info(output)
+// 	} else {
+// 		output = strings.TrimSuffix(output, ",success")
+// 		lw.Logger.WithFields(logrus.Fields{"result": "success"}).Info(output)
+// 	}
+// 	return 1, nil
+// }
+
+// Function for calling by http.Server or httputil.ReverseProxy ErrorLog
+func (lw *LogWriter) Write(p []byte) (n int, err error) {
 	// Customization of the line to be logged
 	output := string(p)
 	if !strings.Contains(output, ",success") {
-		if strings.HasSuffix(output, "\n") {
-			output = strings.TrimSuffix(output, "\n")
-		}
-
-		lw.Logger.WithFields(logrus.Fields{"result": "denied"}).Info(output)
+		output = strings.TrimSuffix(output, "\n")
+		lw.logger.WithFields(logrus.Fields{"result": "denied"}).Info(output)
 	} else {
 		output = strings.TrimSuffix(output, ",success")
-		lw.Logger.WithFields(logrus.Fields{"result": "success"}).Info(output)
+		lw.logger.WithFields(logrus.Fields{"result": "success"}).Info(output)
 	}
 	return 1, nil
 }
@@ -111,64 +174,95 @@ func (lw LogWriter) Write(p []byte) (n int, err error) {
 // The LogHTTPRequest() function prints HTTP request details into the log file
 // TODO Rename the function!
 func (lw *LogWriter) LogHTTPRequest(req *http.Request) {
-	// TODO: MAKE THIS BETTER
-	lw.Write([]byte(fmt.Sprintf("%s,%s,%s,%t,%t,%s,success",
+	lw.Infof("%s,%s,%s,%t,%t,%s,success",
 		req.RemoteAddr,
 		req.TLS.ServerName,
 		MatchTLSConst(req.TLS.Version),
 		req.TLS.HandshakeComplete,
 		req.TLS.DidResume,
-		MatchTLSConst(req.TLS.CipherSuite))))
+		MatchTLSConst(req.TLS.CipherSuite))
 }
 
-func (lw *LogWriter) Terminate() {
-	lw.logfile.Close()
-}
+// func (lw *LogWriter) Terminate() {
+// 	lw.logfile.Close()
+// }
 
 func MatchTLSConst(input uint16) string {
-	switch input {
-	// TLS VERSION
-	case 0x0300:
-		return "VersionSSL30"
-	case 0x0301:
-		return "VersionTLS10"
-	case 0x0302:
-		return "VersionTLS11"
-	case 0x0303:
-		return "VersionTLS12"
-	case 0x0304:
-		return "VersionTLS13"
-	// TLS CIPHER SUITES
-	// TODO: Replace it by func CipherSuiteName --> version 1.14 needed
-	case 0x0005:
-		return "TLS_RSA_WITH_RC4_128_SHA"
-	case 0x000a:
-		return "TLS_RSA_WITH_3DES_EDE_CBC_SHA"
-	case 0x002f:
-		return "TLS_RSA_WITH_AES_128_CBC_SHA"
-	case 0x0035:
-		return "TLS_RSA_WITH_AES_256_CBC_SHA"
-	case 0x003c:
-		return "TLS_RSA_WITH_AES_128_CBC_SHA256"
-	case 0x009c:
-		return "TLS_RSA_WITH_AES_128_GCM_SHA256"
-	case 0x009d:
-		return "TLS_RSA_WITH_AES_256_GCM_SHA384"
-	case 0xc007:
-		return "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA"
-	case 0xc009:
-		return "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA"
-	case 0xc00a:
-		return "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA"
-	case 0x1301:
-		return "TLS_AES_128_GCM_SHA256"
-	case 0x1302:
-		return "TLS_AES_256_GCM_SHA384"
-	case 0x1303:
-		return "TLS_CHACHA20_POLY1305_SHA256"
-	case 0x5600:
-		return "TLS_FALLBACK_SCSV"
-	default:
-		return "unsupported"
+	// Decode the input value into a name of the cipher suite
+	name := tls.CipherSuiteName(input)
+
+	// If the name after decoding fits the "0x****" format,
+	// then the CipherSuiteName could not decode the input
+	if len(name) == 6 && strings.HasPrefix(name, "0x") {
+		switch input {
+		// TLS VERSION
+		case 0x0300:
+			return "VersionSSL30"
+		case 0x0301:
+			return "VersionTLS10"
+		case 0x0302:
+			return "VersionTLS11"
+		case 0x0303:
+			return "VersionTLS12"
+		case 0x0304:
+			return "VersionTLS13"
+		default:
+			return "unsupported"
+		}
 	}
+	return name
+}
+
+// Info() calls the corresponding function of the original logrus package
+func (lw *LogWriter) Info(args ...interface{}) {
+	lw.logger.Info(args...)
+}
+
+// Infof() calls the corresponding function of the original logrus package
+func (lw *LogWriter) Infof(format string, args ...interface{}) {
+	lw.logger.Infof(format, args...)
+}
+
+// Error() calls the corresponding function of the original logrus package
+func (lw *LogWriter) Error(args ...interface{}) {
+	lw.logger.Error(args...)
+}
+
+// Errorf() calls the corresponding function of the original logrus package
+func (lw *LogWriter) Errorf(format string, args ...interface{}) {
+	lw.logger.Errorf(format, args...)
+}
+
+// Fatal() calls the corresponding function of the original logrus package
+func (lw *LogWriter) Fatal(args ...interface{}) {
+	lw.logger.Fatal(args...)
+}
+
+// Fatalf() calls the corresponding function of the original logrus package
+func (lw *LogWriter) Fatalf(format string, args ...interface{}) {
+	lw.logger.Fatalf(format, args...)
+}
+
+// Debug() calls the corresponding function of the original logrus package
+func (lw *LogWriter) Debug(args ...interface{}) {
+	lw.logger.Debug(args...)
+}
+
+// Debugf() calls the corresponding function of the original logrus package
+func (lw *LogWriter) Debugf(format string, args ...interface{}) {
+	lw.logger.Debugf(format, args...)
+}
+
+// WithField() calls the corresponding function of the original logrus package
+func (lw *LogWriter) WithField(key string, value interface{}) *logrus.Entry {
+	return lw.logger.WithField(key, value)
+}
+
+// WithFields() calls the corresponding function of the original logrus package
+func (lw *LogWriter) WithFields(fields logrus.Fields) *logrus.Entry {
+	return lw.logger.WithFields(fields)
+}
+
+func (lw *LogWriter) GetWriter() *io.PipeWriter {
+	return lw.logger.Writer()
 }

@@ -26,6 +26,13 @@ type authResponse struct {
 	SFC   []string `json:"sfc"`
 }
 
+var logWriter *logwriter.LogWriter
+
+// SetLogWriter() sets the logWriter to send the log messages to
+func SetLogWriter(lw *logwriter.LogWriter) {
+	logWriter = lw
+}
+
 // PerformAuthorization decides for a specific client request, wether it should
 // allowed and if so, under which conditions. Therefore, it communicates with
 // the PDP over HTTPS. The PDP makes the authorization decision and returns it
@@ -45,7 +52,7 @@ func PerformAuthorization(clientReq *http.Request, cpm *metadata.CpMetadata) err
 	prepareAuthRequest(req, cpm)
 	resp, err := proxies.PdpClientPool[rand.Int()%50].Do(req)
 	if err != nil {
-		return fmt.Errorf("Error when sending to pdp: %v", err)
+		return fmt.Errorf("error when sending to pdp: %v", err)
 	}
 
 	// @author:marie
@@ -53,10 +60,12 @@ func PerformAuthorization(clientReq *http.Request, cpm *metadata.CpMetadata) err
 	var authRes authResponse
 	err = json.NewDecoder(resp.Body).Decode(&authRes)
 	if err != nil {
-		return fmt.Errorf("Could not parse json answer from PDP: %v", err)
+		return fmt.Errorf("could not parse json answer from PDP: %v", err)
 	}
 
-	logwriter.LW.Logger.Debugf("Response from PDP: %v", authRes)
+	if logWriter != nil {
+		logWriter.Debugf("Response from PDP: %v", authRes)
+	}
 	cpm.SFC = authRes.SFC
 	cpm.AuthDecision = authRes.Allow
 
