@@ -4,11 +4,11 @@ package authorization
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/rand"
 	"net/http"
 	"strconv"
 
+    "github.com/sirupsen/logrus"
 	"local.com/leobrada/ztsfc_http_pep/env"
 	"local.com/leobrada/ztsfc_http_pep/logwriter"
 	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	// @author:marie
 	// Last part of the endpoint's request URI of the PDP API
 	requestEndpoint = "/v1/authorization"
 )
@@ -33,30 +32,33 @@ type authResponse struct {
 // The functions writes some meta data about the request into cpm and also
 // stores the answers of the PDP in here.
 func PerformAuthorization(clientReq *http.Request, cpm *metadata.CpMetadata) error {
+    sysLogger := logwriter.LW.Logger.WithFields(logrus.Fields{"type": "system"})
+
 	collectAttributes(clientReq, cpm)
 
 	// send request to correct address and API endpoint
-	// @author:marie
 	req, err := http.NewRequest("GET", env.Config.Pdp.TargetPdpAddr+requestEndpoint, nil)
-	if err != nil { // @author:marie catch error
+	if err != nil {
+        sysLogger.Errorf("Could not create the authorization request for %s: %v", clientReq.RemoteAddr, err)
 		return err
 	}
 
 	prepareAuthRequest(req, cpm)
 	resp, err := proxies.PdpClientPool[rand.Int()%50].Do(req)
 	if err != nil {
-		return fmt.Errorf("Error when sending to pdp: %v", err)
+        sysLogger.Errorf("Could not send the authorization request for %s to the PDP: %v", clientReq.RemoteAddr, err)
+		return err
 	}
 
-	// @author:marie
 	// Decode json body received from PDP
 	var authRes authResponse
 	err = json.NewDecoder(resp.Body).Decode(&authRes)
 	if err != nil {
-		return fmt.Errorf("Could not parse json answer from PDP: %v", err)
+        sysLogger.Errorf("Could not parse JSON answer from PDP: %v", err)
+		return err
 	}
 
-	logwriter.LW.Logger.Debugf("Response from PDP: %v", authRes)
+	sysLogger.Debugf("Response from PDP: %v", authRes)
 	cpm.SFC = authRes.SFC
 	cpm.AuthDecision = authRes.Allow
 

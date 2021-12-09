@@ -13,7 +13,7 @@ import (
 //	"strings"
 	"time"
 
-//	pdp "local.com/leobrada/ztsfc_http_pep/authorization"
+	pdp "local.com/leobrada/ztsfc_http_pep/authorization"
 	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
 	env "local.com/leobrada/ztsfc_http_pep/env"
 	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
@@ -104,21 +104,21 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// AUTHORIZATION
     // RM FOR PRODUCTIVE
-	//err = pdp.PerformAuthorization(req, md)
+	err := pdp.PerformAuthorization(req, md)
 	// observe errors and abort routine if something goes wrong
 	// @author:marie
-	//if err != nil {
-	//	logwriter.LW.Logger.WithField("issuer", "PDP").Error(err)
-	//	return
-	//}
+	if err != nil {
+		logwriter.LW.Logger.WithField("issuer", "PDP").Error(err)
+		return
+	}
 
     // RM FOR PRODUCTIVE
-	//if !md.AuthDecision {
-	//	logwriter.LW.Logger.Info("Request was rejected due to too low trust score")
-	//	w.WriteHeader(503)
-	//	return
-	//}
-	//logwriter.LW.Logger.Debugf("Request passed PDP. SFC: %s", md.SFC)
+	if !md.AuthDecision {
+		logwriter.LW.Logger.Info("Request was rejected due to too low trust score")
+		w.WriteHeader(503)
+		return
+	}
+	logwriter.LW.Logger.Debugf("Request passed PDP. SFC: %s", md.SFC)
 
 	// If user could be authenticated, create ReverseProxy variable for the connection to serve
 	var proxy *httputil.ReverseProxy
