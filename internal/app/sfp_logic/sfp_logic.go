@@ -8,10 +8,10 @@ import (
 	"math/rand"
 	"net/http"
 
-	env "local.com/leobrada/ztsfc_http_pep/env"
-	"local.com/leobrada/ztsfc_http_pep/logwriter"
-	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-	proxies "local.com/leobrada/ztsfc_http_pep/proxies"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/proxies"
 )
 
 const (
@@ -28,6 +28,13 @@ type sfpResponse struct {
 	} `json:"sfp"`
 }
 
+var logWriter *logwriter.LogWriter
+
+// SetLogWriter() sets the logWriter to send the log messages to
+func SetLogWriter(lw *logwriter.LogWriter) {
+	logWriter = lw
+}
+
 // TransformSFCintoSFP creates a service function path out of a service
 // function chain. Therefore, it communicates with the SFP Logic over HTTPS.
 // The SFP Logic determines the order of the service functions inside the SFC
@@ -38,13 +45,15 @@ func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 
 	// send request to correct address and API endpoint
 	// @author:marie
-	req, err := http.NewRequest("GET", env.Config.SfpLogic.TargetSfplAddr+requestEndpoint, nil)
+	req, err := http.NewRequest("GET", config.Config.SfpLogic.TargetSfplAddr+requestEndpoint, nil)
 	if err != nil { // @author:marie catch error
 		return err
 	}
 	prepareSFPRequest(req, cpm)
 
-	logwriter.LW.Logger.Debugf("Request to sfp logic: %v", req)
+	if logWriter != nil {
+		logWriter.Debugf("Request to sfp logic: %v", req)
+	}
 
 	resp, err := proxies.SfpLogicClientPool[rand.Int()%50].Do(req)
 	if err != nil {
@@ -57,10 +66,13 @@ func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 
 	err = json.NewDecoder(resp.Body).Decode(&sfpRes)
 	if err != nil {
-		return fmt.Errorf("Could not parse json answer from sfp logic: %v", err)
+		return fmt.Errorf("could not parse json answer from sfp logic: %v", err)
 	}
 
-	logwriter.LW.Logger.Debugf("Response from SFP logic: %v", sfpRes)
+	if logWriter != nil {
+		logWriter.Debugf("Response from SFP logic: %v", sfpRes)
+	}
+
 	for _, sf := range sfpRes.SFP {
 		cpm.SFP = append(cpm.SFP, struct {
 			Name    string

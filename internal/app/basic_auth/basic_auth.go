@@ -11,11 +11,11 @@ import (
 	"net/http"
 	"time"
 
-    "github.com/sirupsen/logrus"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/jtblin/go-ldap-client"
-	env "local.com/leobrada/ztsfc_http_pep/env"
-	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 )
 
 func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
@@ -26,7 +26,7 @@ func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
 	ss := jwtCookie.Value
 
 	token, err := jwt.Parse(ss, func(token *jwt.Token) (interface{}, error) {
-		return env.Config.BasicAuth.Session.JwtPubKey, nil
+		return config.Config.BasicAuth.Session.JwtPubKey, nil
 	})
 
 	if err != nil {
@@ -42,12 +42,7 @@ func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
 }
 
 func BasicAuth(w http.ResponseWriter, req *http.Request) bool {
-
-	if performPasswdAuth(w, req) {
-		return true
-	}
-
-	return false
+	return performPasswdAuth(w, req)
 }
 
 func performPasswdAuth(w http.ResponseWriter, req *http.Request) bool {
@@ -88,8 +83,8 @@ func performPasswdAuth(w http.ResponseWriter, req *http.Request) bool {
 		}
 
 		// Create JWT
-		//env.Config.BasicAuth.Session.MySigningKey := parseRsaiPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
-		ss := createJWToken(env.Config.BasicAuth.Session.MySigningKey, username)
+		//config.Config.BasicAuth.Session.MySigningKey := parseRsaiPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
+		ss := createJWToken(config.Config.BasicAuth.Session.MySigningKey, username)
 
 		ztsfcCookie := http.Cookie{
 			Name:   "ztsfc_session",
@@ -102,7 +97,7 @@ func performPasswdAuth(w http.ResponseWriter, req *http.Request) bool {
 		// TODO: make it user configurable
 		// TODO: is there a better solution for the content-length  /body length "bug"?
 		req.ContentLength = 0
-		http.Redirect(w, req, "https://"+req.Host+req.URL.String(), 303)
+		http.Redirect(w, req, "https://"+req.Host+req.URL.String(), http.StatusSeeOther) // 303
 		return false
 
 	} else {
@@ -133,10 +128,10 @@ func performX509auth(req *http.Request) bool {
 	return false
 }
 
-func ParseRsaPublicKeyFromPemStr(sysLogger *logrus.Entry, pubPEMLocation string) *rsa.PublicKey {
+func ParseRsaPublicKeyFromPemStr(sysLogger *logwriter.LogWriter, pubPEMLocation string) *rsa.PublicKey {
 	pubReadIn, err := ioutil.ReadFile(pubPEMLocation)
 	if err != nil {
-        sysLogger.Fatalf("JWT Public Key: Could not read from file '%s'", pubPEMLocation)
+		sysLogger.Fatalf("JWT Public Key: Could not read from file '%s'", pubPEMLocation)
 		return nil
 	}
 
@@ -180,10 +175,10 @@ func PerformMoodleLogin(w http.ResponseWriter, req *http.Request) bool {
 
 }
 
-func ParseRsaPrivateKeyFromPemStr(sysLogger *logrus.Entry, privPEMLocation string) *rsa.PrivateKey {
+func ParseRsaPrivateKeyFromPemStr(sysLogger *logwriter.LogWriter, privPEMLocation string) *rsa.PrivateKey {
 	privReadIn, err := ioutil.ReadFile(privPEMLocation)
 	if err != nil {
-        sysLogger.Fatalf("JWT Signing Key: Could not read from file '%s'", privPEMLocation)
+		sysLogger.Fatalf("JWT Signing Key: Could not read from file '%s'", privPEMLocation)
 		return nil
 	}
 
@@ -218,7 +213,7 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
         </html>
         `
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprintf(w, form)
+	fmt.Fprint(w, form)
 }
 
 func userIsInLDAP(userName, password string) bool {
@@ -226,15 +221,15 @@ func userIsInLDAP(userName, password string) bool {
 	// @author:marie
 
 	client := &ldap.LDAPClient{
-		Base:         env.Config.Ldap.Base,
-		Host:         env.Config.Ldap.Host,
-		Port:         env.Config.Ldap.Port,
-		UseSSL:       env.Config.Ldap.UseSSL,
-		BindDN:       env.Config.Ldap.BindDN,
-		BindPassword: env.Config.Ldap.BindPassword,
-		UserFilter:   env.Config.Ldap.UserFilter,
-		GroupFilter:  env.Config.Ldap.GroupFilter,
-		Attributes:   env.Config.Ldap.Attributes,
+		Base:         config.Config.Ldap.Base,
+		Host:         config.Config.Ldap.Host,
+		Port:         config.Config.Ldap.Port,
+		UseSSL:       config.Config.Ldap.UseSSL,
+		BindDN:       config.Config.Ldap.BindDN,
+		BindPassword: config.Config.Ldap.BindPassword,
+		UserFilter:   config.Config.Ldap.UserFilter,
+		GroupFilter:  config.Config.Ldap.GroupFilter,
+		Attributes:   config.Config.Ldap.Attributes,
 	}
 	// It is the responsibility of the caller to close the connection
 	defer client.Close()
