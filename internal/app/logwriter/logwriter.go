@@ -39,57 +39,8 @@ type LogWriter struct {
 	logger *logrus.Entry
 }
 
-// // Creates and return a new LogWriter instance
-// func InitLogwriter(_logFilePath, _logLevel string, _ifTextFormatter bool) {
-// 	// @author:marie
-// 	// changed this function from a constructor to an init function, because
-// 	// all packages should access a single global instance.
-
-// 	var err error
-// 	LW = new(LogWriter)
-
-// 	// Create a new instance of logrus logger
-// 	LW.Logger = logrus.New()
-
-// 	// Set a log level (debug, info, warning, error)
-// 	switch strings.ToLower(_logLevel) {
-// 	case "debug":
-// 		LW.Logger.SetLevel(logrus.DebugLevel)
-// 	case "info":
-// 		LW.Logger.SetLevel(logrus.InfoLevel)
-// 	case "warning":
-// 		LW.Logger.SetLevel(logrus.WarnLevel)
-// 	case "error":
-// 		LW.Logger.SetLevel(logrus.ErrorLevel)
-// 	case "":
-// 		LW.Logger.SetLevel(logrus.ErrorLevel)
-// 	default:
-// 		log.Fatal("Wrong log level value. Supported values are info, warning, error (default)")
-// 	}
-
-// 	// Set a JSON log formatter if necessary
-// 	if _ifTextFormatter {
-// 		LW.Logger.SetFormatter(&logrus.TextFormatter{})
-// 	} else {
-// 		LW.Logger.SetFormatter(&logrus.JSONFormatter{})
-// 	}
-
-// 	if strings.ToLower(_logFilePath) == "stdout" {
-// 		LW.Logger.SetOutput(os.Stdout)
-// 	} else {
-// 		// Open a file for the logger output
-// 		LW.logfile, err = os.OpenFile(_logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-
-// 		// Redirect the logger output to the file
-// 		LW.Logger.SetOutput(LW.logfile)
-// 	}
-// }
-
-// New() creates and return a new logrus.Logger instance
-func New(_logFilePath, _logLevel, _ifTextFormatter string, _fields logrus.Fields) (*LogWriter, error) {
+// New() creates and returns a new logrus.Logger instance
+func New(logFilePath, logLevel, logFormatter string, logFields logrus.Fields) (*LogWriter, error) {
 	var (
 		err   error
 		level logrus.Level
@@ -99,33 +50,33 @@ func New(_logFilePath, _logLevel, _ifTextFormatter string, _fields logrus.Fields
 	l := logrus.New()
 
 	// Set the system logger logging level
-	level, err = logrus.ParseLevel(_logLevel)
+	level, err = logrus.ParseLevel(logLevel)
 	if err != nil {
-		l.Errorf("unable to set the logger level %s", _logLevel)
+		l.Errorf("unable to set the logger level %s", logLevel)
 		return nil, err
 	}
 	l.SetLevel(level)
-	l.Debugf("system logger logging level is set to %s", _logLevel)
+	l.Debugf("system logger logging level is set to %s", logLevel)
 
 	// Set the system logger formatter
-	switch strings.ToLower(_ifTextFormatter) {
+	switch strings.ToLower(logFormatter) {
 	case "text":
 		l.SetFormatter(&logrus.TextFormatter{})
 	case "json":
 		l.SetFormatter(&logrus.JSONFormatter{})
 	default:
-		l.Errorf("unable to set logging level %s. Supported values are JSON (default) and text", _ifTextFormatter)
+		l.Errorf("unable to set logging level %s. Supported values are JSON (default) and text", logFormatter)
 		return nil, err
 	}
 
 	// Set the os.Stdout or a file for writing the system log messages
-	if strings.ToLower(_logFilePath) == "stdout" {
+	if strings.ToLower(logFilePath) == "stdout" {
 		l.SetOutput(os.Stdout)
 	} else {
 		// Open a file for the logger output
-		file, err := os.OpenFile(_logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		file, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			l.Errorf("unable to open file %s to write logging messages", _logFilePath)
+			l.Errorf("unable to open file %s to write logging messages", logFilePath)
 			return nil, err
 		}
 
@@ -135,27 +86,10 @@ func New(_logFilePath, _logLevel, _ifTextFormatter string, _fields logrus.Fields
 
 	// Create a LogWriter struct and bind it to the configured logger
 	lw := &LogWriter{
-		logger: l.WithFields(_fields),
+		logger: l.WithFields(logFields),
 	}
 	return lw, nil
 }
-
-// // Function for calling by http.Server ErrorLog
-// func (lw LogWriter) Write(p []byte) (n int, err error) {
-// 	// Customization of the line to be logged
-// 	output := string(p)
-// 	if !strings.Contains(output, ",success") {
-// 		if strings.HasSuffix(output, "\n") {
-// 			output = strings.TrimSuffix(output, "\n")
-// 		}
-
-// 		lw.Logger.WithFields(logrus.Fields{"result": "denied"}).Info(output)
-// 	} else {
-// 		output = strings.TrimSuffix(output, ",success")
-// 		lw.Logger.WithFields(logrus.Fields{"result": "success"}).Info(output)
-// 	}
-// 	return 1, nil
-// }
 
 // Function for calling by http.Server or httputil.ReverseProxy ErrorLog
 func (lw *LogWriter) Write(p []byte) (n int, err error) {

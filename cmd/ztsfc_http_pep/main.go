@@ -15,26 +15,31 @@ import (
 
 var (
 	confFilePath string
-	sysLogger    logwriter.LogWriter
+	sysLogger    *logwriter.LogWriter
 )
 
 func init() {
+	var err error
+
 	// Operating input parameters
 	flag.StringVar(&confFilePath, "c", "", "Path to user defined yml config file")
 	flag.Parse()
 
 	// Loading all config parameter from config file defined in "confFilePath"
-	err := config.LoadConfig(confFilePath)
+	err = config.LoadConfig(confFilePath)
 	if err != nil {
 		return
 	}
 
 	// Create an instance of the system logger
-	sysLogger, err := logwriter.New(config.Config.SysLogger.LogFilePath,
+	sysLogger, err = logwriter.New(config.Config.SysLogger.LogFilePath,
 		config.Config.SysLogger.LogLevel,
 		config.Config.SysLogger.IfTextFormatter,
 		logrus.Fields{"type": "system"},
 	)
+	if err != nil {
+		return
+	}
 	sysLogger.Debugf("loading logger configuration from %s - OK", confFilePath)
 
 	// Create Certificate Pools for the CA certificates used by the PEP
@@ -73,7 +78,7 @@ func main() {
 	}
 	sysLogger.Debug("new router is successfully created")
 
-	pep.SetLogWriter(&sysLogger)
+	pep.SetLogWriter(sysLogger)
 
 	http.Handle("/", pep)
 
