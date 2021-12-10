@@ -130,7 +130,7 @@ func InitPdpParams(sysLogger *logwriter.LogWriter) {
 		handleFatalf(sysLogger, section, fields)
 	}
 
-	// Preload X509KeyPair and write it to env
+	// Preload X509KeyPair and write it to config
 	config.Config.Pdp.X509KeyPairShownByPepToPdp = loadX509KeyPair(sysLogger, config.Config.Pdp.CertShownByPepToPdp, config.Config.Pdp.PrivkeyForCertShownByPepToPdp, "PDP", "")
 
 	// Preload CA certificate and append it to cert pool
@@ -174,7 +174,7 @@ func InitSfplParams(sysLogger *logwriter.LogWriter) {
 		handleFatalf(sysLogger, section, fields)
 	}
 
-	// Preload X509KeyPair and write it to env
+	// Preload X509KeyPair and write it to config
 	config.Config.SfpLogic.X509KeyPairShownByPepToSfpl = loadX509KeyPair(sysLogger, config.Config.SfpLogic.CertShownByPepToSfpl, config.Config.SfpLogic.PrivkeyForCertShownByPepToSfpl, "SFP_logic", "")
 
 	// Preload CA certificate and append it to cert pool
