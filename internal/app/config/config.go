@@ -1,5 +1,5 @@
 // Package env reads the config file and parses it to go data structures.
-package env
+package config
 
 import (
 	"crypto/rsa"
@@ -11,6 +11,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
+
+type sysLoggerT struct {
+	LogLevel        string `yaml:"system_logger_logging_level"`
+	LogFilePath     string `yaml:"system_logger_destination"`
+	IfTextFormatter string `yaml:"system_logger_format"`
+}
 
 // The struct PepT is for parsing the section 'pep' of the config file.
 type PepT struct {
@@ -89,8 +95,9 @@ type ServFunctionT struct {
 	TargetSfUrl                  *url.URL
 }
 
-// The struct ConfigT is for parsing the basic structure of the config file.
+// ConfigT struct is for parsing the basic structure of the config file
 type ConfigT struct {
+	SysLogger sysLoggerT `yaml:"system_logger"`
 	Pep       PepT       `yaml:"pep"`
 	BasicAuth BasicAuthT `yaml:"basic_auth"`
 	Ldap      LdapT      `yaml:"ldap"`
@@ -104,30 +111,32 @@ type ConfigT struct {
 	ServiceSniMap               map[string]*ServiceT
 }
 
-// Var Config contains all input from the config file and is is globally accessible.
+// Config contains all input from the config file and is is globally accessible
 var Config ConfigT
 
-// Parses a configuration yaml file into the global Config variable
-func LoadConfig(configPath string, sysLogger *logrus.Entry) (err error) {
+// LoadConfig() parses a configuration yaml file into the global Config variable
+func LoadConfig(configPath string) error {
+	// If the config file path was not provided
+	if configPath == "" {
+		logrus.Error("no configuration file is provided. Please, use '-c <path_to_config_file.yaml>' option")
+	}
+
 	// Open config file
 	file, err := os.Open(configPath)
 	if err != nil {
-		sysLogger.Fatalf("Open configuration file error: %v", err)
-	} else {
-		sysLogger.Debugf("Configuration file %s exists and is readable", configPath)
+		logrus.Errorf("unable to open the YAML configuration file %s: %s", configPath, err.Error())
+		return err
 	}
 	defer file.Close()
 
 	// Init new YAML decode
 	d := yaml.NewDecoder(file)
 
-	// Start YAML decoding from file
+	// Decode configuration from the YAML config file
 	err = d.Decode(&Config)
 	if err != nil {
-		sysLogger.Fatalf("Configuration yaml-->go decoding error: %v", err)
-	} else {
-		sysLogger.Debugf("Configuration has been successfully decoded")
+		logrus.Errorf("unable to decode the YAML configuration file %s: %s", configPath, err.Error())
+		return err
 	}
-
-	return
+	return nil
 }

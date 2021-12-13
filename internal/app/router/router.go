@@ -10,24 +10,28 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-//	"strings"
+
 	"time"
 
-	pdp "local.com/leobrada/ztsfc_http_pep/authorization"
-	bauth "local.com/leobrada/ztsfc_http_pep/basic_auth"
-	env "local.com/leobrada/ztsfc_http_pep/env"
-	logwriter "local.com/leobrada/ztsfc_http_pep/logwriter"
-	metadata "local.com/leobrada/ztsfc_http_pep/metadata"
-//	sfpl "local.com/leobrada/ztsfc_http_pep/sfp_logic"
+	pdp "github.com/vs-uulm/ztsfc_http_pep/internal/app/authorization"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/basic_auth"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
+	//	sfpl "github.com/vs-uulm/ztsfc_http_pep/internal/app/sfp_logic"
 )
 
 type Router struct {
 	tlsConfig *tls.Config
 	frontend  *http.Server
+	logWriter *logwriter.LogWriter
 }
 
-func NewRouter() (*Router, error) {
+func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 	router := new(Router)
+
+    // Set logWriter to the one created in the init function
+    router.logWriter = lw
 
 	router.tlsConfig = &tls.Config{
 		Rand:                   nil,
@@ -38,12 +42,12 @@ func NewRouter() (*Router, error) {
 		Certificates:           nil,
 		//ClientAuth:             tls.RequireAndVerifyClientCert,
 		ClientAuth: tls.VerifyClientCertIfGiven,
-		ClientCAs:  env.Config.CAcertPoolPepAcceptsFromExt,
+		ClientCAs:  config.Config.CAcertPoolPepAcceptsFromExt,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// use SNI map to load suitable certificate
-			service, ok := env.Config.ServiceSniMap[cli.ServerName]
+			service, ok := config.Config.ServiceSniMap[cli.ServerName]
 			if !ok {
-				return nil, fmt.Errorf("Error: Could not serve a suitable certificate for %s\n", cli.ServerName)
+				return nil, fmt.Errorf("error: could not serve a suitable certificate for %s", cli.ServerName)
 			}
 			return &service.X509KeyPairShownByPepToClient, nil
 		},
@@ -55,19 +59,19 @@ func NewRouter() (*Router, error) {
 
 	// Setting Up the Frontend Server
 	router.frontend = &http.Server{
-		Addr:         env.Config.Pep.ListenAddr,
+		Addr:         config.Config.Pep.ListenAddr,
 		TLSConfig:    router.tlsConfig,
 		ReadTimeout:  time.Hour * 1,
 		WriteTimeout: time.Hour * 1,
 		Handler:      mux,
-		ErrorLog:     log.New(logwriter.LW, "", 0),
+		ErrorLog:     log.New(router.logWriter.GetWriter(), "", 0),
 	}
 
 	return router, nil
 }
 
 func addHSTSHeader(w http.ResponseWriter) {
-    w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 }
 
 // ServeHTTP gets called if a request receives the PEP. The function implements
@@ -76,26 +80,26 @@ func addHSTSHeader(w http.ResponseWriter) {
 // Logic, and then forwards the package along the SFP.
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
-    // Add HSTS Header
-    addHSTSHeader(w)
+	// Add HSTS Header
+	addHSTSHeader(w)
 
 	// Used for measuring the time ServeHTTP runs
 	//start := time.Now()
 
 	//var err error
-    // RM FOR PRODUCTIVE
+	// RM FOR PRODUCTIVE
 	md := new(metadata.CpMetadata)
 
 	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
-	logwriter.LW.LogHTTPRequest(req)
+	router.logWriter.LogHTTPRequest(req)
 
 	// BASIC AUTHENTICATION
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
 	// TODO: return error to client?
 	// Check if user has a valid session already
-    // RM FOR PRODUCTIVE
-	if !bauth.UserSessionIsValid(req, md) {
-		if !bauth.BasicAuth(w, req) {
+	// RM FOR PRODUCTIVE
+	if !basic_auth.UserSessionIsValid(req, md) {
+		if !basic_auth.BasicAuth(router.logWriter, w, req) {
 			// Used for measuring the time ServeHTTP runs
 			// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
 			return
@@ -103,38 +107,37 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// AUTHORIZATION
-    // RM FOR PRODUCTIVE
-	err := pdp.PerformAuthorization(req, md)
+	// RM FOR PRODUCTIVE
+	err := pdp.PerformAuthorization(router.logWriter, req, md)
 	// observe errors and abort routine if something goes wrong
 	// @author:marie
 	if err != nil {
-		logwriter.LW.Logger.WithField("issuer", "PDP").Error(err)
+		router.logWriter.WithField("issuer", "PDP").Error(err)
 		return
 	}
 
-    // RM FOR PRODUCTIVE
+	// RM FOR PRODUCTIVE
 	if !md.AuthDecision {
-		logwriter.LW.Logger.Info("Request was rejected due to too low trust score")
+		router.logWriter.Info("Request was rejected due to too low trust score")
 		w.WriteHeader(503)
 		return
 	}
-	logwriter.LW.Logger.Debugf("Request passed PDP. SFC: %s", md.SFC)
+	router.logWriter.Debugf("Request passed PDP. SFC: %s", md.SFC)
 
 	// If user could be authenticated, create ReverseProxy variable for the connection to serve
 	var proxy *httputil.ReverseProxy
 	var serviceURL *url.URL
 	var certShownByPEP tls.Certificate
 
-	//serviceConf, ok := env.Config.ServiceSniMap[md.Resource]
-	serviceConf, ok := env.Config.ServiceSniMap[req.Host]
+	//serviceConf, ok := config.Config.ServiceSniMap[md.Resource]
+	serviceConf, ok := config.Config.ServiceSniMap[req.Host]
 	if !ok {
-		//logwriter.LW.Logger.WithField("sni", md.Resource).Error("Requested SNI has no match in config file.")
-		logwriter.LW.Logger.WithField("sni", req.Host).Error("Requested SNI has no match in config file.")
+		router.logWriter.WithField("sni", req.Host).Error("Requested SNI has no match in config file.")
 		return
 	}
 
 	// SFP LOGIC
-    // TODO: Check what happens if sf_pool in conf.yml is empty
+	// TODO: Check what happens if sf_pool in conf.yml is empty
 	// only connect to SFP logic, if SFC is not empty
 	// @author:marie
 	//if len(md.SFC) == 0 {
@@ -144,7 +147,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//	certShownByPEP = serviceConf.X509KeyPairShownByPepToService
 
 	//} else {
-
+	//  sfp1.SetLogWriter(router.logWriter)
 	//	err = sfpl.TransformSFCintoSFP(md)
 	//	// observe errors and abort routine if something goes wrong
 	//	// @author:marie
@@ -163,7 +166,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//	// @author:marie
 	//	nextHop := md.SFP[0]
 	//	logwriter.LW.Logger.Debugf("Next Hop: %s", nextHop)
-	//	nextHopConf, ok := env.Config.SfPool[nextHop.Name]
+	//	nextHopConf, ok := config.Config.SfPool[nextHop.Name]
 	//	if !ok {
 	//		logwriter.LW.Logger.WithField("sf", nextHop).Error("First SF from the SFP does not exist in config file.")
 	//		return
@@ -193,13 +196,13 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//}
 	//logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
 	serviceURL = serviceConf.TargetServiceUrl
-    logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
+	router.logWriter.Debugf("Service URL: %s", serviceURL.String())
 	certShownByPEP = serviceConf.X509KeyPairShownByPepToService
-	logwriter.LW.Logger.Debugf("Service URL: %s", serviceConf.TargetServiceAddr)
+	router.logWriter.Debugf("Service URL: %s", serviceConf.TargetServiceAddr)
 
 	proxy = httputil.NewSingleHostReverseProxy(serviceURL)
 
-	proxy.ErrorLog = log.New(logwriter.LW, "", 0)
+	proxy.ErrorLog = log.New(router.logWriter.GetWriter(), "", 0)
 
 	// When the PEP is acting as a client; this defines his behavior
 	proxy.Transport = &http.Transport{
@@ -209,7 +212,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			Certificates:       []tls.Certificate{certShownByPEP},
 			InsecureSkipVerify: true,
 			ClientAuth:         tls.RequireAndVerifyClientCert,
-			ClientCAs:          env.Config.CAcertPoolPepAcceptsFromInt,
+			ClientCAs:          config.Config.CAcertPoolPepAcceptsFromInt,
 		},
 	}
 

@@ -1,5 +1,5 @@
 # Binaries for programs and plugins
-ztsfc_http_pep
+/ztsfc_http_pep
 *.exe
 *.exe~
 *.dll
@@ -15,8 +15,11 @@ ztsfc_http_pep
 # Dependency directories (remove the comment below to include it)
 # vendor/
 .env
-conf.yml
 *.log
 certs
 main
 *.pprof
+
+# Config files except the example
+/config/*
+!/config/example_conf.yml
