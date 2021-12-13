@@ -1,10 +1,15 @@
-.DEFAULT_GOAL := build
+GO_BUILD_TARGET=./cmd/ztsfc_http_pep/main.go
+DOCKER_BUILD_TARGET=vs-uulm/ztsfc_http_pep:latest
 
-.PHONY: build
-build:
+.PHONY: main
+main: source docker
+
+.PHONY: source
+source:
 	go mod tidy
-	go build -v ./cmd/ztsfc_http_pep
+	go build -v $(GO_BUILD_TARGET)
 
-.PHONY: image
-image:
-	docker build -t vs-uulm/ztsfc_http_pep:1.0 .
+.PHONY: docker
+docker:
+	sudo docker image rm -f $(DOCKER_BUILD_TARGET) || true
+	sudo docker build -t $(DOCKER_BUILD_TARGET) .

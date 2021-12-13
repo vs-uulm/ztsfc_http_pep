@@ -11,7 +11,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	//	"strings"
 	"time"
 
 	pdp "github.com/vs-uulm/ztsfc_http_pep/internal/app/authorization"
@@ -28,8 +27,11 @@ type Router struct {
 	logWriter *logwriter.LogWriter
 }
 
-func NewRouter() (*Router, error) {
+func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 	router := new(Router)
+
+    // Set logWriter to the one created in the init function
+    router.logWriter = lw
 
 	router.tlsConfig = &tls.Config{
 		Rand:                   nil,
@@ -63,14 +65,9 @@ func NewRouter() (*Router, error) {
 		WriteTimeout: time.Hour * 1,
 		Handler:      mux,
 		ErrorLog:     log.New(router.logWriter.GetWriter(), "", 0),
-		// ErrorLog:     log.New(logwriter.LW, "", 0),
 	}
 
 	return router, nil
-}
-
-func (router *Router) SetLogWriter(lw *logwriter.LogWriter) {
-	router.logWriter = lw
 }
 
 func addHSTSHeader(w http.ResponseWriter) {
@@ -102,7 +99,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Check if user has a valid session already
 	// RM FOR PRODUCTIVE
 	if !basic_auth.UserSessionIsValid(req, md) {
-		if !basic_auth.BasicAuth(w, req) {
+		if !basic_auth.BasicAuth(router.logWriter, w, req) {
 			// Used for measuring the time ServeHTTP runs
 			// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
 			return
@@ -111,8 +108,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// AUTHORIZATION
 	// RM FOR PRODUCTIVE
-	pdp.SetLogWriter(router.logWriter)
-	err := pdp.PerformAuthorization(req, md)
+	err := pdp.PerformAuthorization(router.logWriter, req, md)
 	// observe errors and abort routine if something goes wrong
 	// @author:marie
 	if err != nil {

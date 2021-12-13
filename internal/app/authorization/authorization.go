@@ -25,12 +25,12 @@ type authResponse struct {
 	SFC   []string `json:"sfc"`
 }
 
-var logWriter *logwriter.LogWriter
+//var logWriter *logwriter.LogWriter
 
 // SetLogWriter() sets the logWriter to send the log messages to
-func SetLogWriter(lw *logwriter.LogWriter) {
-	logWriter = lw
-}
+//func SetLogWriter(lw *logwriter.LogWriter) {
+//	logWriter = lw
+//}
 
 // PerformAuthorization decides for a specific client request, wether it should
 // allowed and if so, under which conditions. Therefore, it communicates with
@@ -38,37 +38,30 @@ func SetLogWriter(lw *logwriter.LogWriter) {
 // together with an SFC.
 // The functions writes some meta data about the request into cpm and also
 // stores the answers of the PDP in here.
-func PerformAuthorization(clientReq *http.Request, cpm *metadata.CpMetadata) error {
+func PerformAuthorization(sysLogger *logwriter.LogWriter, clientReq *http.Request, cpm *metadata.CpMetadata) error {
 	collectAttributes(clientReq, cpm)
 
 	// send request to correct address and API endpoint
-	// @author:marie
 	req, err := http.NewRequest("GET", config.Config.Pdp.TargetPdpAddr+requestEndpoint, nil)
-	if err != nil { // @author:marie catch error
-		if logWriter != nil {
-			logWriter.Errorf("Could not create the authorization request for %s: %v", clientReq.RemoteAddr, err)
-		}
-		return err
+	if err != nil {
+		return fmt.Errorf("Error when creating authorization request for PDP: %v", err)
 	}
 
 	prepareAuthRequest(req, cpm)
 	resp, err := proxies.PdpClientPool[rand.Int()%50].Do(req)
 	if err != nil {
-		if logWriter != nil {
-			logWriter.Errorf("Could not send the authorization request for %s to the PDP: %v", clientReq.RemoteAddr, err)
-		}
-		return fmt.Errorf("error when sending to pdp: %v", err)
+		return fmt.Errorf("Error when sending to PDP: %v", err)
 	}
 
 	// Decode json body received from PDP
 	var authRes authResponse
 	err = json.NewDecoder(resp.Body).Decode(&authRes)
 	if err != nil {
-		return fmt.Errorf("could not parse json answer from PDP: %v", err)
+		return fmt.Errorf("Could not parse json answer from PDP: %v", err)
 	}
 
-	if logWriter != nil {
-		logWriter.Debugf("Response from PDP: %v", authRes)
+	if sysLogger != nil {
+		sysLogger.Debugf("Response from PDP: %v", authRes)
 	}
 	cpm.SFC = authRes.SFC
 	cpm.AuthDecision = authRes.Allow

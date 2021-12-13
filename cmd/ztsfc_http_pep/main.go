@@ -22,7 +22,7 @@ func init() {
 	var err error
 
 	// Operating input parameters
-	flag.StringVar(&confFilePath, "c", "", "Path to user defined yml config file")
+	flag.StringVar(&confFilePath, "c", "./config/conf.yml", "Path to user defined yml config file")
 	flag.Parse()
 
 	// Loading all config parameter from config file defined in "confFilePath"
@@ -72,13 +72,11 @@ func main() {
 	// defer profile.Start(profile.GoroutineProfile, profile.ProfilePath(".")).Stop()
 
 	// Create new PEP router
-	pep, err := router.NewRouter()
+	pep, err := router.NewRouter(sysLogger)
 	if err != nil {
 		sysLogger.Fatalf("unable to create a new router: %s", err.Error())
 	}
 	sysLogger.Debug("new router is successfully created")
-
-	pep.SetLogWriter(sysLogger)
 
 	http.Handle("/", pep)
 

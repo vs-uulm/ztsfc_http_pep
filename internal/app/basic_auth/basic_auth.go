@@ -6,9 +6,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"io/ioutil"
 	"net/http"
+    "fmt"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -41,11 +41,11 @@ func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
 	return true
 }
 
-func BasicAuth(w http.ResponseWriter, req *http.Request) bool {
-	return performPasswdAuth(w, req)
+func BasicAuth(sysLogger *logwriter.LogWriter, w http.ResponseWriter, req *http.Request) bool {
+	return performPasswdAuth(sysLogger, w, req)
 }
 
-func performPasswdAuth(w http.ResponseWriter, req *http.Request) bool {
+func performPasswdAuth(sysLogger *logwriter.LogWriter, w http.ResponseWriter, req *http.Request) bool {
 	var username, password string
 
 	// TODO: Check for JW Token initially
@@ -77,7 +77,7 @@ func performPasswdAuth(w http.ResponseWriter, req *http.Request) bool {
 			return false
 		}
 
-		if !userIsInLDAP(username, password) {
+		if !userIsInLDAP(sysLogger, username, password) {
 			handleFormReponse("Authentication failed for user", w)
 			return false
 		}
@@ -131,19 +131,19 @@ func performX509auth(req *http.Request) bool {
 func ParseRsaPublicKeyFromPemStr(sysLogger *logwriter.LogWriter, pubPEMLocation string) *rsa.PublicKey {
 	pubReadIn, err := ioutil.ReadFile(pubPEMLocation)
 	if err != nil {
-		sysLogger.Fatalf("JWT Public Key: Could not read from file '%s'", pubPEMLocation)
+		sysLogger.Errorf("JWT Public Key: Could not read from file '%s'", pubPEMLocation)
 		return nil
 	}
 
 	block, _ := pem.Decode(pubReadIn)
 	if block == nil {
-		fmt.Printf("Could not decode the read in block.\n")
+        sysLogger.Errorf("JWT Public Key: Could not decode the read in block.\n")
 		return nil
 	}
 
 	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		fmt.Printf("Could not Parse pub key")
+        sysLogger.Errorf("JWT Public Key: Could not parse JWT pub key.\n")
 		return nil
 	}
 
@@ -151,46 +151,46 @@ func ParseRsaPublicKeyFromPemStr(sysLogger *logwriter.LogWriter, pubPEMLocation 
 }
 
 // Just for LCN paper; function currently not in use
-func PerformMoodleLogin(w http.ResponseWriter, req *http.Request) bool {
-	_, err := req.Cookie("li")
-	if err != nil {
-		// Transform existing http request into log POST form
-		//        req.Method = "POST"
-
-		// Set cookie presenting that user is logged in
-		fmt.Printf("Performing Moodle log in...\n")
-		liCookie := &http.Cookie{
-			Name:   "li",
-			Value:  "yes",
-			MaxAge: 36000,
-			Path:   "/",
-		}
-		//req.AddCookie(liCookie)
-		http.SetCookie(w, liCookie)
-		return true
-	}
-
-	fmt.Printf("Cookie is present, user is logged in\n")
-	return false
-
-}
+//func PerformMoodleLogin(w http.ResponseWriter, req *http.Request) bool {
+//	_, err := req.Cookie("li")
+//	if err != nil {
+//		// Transform existing http request into log POST form
+//		//        req.Method = "POST"
+//
+//		// Set cookie presenting that user is logged in
+//		fmt.Printf("Performing Moodle log in...\n")
+//		liCookie := &http.Cookie{
+//			Name:   "li",
+//			Value:  "yes",
+//			MaxAge: 36000,
+//			Path:   "/",
+//		}
+//		//req.AddCookie(liCookie)
+//		http.SetCookie(w, liCookie)
+//		return true
+//	}
+//
+//	fmt.Printf("Cookie is present, user is logged in\n")
+//	return false
+//
+//}
 
 func ParseRsaPrivateKeyFromPemStr(sysLogger *logwriter.LogWriter, privPEMLocation string) *rsa.PrivateKey {
 	privReadIn, err := ioutil.ReadFile(privPEMLocation)
 	if err != nil {
-		sysLogger.Fatalf("JWT Signing Key: Could not read from file '%s'", privPEMLocation)
+		sysLogger.Errorf("JWT Signing Key: Could not read from file '%s'", privPEMLocation)
 		return nil
 	}
 
 	block, _ := pem.Decode(privReadIn)
 	if block == nil {
-		fmt.Printf("Could not decode the read in block.\n")
+		sysLogger.Errorf("JWT Signing Key: Could not decode the read in block.\n")
 		return nil
 	}
 
 	priv, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
-		fmt.Print("Could not Parse priv key: \n", err)
+		sysLogger.Errorf("JWT Signing Key: Could not parse signing key.\n")
 		return nil
 	}
 
@@ -216,9 +216,8 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
 	fmt.Fprint(w, form)
 }
 
-func userIsInLDAP(userName, password string) bool {
+func userIsInLDAP(sysLogger *logwriter.LogWriter, userName, password string) bool {
 	// retrieve connection parameters from config file instead of hard coding
-	// @author:marie
 
 	client := &ldap.LDAPClient{
 		Base:         config.Config.Ldap.Base,
@@ -236,11 +235,11 @@ func userIsInLDAP(userName, password string) bool {
 
 	ok, _, err := client.Authenticate(userName, password)
 	if err != nil {
-		fmt.Printf("Error authenticating user %s: %+v\n", userName, err)
+        sysLogger.Errorf("Error authenticating user %s: %+v\n", userName, err)
 		return false
 	}
 	if !ok {
-		fmt.Printf("Authenticating failed for user %s\n", userName)
+        sysLogger.Errorf("Authenticating failed for user %s\n", userName)
 		return false
 	}
 	return true

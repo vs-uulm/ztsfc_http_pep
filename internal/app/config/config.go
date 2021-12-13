@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"net/url"
 	"os"
 
@@ -120,7 +119,6 @@ func LoadConfig(configPath string) error {
 	// If the config file path was not provided
 	if configPath == "" {
 		logrus.Error("no configuration file is provided. Please, use '-c <path_to_config_file.yaml>' option")
-		fmt.Fprint(os.Stderr, "No configuration file was provided.\nPlease, use '-c <path_to_config_file.yaml>' option.")
 	}
 
 	// Open config file
