@@ -23,3 +23,5 @@ main
 # Config files except the example
 /config/*
 !/config/example_conf.yml
+certs/*
+!certs/.gitkeep
