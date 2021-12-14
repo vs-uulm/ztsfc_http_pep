@@ -19,6 +19,7 @@
 certs
 main
 *.pprof
+*.swp
 
 # Config files except the example
 /config/*
