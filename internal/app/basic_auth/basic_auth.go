@@ -11,7 +11,7 @@ import (
     "fmt"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/jtblin/go-ldap-client"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
