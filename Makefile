@@ -2,10 +2,10 @@ GO_BUILD_TARGET=./cmd/ztsfc_http_pep/main.go
 DOCKER_BUILD_TARGET=vs-uulm/ztsfc_http_pep:latest
 
 .PHONY: main
-main: source docker
+main: go docker
 
-.PHONY: source
-source:
+.PHONY: go
+go:
 	go mod tidy
 	go build -v $(GO_BUILD_TARGET)
 
