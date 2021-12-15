@@ -5,10 +5,11 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
+	"fmt"
 	"net/url"
 	"os"
 
-	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -118,14 +119,13 @@ var Config ConfigT
 func LoadConfig(configPath string) error {
 	// If the config file path was not provided
 	if configPath == "" {
-		logrus.Error("no configuration file is provided. Please, use '-c <path_to_config_file.yaml>' option")
+		return errors.New("no configuration file is provided")
 	}
 
 	// Open config file
 	file, err := os.Open(configPath)
 	if err != nil {
-		logrus.Errorf("unable to open the YAML configuration file %s: %s", configPath, err.Error())
-		return err
+		return fmt.Errorf("unable to open the YAML configuration file '%s': %w", configPath, err)
 	}
 	defer file.Close()
 
@@ -135,8 +135,7 @@ func LoadConfig(configPath string) error {
 	// Decode configuration from the YAML config file
 	err = d.Decode(&Config)
 	if err != nil {
-		logrus.Errorf("unable to decode the YAML configuration file %s: %s", configPath, err.Error())
-		return err
+		return fmt.Errorf("unable to decode the YAML configuration file '%s': %w", configPath, err)
 	}
 	return nil
 }

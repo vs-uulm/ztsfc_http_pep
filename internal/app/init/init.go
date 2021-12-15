@@ -27,7 +27,8 @@ func InitDefaultValues(sysLogger *logwriter.LogWriter) {
 }
 
 // InitSysLoggerParams() sets default values for the system logger parameters
-func InitSysLoggerParams(sysLogger *logwriter.LogWriter) {
+// The function should be called before the system logger creation!
+func InitSysLoggerParams() {
 	// Set a default value of a logging level parameter
 	if config.Config.SysLogger.LogLevel == "" {
 		config.Config.SysLogger.LogLevel = "info"
@@ -42,7 +43,6 @@ func InitSysLoggerParams(sysLogger *logwriter.LogWriter) {
 	if config.Config.SysLogger.IfTextFormatter == "" {
 		config.Config.SysLogger.IfTextFormatter = "json"
 	}
-	sysLogger.Debug("init: InitSysLoggerParams(): system logger default parameters were sucessfully set")
 }
 
 // InitPepParams() initializes the 'pep' section of the config file and

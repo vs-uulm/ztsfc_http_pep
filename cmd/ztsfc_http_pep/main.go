@@ -32,6 +32,7 @@ func init() {
 	}
 
 	// Create an instance of the system logger
+	confInit.InitSysLoggerParams()
 	sysLogger, err = logwriter.New(config.Config.SysLogger.LogFilePath,
 		config.Config.SysLogger.LogLevel,
 		config.Config.SysLogger.IfTextFormatter,
@@ -49,14 +50,48 @@ func init() {
 	// Preload diverse parameters from config
 	// (One function for each section in config.yml)
 	confInit.InitDefaultValues(sysLogger)
-	confInit.InitSysLoggerParams(sysLogger)
-	confInit.InitPepParams(sysLogger)
-	confInit.InitBasicAuth(sysLogger)
-	confInit.InitLdapParams(sysLogger)
-	confInit.InitPdpParams(sysLogger)
-	confInit.InitSfplParams(sysLogger)
-	confInit.InitServicePoolParams(sysLogger)
-	confInit.InitSfPoolParams(sysLogger)
+
+	// pep
+	err = confInit.InitPepParams(sysLogger)
+	if err != nil {
+		sysLogger.Fatal(err)
+	}
+
+	// nit BasicAuth, session, JWT certs
+	err = confInit.InitBasicAuth(sysLogger)
+	if err != nil {
+		sysLogger.Fatal(err)
+	}
+
+	// ldap
+	err = confInit.InitLdapParams(sysLogger)
+	if err != nil {
+		sysLogger.Fatal(err)
+	}
+
+	// pdp
+	err = confInit.InitPdpParams(sysLogger)
+	if err != nil {
+		sysLogger.Fatal(err)
+	}
+
+	// sfp_logic
+	err = confInit.InitSfplParams(sysLogger)
+	if err != nil {
+		sysLogger.Fatal(err)
+	}
+
+	// service_pool
+	err = confInit.InitServicePoolParams(sysLogger)
+	if err != nil {
+		sysLogger.Fatal(err)
+	}
+
+	// sf_pool
+	err = confInit.InitSfPoolParams(sysLogger)
+	if err != nil {
+		sysLogger.Fatal(err)
+	}
 
 	// Init Reverse Proxies used for the modules
 	// Basic_auth_proxy currently not needed since BasicAuth is performed as part of the PEP
@@ -74,14 +109,14 @@ func main() {
 	// Create new PEP router
 	pep, err := router.NewRouter(sysLogger)
 	if err != nil {
-		sysLogger.Fatalf("unable to create a new router: %s", err.Error())
+		sysLogger.Fatalf("main: unable to create a new router: %w", err)
 	}
-	sysLogger.Debug("new router is successfully created")
+	sysLogger.Debug("main: new router was successfully created")
 
 	http.Handle("/", pep)
 
 	err = pep.ListenAndServeTLS()
 	if err != nil {
-		sysLogger.Fatalf("ListenAndServeTLS() Fatal Error: %s", err.Error())
+		sysLogger.Fatalf("main: ListenAndServeTLS() fatal error: %w", err)
 	}
 }
