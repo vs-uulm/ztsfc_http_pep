@@ -6,12 +6,12 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"net/http"
-    "fmt"
 	"time"
 
-	"github.com/golang-jwt/jwt/v4"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/jtblin/go-ldap-client"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
@@ -107,6 +107,7 @@ func performPasswdAuth(sysLogger *logwriter.LogWriter, w http.ResponseWriter, re
 }
 
 func createJWToken(mySigningKey *rsa.PrivateKey, username string) string {
+	// ! ToDo: deprecated! REplace by jwt.RegisteredClaims
 	claims := &jwt.StandardClaims{
 		ExpiresAt: time.Now().Add(time.Hour * 1).Unix(),
 		Issuer:    "ztsfc_bauth",
@@ -126,28 +127,6 @@ func performX509auth(req *http.Request) bool {
 	}
 
 	return false
-}
-
-func ParseRsaPublicKeyFromPemStr(sysLogger *logwriter.LogWriter, pubPEMLocation string) *rsa.PublicKey {
-	pubReadIn, err := ioutil.ReadFile(pubPEMLocation)
-	if err != nil {
-		sysLogger.Errorf("JWT Public Key: Could not read from file '%s'", pubPEMLocation)
-		return nil
-	}
-
-	block, _ := pem.Decode(pubReadIn)
-	if block == nil {
-        sysLogger.Errorf("JWT Public Key: Could not decode the read in block.\n")
-		return nil
-	}
-
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-        sysLogger.Errorf("JWT Public Key: Could not parse JWT pub key.\n")
-		return nil
-	}
-
-	return pub.(*rsa.PublicKey)
 }
 
 // Just for LCN paper; function currently not in use
@@ -175,26 +154,44 @@ func ParseRsaPublicKeyFromPemStr(sysLogger *logwriter.LogWriter, pubPEMLocation 
 //
 //}
 
-func ParseRsaPrivateKeyFromPemStr(sysLogger *logwriter.LogWriter, privPEMLocation string) *rsa.PrivateKey {
+func ParseRsaPublicKeyFromPemStr(pubPEMLocation string) (*rsa.PublicKey, error) {
+	pubReadIn, err := ioutil.ReadFile(pubPEMLocation)
+	if err != nil {
+		return nil, fmt.Errorf("basic_auth: ParseRsaPublicKeyFromPemStr(): unable to read JWT Public Key from file '%s': %w",
+			pubPEMLocation, err)
+	}
+
+	block, _ := pem.Decode(pubReadIn)
+	if block == nil {
+		return nil, fmt.Errorf("basic_auth: ParseRsaPublicKeyFromPemStr(): unable to decode the read in block: %w", err)
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("basic_auth: ParseRsaPublicKeyFromPemStr(): unable to parse JWT pub key: %w", err)
+	}
+
+	return pub.(*rsa.PublicKey), nil
+}
+
+func ParseRsaPrivateKeyFromPemStr(privPEMLocation string) (*rsa.PrivateKey, error) {
 	privReadIn, err := ioutil.ReadFile(privPEMLocation)
 	if err != nil {
-		sysLogger.Errorf("JWT Signing Key: Could not read from file '%s'", privPEMLocation)
-		return nil
+		return nil, fmt.Errorf("basic_auth: ParseRsaPrivateKeyFromPemStr(): unable to read JWT Signing Key from file '%s': %w",
+			privPEMLocation, err)
 	}
 
 	block, _ := pem.Decode(privReadIn)
 	if block == nil {
-		sysLogger.Errorf("JWT Signing Key: Could not decode the read in block.\n")
-		return nil
+		return nil, fmt.Errorf("basic_auth: ParseRsaPrivateKeyFromPemStr(): unable to decode the read in block: %w", err)
 	}
 
 	priv, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
-		sysLogger.Errorf("JWT Signing Key: Could not parse signing key.\n")
-		return nil
+		return nil, fmt.Errorf("basic_auth: ParseRsaPrivateKeyFromPemStr(): unable to parse JWT signing key: %w", err)
 	}
 
-	return priv.(*rsa.PrivateKey)
+	return priv.(*rsa.PrivateKey), nil
 }
 
 func handleFormReponse(msg string, w http.ResponseWriter) {
@@ -235,11 +232,11 @@ func userIsInLDAP(sysLogger *logwriter.LogWriter, userName, password string) boo
 
 	ok, _, err := client.Authenticate(userName, password)
 	if err != nil {
-        sysLogger.Errorf("Error authenticating user %s: %+v\n", userName, err)
+		sysLogger.Errorf("Error authenticating user %s: %+v\n", userName, err)
 		return false
 	}
 	if !ok {
-        sysLogger.Errorf("Authenticating failed for user %s\n", userName)
+		sysLogger.Errorf("Authenticating failed for user %s\n", userName)
 		return false
 	}
 	return true

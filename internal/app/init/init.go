@@ -6,6 +6,8 @@ package init
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/url"
 	"strings"
@@ -15,33 +17,38 @@ import (
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 )
 
+// InitDefaultValues() sets a default PEP DefaultPoolSize value
 func InitDefaultValues(sysLogger *logwriter.LogWriter) {
-
 	// Initialize a DefaultPoolSize if its not set
 	if config.Config.Pep.DefaultPoolSize == 0 {
 		config.Config.Pep.DefaultPoolSize = 50
 	}
-
+	sysLogger.Debug("init: InitDefaultValues(): Config.Pep.DefaultPoolSize is set to 50")
 }
 
+// InitSysLoggerParams() sets default values for the system logger parameters
 func InitSysLoggerParams(sysLogger *logwriter.LogWriter) {
+	// Set a default value of a logging level parameter
 	if config.Config.SysLogger.LogLevel == "" {
-		config.Config.SysLogger.LogLevel = "error"
+		config.Config.SysLogger.LogLevel = "info"
 	}
 
+	// Set a default value of a log messages destination parameter
 	if config.Config.SysLogger.LogFilePath == "" {
-		config.Config.SysLogger.LogFilePath = "./pep.log"
+		config.Config.SysLogger.LogFilePath = "stdout"
 	}
 
+	// Set a default value of a log messages formatter parameter
 	if config.Config.SysLogger.IfTextFormatter == "" {
 		config.Config.SysLogger.IfTextFormatter = "json"
 	}
+	sysLogger.Debug("init: InitSysLoggerParams(): system logger default parameters were sucessfully set")
 }
 
-// Function initializes the 'pep' section of the config file.
-// It loads the PEP certificate.
-func InitPepParams(sysLogger *logwriter.LogWriter) {
-	section := "pep"
+// InitPepParams() initializes the 'pep' section of the config file and
+// loads the PEP certificate(s).
+func InitPepParams(sysLogger *logwriter.LogWriter) error {
+	var err error
 	fields := ""
 
 	// TODO: Check if the field make sense as well!
@@ -54,55 +61,67 @@ func InitPepParams(sysLogger *logwriter.LogWriter) {
 	}
 
 	if fields != "" {
-		fields = strings.TrimSuffix(fields, ",")
-		handleFatalf(sysLogger, section, fields)
+		return fmt.Errorf("init: InitPepParams(): in the section 'pep' the following required fields are missed: '%s'", strings.TrimSuffix(fields, ","))
 	}
 
 	// Read CA certs used for signing client certs and are accepted by the PEP
 	for _, acceptedClientCert := range config.Config.Pep.CertsPepAcceptsWhenShownByClients {
-		loadCACertificate(sysLogger, acceptedClientCert, "client", config.Config.CAcertPoolPepAcceptsFromExt)
+		err = loadCACertificate(sysLogger, acceptedClientCert, "client", config.Config.CAcertPoolPepAcceptsFromExt)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func InitBasicAuth(sysLogger *logwriter.LogWriter) {
-	initSession(sysLogger)
+// InitBasicAuth() ...
+func InitBasicAuth(sysLogger *logwriter.LogWriter) error {
+	return initSession(sysLogger)
 }
 
-func initSession(sysLogger *logwriter.LogWriter) {
-	section := "session"
+// InitSession() ...
+func initSession(sysLogger *logwriter.LogWriter) error {
+	var err error
 	fields := ""
 
 	if config.Config.BasicAuth.Session.Path_to_jwt_pub_key == "" {
 		fields += "path_to_jwt_pub_key,"
-	} else {
-		sysLogger.Debugf("JWT Public Key is searched for here: %s", config.Config.BasicAuth.Session.Path_to_jwt_pub_key)
 	}
+	sysLogger.Debugf("init: initSession(): JWT Public Key path: '%s'", config.Config.BasicAuth.Session.Path_to_jwt_pub_key)
 
 	if config.Config.BasicAuth.Session.Path_to_jwt_signing_key == "" {
 		fields += "path_to_jwt_signing_key,"
-	} else {
-		sysLogger.Debugf("JWT Signing Key is searched for here: %s", config.Config.BasicAuth.Session.Path_to_jwt_signing_key)
 	}
+	sysLogger.Debugf("init: initSession(): JWT Signing Key path: '%s'", config.Config.BasicAuth.Session.Path_to_jwt_signing_key)
 
 	if fields != "" {
-		fields = strings.TrimSuffix(fields, ",")
-		handleFatalf(sysLogger, section, fields)
+		return fmt.Errorf("init: initSession(): in the section 'session' the following required fields are missed: '%s'", strings.TrimSuffix(fields, ","))
 	}
 
-	config.Config.BasicAuth.Session.JwtPubKey = basic_auth.ParseRsaPublicKeyFromPemStr(sysLogger, config.Config.BasicAuth.Session.Path_to_jwt_pub_key)
-	config.Config.BasicAuth.Session.MySigningKey = basic_auth.ParseRsaPrivateKeyFromPemStr(sysLogger, config.Config.BasicAuth.Session.Path_to_jwt_signing_key)
+	config.Config.BasicAuth.Session.JwtPubKey, err = basic_auth.ParseRsaPublicKeyFromPemStr(config.Config.BasicAuth.Session.Path_to_jwt_pub_key)
+	if err != nil {
+		return err
+	}
+
+	config.Config.BasicAuth.Session.MySigningKey, err = basic_auth.ParseRsaPrivateKeyFromPemStr(config.Config.BasicAuth.Session.Path_to_jwt_signing_key)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-// Function initializes the 'ldap' section of the config file.
+// InitLdapParams() initializes the 'ldap' section of the config file.
 // Function currently does nothing.
-func InitLdapParams(sysLogger *logwriter.LogWriter) {
-
+func InitLdapParams(sysLogger *logwriter.LogWriter) error {
+	return nil
 }
 
-// Function initializes the 'pdp' section of the config file.
-// It loads the certificates for the given file paths.
-func InitPdpParams(sysLogger *logwriter.LogWriter) {
-	section := "pdp"
+// InitPdpParams() initializes the 'pdp' section of the config file and
+// loads certificates for the given file paths.
+func InitPdpParams(sysLogger *logwriter.LogWriter) error {
+	var err error
 	fields := ""
 
 	// TODO: Check if the field make sense as well!
@@ -126,27 +145,34 @@ func InitPdpParams(sysLogger *logwriter.LogWriter) {
 	}
 
 	if fields != "" {
-		fields = strings.TrimSuffix(fields, ",")
-		handleFatalf(sysLogger, section, fields)
+		return fmt.Errorf("init: InitPdpParams(): in the section 'pdp' the following required fields are missed: '%s'", strings.TrimSuffix(fields, ","))
 	}
 
 	// Preload X509KeyPair and write it to config
-	config.Config.Pdp.X509KeyPairShownByPepToPdp = loadX509KeyPair(sysLogger, config.Config.Pdp.CertShownByPepToPdp, config.Config.Pdp.PrivkeyForCertShownByPepToPdp, "PDP", "")
+	config.Config.Pdp.X509KeyPairShownByPepToPdp, err = loadX509KeyPair(sysLogger, config.Config.Pdp.CertShownByPepToPdp, config.Config.Pdp.PrivkeyForCertShownByPepToPdp, "PDP", "")
+	if err != nil {
+		return err
+	}
 
 	// Preload CA certificate and append it to cert pool
-	loadCACertificate(sysLogger, config.Config.Pdp.CertPepAcceptsShownByPdp, "PDP", config.Config.CAcertPoolPepAcceptsFromInt)
+	err = loadCACertificate(sysLogger, config.Config.Pdp.CertPepAcceptsShownByPdp, "PDP", config.Config.CAcertPoolPepAcceptsFromInt)
+	if err != nil {
+		return err
+	}
 
 	// Use default pool size as pdp pool size if necessary
 	if config.Config.Pdp.PdpClientPoolSize == 0 {
 		config.Config.Pdp.PdpClientPoolSize = config.Config.Pep.DefaultPoolSize
-		sysLogger.Debugf("PDP client pool size set to default pool size (%d)", config.Config.Pep.DefaultPoolSize)
+		sysLogger.Debugf("init: InitPdpParams(): PDP client pool size is set to default pool size (%d)", config.Config.Pep.DefaultPoolSize)
 	}
+
+	return nil
 }
 
-// Function initializes the 'sfp_logic' section of the config file.
-// It loads the certificates for the given file paths.
-func InitSfplParams(sysLogger *logwriter.LogWriter) {
-	section := "sfp_logic"
+// InitSfplParams() initializes the 'sfp_logic' section of the config file and
+// loads certificates for the given file paths.
+func InitSfplParams(sysLogger *logwriter.LogWriter) error {
+	var err error
 	fields := ""
 
 	// TODO: Check if the field make sense as well!
@@ -170,31 +196,39 @@ func InitSfplParams(sysLogger *logwriter.LogWriter) {
 	}
 
 	if fields != "" {
-		fields = strings.TrimSuffix(fields, ",")
-		handleFatalf(sysLogger, section, fields)
+		return fmt.Errorf("init: InitSfplParams(): in the section 'sfp_logic' the following required fields are missed: '%s'", strings.TrimSuffix(fields, ","))
 	}
 
 	// Preload X509KeyPair and write it to config
-	config.Config.SfpLogic.X509KeyPairShownByPepToSfpl = loadX509KeyPair(sysLogger, config.Config.SfpLogic.CertShownByPepToSfpl, config.Config.SfpLogic.PrivkeyForCertShownByPepToSfpl, "SFP_logic", "")
+	config.Config.SfpLogic.X509KeyPairShownByPepToSfpl, err = loadX509KeyPair(sysLogger, config.Config.SfpLogic.CertShownByPepToSfpl,
+		config.Config.SfpLogic.PrivkeyForCertShownByPepToSfpl, "SFP_logic", "")
+	if err != nil {
+		return err
+	}
 
 	// Preload CA certificate and append it to cert pool
-	loadCACertificate(sysLogger, config.Config.SfpLogic.CertPepAcceptsShownBySfpl, "SFP_logic", config.Config.CAcertPoolPepAcceptsFromInt)
+	err = loadCACertificate(sysLogger, config.Config.SfpLogic.CertPepAcceptsShownBySfpl, "SFP_logic", config.Config.CAcertPoolPepAcceptsFromInt)
+	if err != nil {
+		return err
+	}
 
 	// Use default pool size as sfpl pool size if necessary
 	if config.Config.SfpLogic.SfplClientPoolSize == 0 {
 		config.Config.SfpLogic.SfplClientPoolSize = config.Config.Pep.DefaultPoolSize
-		sysLogger.Debugf("SFPL client pool size set to default pool size (%d)", config.Config.Pep.DefaultPoolSize)
+		sysLogger.Debugf("init: InitSfplParams(): SFPL client pool size is set to default pool size (%d)", config.Config.Pep.DefaultPoolSize)
 	}
+
+	return nil
 }
 
-// Function initializes the 'service_pool' section of the config file.
+// InitServicePoolParams() initializes the 'service_pool' section of the config file.
 // It loads the certificates for the given file paths and preparses the URLs.
 // Additionally, it creates a map to access services by SNI directly.
-func InitServicePoolParams(sysLogger *logwriter.LogWriter) {
+func InitServicePoolParams(sysLogger *logwriter.LogWriter) error {
 	var err error
 
 	if config.Config.ServicePool == nil {
-		sysLogger.Fatalf("Service Pool field 'service_pool' is empty. No Service is defined")
+		return errors.New("init: InitServicePoolParams(): the section 'service_pool' is empty. No Service is defined")
 	}
 
 	for serviceName, serviceConfig := range config.Config.ServicePool {
@@ -203,7 +237,8 @@ func InitServicePoolParams(sysLogger *logwriter.LogWriter) {
 		if serviceConfig == nil {
 			fields += "sni,target_service_addr,privkey_for_cert_shown_by_pep_to_clients_matching_sni,privkey_for_cert_shown_by_pep_to_client," +
 				"cert_shown_by_pep_to_service,privkey_for_cert_shown_by_pep_to_service,cert_pep_accepts_when_shown_by_service"
-			handleFatalf(sysLogger, serviceName, fields)
+			return fmt.Errorf("init: InitServicePoolParams(): in the section '%s' the following required fields are missed: '%s'",
+				serviceName, strings.TrimSuffix(fields, ","))
 		}
 
 		// Checking the yaml parameter if they are present and meaningful
@@ -243,26 +278,36 @@ func InitServicePoolParams(sysLogger *logwriter.LogWriter) {
 		}
 
 		if fields != "" {
-			fields = strings.TrimSuffix(fields, ",")
-			handleFatalf(sysLogger, serviceName, fields)
+			return fmt.Errorf("init: InitServicePoolParams(): in the section '%s' the following required fields are missed: '%s'",
+				serviceName, strings.TrimSuffix(fields, ","))
 		}
 
 		// Preload X509KeyPairs shown by pep to client
-		config.Config.ServicePool[serviceName].X509KeyPairShownByPepToClient = loadX509KeyPair(sysLogger, serviceConfig.CertShownByPepToClientsMatchingSni, serviceConfig.PrivkeyForCertShownByPepToClient, "service "+serviceName, "external")
+		config.Config.ServicePool[serviceName].X509KeyPairShownByPepToClient, err = loadX509KeyPair(sysLogger,
+			serviceConfig.CertShownByPepToClientsMatchingSni, serviceConfig.PrivkeyForCertShownByPepToClient, "service "+serviceName, "external")
+		if err != nil {
+			return err
+		}
 
 		// Preload X509KeyPairs shown by pep to service
-		config.Config.ServicePool[serviceName].X509KeyPairShownByPepToService = loadX509KeyPair(sysLogger, serviceConfig.CertShownByPepToService, serviceConfig.PrivkeyForCertShownByPepToService, "service "+serviceName, "internal")
+		config.Config.ServicePool[serviceName].X509KeyPairShownByPepToService, err = loadX509KeyPair(sysLogger,
+			serviceConfig.CertShownByPepToService, serviceConfig.PrivkeyForCertShownByPepToService, "service "+serviceName, "internal")
+		if err != nil {
+			return err
+		}
 
 		// Preparse Service URL
 		config.Config.ServicePool[serviceName].TargetServiceUrl, err = url.Parse(serviceConfig.TargetServiceAddr)
 		if err != nil {
-			sysLogger.Fatalf("Critical Error when parsing target service URL for service %s: %v", serviceName, err)
-		} else {
-			sysLogger.Debugf("Target service URL for service %s was successfully parsed", serviceName)
+			return fmt.Errorf("init: InitServicePoolParams(): unable to parse a target service URL for service '%s': %w", serviceName, err)
 		}
+		sysLogger.Debugf("init: InitServicePoolParams(): Target service URL for service %s was successfully parsed", serviceName)
 
 		// Preload CA certificate and append it to cert pool
-		loadCACertificate(sysLogger, serviceConfig.CertPepAcceptsWhenShownByService, "service "+serviceName, config.Config.CAcertPoolPepAcceptsFromInt)
+		err = loadCACertificate(sysLogger, serviceConfig.CertPepAcceptsWhenShownByService, "service "+serviceName, config.Config.CAcertPoolPepAcceptsFromInt)
+		if err != nil {
+			return err
+		}
 
 		// Create a map to directly access service config by SNI
 		config.Config.ServiceSniMap = make(map[string]*config.ServiceT)
@@ -270,15 +315,17 @@ func InitServicePoolParams(sysLogger *logwriter.LogWriter) {
 			config.Config.ServiceSniMap[service.Sni] = service
 		}
 	}
+
+	return nil
 }
 
-// Function initializes the 'sf_pool' section of the config file.
-// It loads the certificates for the given file paths and preparses the URLs.
-func InitSfPoolParams(sysLogger *logwriter.LogWriter) {
+// InitSfPoolParams() initializes the 'sf_pool' section of the config file and
+// loads the certificates for the given file paths and preparses the URLs.
+func InitSfPoolParams(sysLogger *logwriter.LogWriter) error {
 	var err error
 
 	if config.Config.SfPool == nil {
-		sysLogger.Debugf("Service Pool field 'sf_pool' is empty. No SF is defined")
+		return errors.New("init: InitSfPoolParams(): the section 'sf_pool' is empty. No SF is defined")
 	}
 
 	for sfName, sfConfig := range config.Config.SfPool {
@@ -287,7 +334,8 @@ func InitSfPoolParams(sysLogger *logwriter.LogWriter) {
 		// This case is TRUE if a SF section such as logger is completely empty; in this case sfConfig is a nil pointer
 		if sfConfig == nil {
 			fields += "target_sf_addr,cert_shown_by_pep_to_sf,privkey_for_cert_shown_by_pep_to_sf,cert_pep_accepts_shown_by_sf"
-			handleFatalf(sysLogger, sfName, fields)
+			return fmt.Errorf("init: InitSfPoolParams(): in the section '%s' the following required fields are missed: '%s'",
+				sfName, strings.TrimSuffix(fields, ","))
 		}
 
 		// Checking the yaml parameter if they are present and meaningful
@@ -312,49 +360,59 @@ func InitSfPoolParams(sysLogger *logwriter.LogWriter) {
 		}
 
 		if fields != "" {
-			fields = strings.TrimSuffix(fields, ",")
-			handleFatalf(sysLogger, sfName, fields)
+			return fmt.Errorf("init: InitSfPoolParams(): in the section '%s' the following required fields are missed: '%s'",
+				sfName, strings.TrimSuffix(fields, ","))
 		}
 
 		// preload X509KeyPairs shown by pep to sf
-		config.Config.SfPool[sfName].X509KeyPairShownByPepToSf = loadX509KeyPair(sysLogger, sfConfig.CertShownByPepToSf, sfConfig.PrivkeyForCertShownByPepToSf, "service function "+sfName, "")
+		config.Config.SfPool[sfName].X509KeyPairShownByPepToSf, err = loadX509KeyPair(sysLogger, sfConfig.CertShownByPepToSf, sfConfig.PrivkeyForCertShownByPepToSf, "service function "+sfName, "")
+		if err != nil {
+			return err
+		}
 
 		// Preparse SF URL
 		config.Config.SfPool[sfName].TargetSfUrl, err = url.Parse(sfConfig.TargetSfAddr)
 		if err != nil {
-			sysLogger.Fatalf("Critical Error when parsing target URL for service function %s: %v", sfName, err)
-		} else {
-			sysLogger.Debugf("Target URL for service function %s was successfully parsed", sfName)
+			return fmt.Errorf("init: InitServicePoolParams(): unable to parse a target service URL for service function '%s': %w", sfName, err)
 		}
+		sysLogger.Debugf("init: InitServicePoolParams(): Target URL for service function %s was successfully parsed", sfName)
 
 		// Preload CA certificate and append it to cert pool
-		loadCACertificate(sysLogger, sfConfig.CertPepAcceptsShownBySf, "service function "+sfName, config.Config.CAcertPoolPepAcceptsFromInt)
+		err = loadCACertificate(sysLogger, sfConfig.CertPepAcceptsShownBySf, "service function "+sfName, config.Config.CAcertPoolPepAcceptsFromInt)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-// function unifies the loading of X509 key pairs for different components
-func loadX509KeyPair(sysLogger *logwriter.LogWriter, certfile, keyfile, componentName, certAttr string) tls.Certificate {
+// LoadX509KeyPair() unifies the loading of X509 key pairs for different components
+func loadX509KeyPair(sysLogger *logwriter.LogWriter, certfile, keyfile, componentName, certAttr string) (tls.Certificate, error) {
 	keyPair, err := tls.LoadX509KeyPair(certfile, keyfile)
 	if err != nil {
-		sysLogger.Fatalf("Critical Error when loading %s X509KeyPair for %s from %s and %s: %v", certAttr, componentName, certfile, keyfile, err)
-	} else {
-		sysLogger.Debugf("%s X509KeyPair for %s from %s and %s is successfully loaded", certAttr, componentName, certfile, keyfile)
+		return tls.Certificate{}, fmt.Errorf("init: loadX509KeyPair(): loading %s X509KeyPair for %s from %s and %s - FAIL: %v",
+			certAttr, componentName, certfile, keyfile, err)
 	}
-	return keyPair
+	sysLogger.Debugf("init: loadX509KeyPair(): loading %s X509KeyPair for %s from %s and %s - OK", certAttr, componentName, certfile, keyfile)
+	return keyPair, nil
 }
 
 // function unifies the loading of CA certificates for different components
-func loadCACertificate(sysLogger *logwriter.LogWriter, certfile string, componentName string, certPool *x509.CertPool) {
+func loadCACertificate(sysLogger *logwriter.LogWriter, certfile string, componentName string, certPool *x509.CertPool) error {
+	// Read the certificate file content
 	caRoot, err := ioutil.ReadFile(certfile)
 	if err != nil {
-		sysLogger.Fatalf("Loading %s CA certificate from %s error: %v", componentName, certfile, err)
-	} else {
-		sysLogger.Debugf("%s CA certificate from %s is successfully loaded", componentName, certfile)
+		return fmt.Errorf("init: loadCACertificate(): loading %s CA certificate from '%s' - FAIL: %w", componentName, certfile, err)
 	}
+	sysLogger.Debugf("init: loadCACertificate(): loading %s CA certificate from '%s' - OK", componentName, certfile)
+
+	// ToDo: check if certPool exists
+	// if certPool == ??? {}
+	//     return errors.New("provided certPool is nil")
+	// }
+
 	// Append a certificate to the pool
 	certPool.AppendCertsFromPEM(caRoot)
-}
-
-func handleFatalf(sysLogger *logwriter.LogWriter, section, fields string) {
-	sysLogger.Fatalf("For section '%s' the necessary field(s) '%s' is/are not present.", section, fields)
+	return nil
 }
