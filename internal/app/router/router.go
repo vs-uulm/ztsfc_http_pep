@@ -27,11 +27,11 @@ type Router struct {
 	sysLogger *logger.Logger
 }
 
-func NewRouter(lw *logger.Logger) (*Router, error) {
+func NewRouter(logger *logger.Logger) (*Router, error) {
 	router := new(Router)
 
 	// Set sysLogger to the one created in the init function
-	router.sysLogger = lw
+	router.sysLogger = logger
 
 	router.tlsConfig = &tls.Config{
 		Rand:                   nil,
