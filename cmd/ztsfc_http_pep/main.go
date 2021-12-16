@@ -22,7 +22,7 @@ func init() {
 	var err error
 
 	// Operating input parameters
-	flag.StringVar(&confFilePath, "c", "", "Path to user defined YML config file")
+	flag.StringVar(&confFilePath, "c", "./config/conf.yml", "Path to user defined YML config file")
 	flag.Parse()
 
 	// Loading all config parameter from config file defined in "confFilePath"

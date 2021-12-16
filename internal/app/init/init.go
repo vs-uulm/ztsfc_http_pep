@@ -325,7 +325,7 @@ func InitSfPoolParams(sysLogger *logger.Logger) error {
 	var err error
 
 	if config.Config.SfPool == nil {
-		return errors.New("init: InitSfPoolParams(): the section 'sf_pool' is empty. No SF is defined")
+		sysLogger.Info("init: InitSfPoolParams(): the section 'sf_pool' is empty. No SF is defined")
 	}
 
 	for sfName, sfConfig := range config.Config.SfPool {
