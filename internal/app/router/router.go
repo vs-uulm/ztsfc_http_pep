@@ -13,10 +13,10 @@ import (
 
 	"time"
 
+	logger "github.com/vs-uulm/ztsfc_http_logger"
 	pdp "github.com/vs-uulm/ztsfc_http_pep/internal/app/authorization"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/basic_auth"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 	//	sfpl "github.com/vs-uulm/ztsfc_http_pep/internal/app/sfp_logic"
 )
@@ -24,14 +24,14 @@ import (
 type Router struct {
 	tlsConfig *tls.Config
 	frontend  *http.Server
-	logWriter *logwriter.LogWriter
+	sysLogger *logger.Logger
 }
 
-func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
+func NewRouter(lw *logger.Logger) (*Router, error) {
 	router := new(Router)
 
-    // Set logWriter to the one created in the init function
-    router.logWriter = lw
+	// Set sysLogger to the one created in the init function
+	router.sysLogger = lw
 
 	router.tlsConfig = &tls.Config{
 		Rand:                   nil,
@@ -64,7 +64,7 @@ func NewRouter(lw *logwriter.LogWriter) (*Router, error) {
 		ReadTimeout:  time.Hour * 1,
 		WriteTimeout: time.Hour * 1,
 		Handler:      mux,
-		ErrorLog:     log.New(router.logWriter.GetWriter(), "", 0),
+		ErrorLog:     log.New(router.sysLogger.GetWriter(), "", 0),
 	}
 
 	return router, nil
@@ -91,7 +91,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	md := new(metadata.CpMetadata)
 
 	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
-	router.logWriter.LogHTTPRequest(req)
+	router.sysLogger.LogHTTPRequest(req)
 
 	// BASIC AUTHENTICATION
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
@@ -99,7 +99,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Check if user has a valid session already
 	// RM FOR PRODUCTIVE
 	if !basic_auth.UserSessionIsValid(req, md) {
-		if !basic_auth.BasicAuth(router.logWriter, w, req) {
+		if !basic_auth.BasicAuth(router.sysLogger, w, req) {
 			// Used for measuring the time ServeHTTP runs
 			// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
 			return
@@ -108,21 +108,21 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// AUTHORIZATION
 	// RM FOR PRODUCTIVE
-	err := pdp.PerformAuthorization(router.logWriter, req, md)
+	err := pdp.PerformAuthorization(router.sysLogger, req, md)
 	// observe errors and abort routine if something goes wrong
 	// @author:marie
 	if err != nil {
-		router.logWriter.WithField("issuer", "PDP").Error(err)
+		router.sysLogger.WithField("issuer", "PDP").Error(err)
 		return
 	}
 
 	// RM FOR PRODUCTIVE
 	if !md.AuthDecision {
-		router.logWriter.Info("Request was rejected due to too low trust score")
+		router.sysLogger.Info("Request was rejected due to too low trust score")
 		w.WriteHeader(503)
 		return
 	}
-	router.logWriter.Debugf("Request passed PDP. SFC: %s", md.SFC)
+	router.sysLogger.Debugf("Request passed PDP. SFC: %s", md.SFC)
 
 	// If user could be authenticated, create ReverseProxy variable for the connection to serve
 	var proxy *httputil.ReverseProxy
@@ -132,7 +132,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//serviceConf, ok := config.Config.ServiceSniMap[md.Resource]
 	serviceConf, ok := config.Config.ServiceSniMap[req.Host]
 	if !ok {
-		router.logWriter.WithField("sni", req.Host).Error("Requested SNI has no match in config file.")
+		router.sysLogger.WithField("sni", req.Host).Error("Requested SNI has no match in config file.")
 		return
 	}
 
@@ -142,38 +142,38 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// @author:marie
 	//if len(md.SFC) == 0 {
 
-	//	logwriter.LW.Logger.Debug("SFC is empty. Thus, no forwarding to SFP logic")
+	//	router.sysLogger.Debug("SFC is empty. Thus, no forwarding to SFP logic")
 	//	serviceURL = serviceConf.TargetServiceUrl
 	//	certShownByPEP = serviceConf.X509KeyPairShownByPepToService
 
 	//} else {
-	//  sfp1.SetLogWriter(router.logWriter)
+	//  sfp1.SetLogger(router.sysLogger)
 	//	err = sfpl.TransformSFCintoSFP(md)
 	//	// observe errors and abort routine if something goes wrong
 	//	// @author:marie
 	//	if err != nil {
-	//		logwriter.LW.Logger.WithField("issuer", "SFP Logic").Error(err)
+	//		router.sysLogger.WithField("issuer", "SFP Logic").Error(err)
 	//		return
 	//	}
-	//	logwriter.LW.Logger.Debugf("Request passed SFP logic. SFP: %s", md.SFP)
+	//	router.sysLogger.Debugf("Request passed SFP logic. SFP: %s", md.SFP)
 
 	//	if len(md.SFP) == 0 {
-	//		logwriter.LW.Logger.Error("SFP is empty, even though SFC is not")
+	//		router.sysLogger.Error("SFP is empty, even though SFC is not")
 	//		return
 	//	}
 
 	//	// identify next hop, find its config and set serviceURL and cert respectively
 	//	// @author:marie
 	//	nextHop := md.SFP[0]
-	//	logwriter.LW.Logger.Debugf("Next Hop: %s", nextHop)
+	//	router.sysLogger.Debugf("Next Hop: %s", nextHop)
 	//	nextHopConf, ok := config.Config.SfPool[nextHop.Name]
 	//	if !ok {
-	//		logwriter.LW.Logger.WithField("sf", nextHop).Error("First SF from the SFP does not exist in config file.")
+	//		router.sysLogger.WithField("sf", nextHop).Error("First SF from the SFP does not exist in config file.")
 	//		return
 	//	}
 	//	serviceURL, err = url.Parse(nextHop.Address)
 	//	if err != nil {
-	//		logwriter.LW.Logger.WithField("address", nextHop.Address).Error("Could not parse address value as URL.")
+	//		router.sysLogger.WithField("address", nextHop.Address).Error("Could not parse address value as URL.")
 	//	}
 	//	certShownByPEP = nextHopConf.X509KeyPairShownByPepToSf
 
@@ -189,20 +189,20 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//	// @author:marie
 	//	ipAddresses = append(ipAddresses, serviceConf.TargetServiceAddr)
 	//	addressesStr := strings.Join(ipAddresses, ",")
-	//	logwriter.LW.Logger.Debugf("SFP as presented to following SFs: %s", addressesStr)
+	//	router.sysLogger.Debugf("SFP as presented to following SFs: %s", addressesStr)
 
 	//	req.Header.Set("sfp", addressesStr)
 
 	//}
-	//logwriter.LW.Logger.Debugf("Service URL: %s", serviceURL.String())
+	//router.sysLogger.Debugf("Service URL: %s", serviceURL.String())
 	serviceURL = serviceConf.TargetServiceUrl
-	router.logWriter.Debugf("Service URL: %s", serviceURL.String())
+	router.sysLogger.Debugf("Service URL: %s", serviceURL.String())
 	certShownByPEP = serviceConf.X509KeyPairShownByPepToService
-	router.logWriter.Debugf("Service URL: %s", serviceConf.TargetServiceAddr)
+	router.sysLogger.Debugf("Service URL: %s", serviceConf.TargetServiceAddr)
 
 	proxy = httputil.NewSingleHostReverseProxy(serviceURL)
 
-	proxy.ErrorLog = log.New(router.logWriter.GetWriter(), "", 0)
+	proxy.ErrorLog = log.New(router.sysLogger.GetWriter(), "", 0)
 
 	// When the PEP is acting as a client; this defines his behavior
 	proxy.Transport = &http.Transport{

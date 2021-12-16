@@ -8,8 +8,8 @@ import (
 	"math/rand"
 	"net/http"
 
+	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/proxies"
 )
@@ -28,11 +28,11 @@ type sfpResponse struct {
 	} `json:"sfp"`
 }
 
-var logWriter *logwriter.LogWriter
+var sysLogger *logger.Logger
 
-// SetLogWriter() sets the logWriter to send the log messages to
-func SetLogWriter(lw *logwriter.LogWriter) {
-	logWriter = lw
+// SetLogger() sets the sysLogger to send the log messages to
+func SetLogger(logger *logger.Logger) {
+	sysLogger = logger
 }
 
 // TransformSFCintoSFP creates a service function path out of a service
@@ -51,8 +51,8 @@ func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 	}
 	prepareSFPRequest(req, cpm)
 
-	if logWriter != nil {
-		logWriter.Debugf("Request to sfp logic: %v", req)
+	if sysLogger != nil {
+		sysLogger.Debugf("Request to sfp logic: %v", req)
 	}
 
 	resp, err := proxies.SfpLogicClientPool[rand.Int()%50].Do(req)
@@ -66,11 +66,11 @@ func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 
 	err = json.NewDecoder(resp.Body).Decode(&sfpRes)
 	if err != nil {
-		return fmt.Errorf("could not parse json answer from sfp logic: %v", err)
+		return fmt.Errorf("could not parse json answer from sfp logic: %w", err)
 	}
 
-	if logWriter != nil {
-		logWriter.Debugf("Response from SFP logic: %v", sfpRes)
+	if sysLogger != nil {
+		sysLogger.Debugf("Response from SFP logic: %v", sfpRes)
 	}
 
 	for _, sf := range sfpRes.SFP {

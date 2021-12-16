@@ -12,13 +12,13 @@ import (
 	"net/url"
 	"strings"
 
+	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/basic_auth"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 )
 
 // InitDefaultValues() sets a default PEP DefaultPoolSize value
-func InitDefaultValues(sysLogger *logwriter.LogWriter) {
+func InitDefaultValues(sysLogger *logger.Logger) {
 	// Initialize a DefaultPoolSize if its not set
 	if config.Config.Pep.DefaultPoolSize == 0 {
 		config.Config.Pep.DefaultPoolSize = 50
@@ -47,7 +47,7 @@ func InitSysLoggerParams() {
 
 // InitPepParams() initializes the 'pep' section of the config file and
 // loads the PEP certificate(s).
-func InitPepParams(sysLogger *logwriter.LogWriter) error {
+func InitPepParams(sysLogger *logger.Logger) error {
 	var err error
 	fields := ""
 
@@ -76,12 +76,12 @@ func InitPepParams(sysLogger *logwriter.LogWriter) error {
 }
 
 // InitBasicAuth() ...
-func InitBasicAuth(sysLogger *logwriter.LogWriter) error {
+func InitBasicAuth(sysLogger *logger.Logger) error {
 	return initSession(sysLogger)
 }
 
 // InitSession() ...
-func initSession(sysLogger *logwriter.LogWriter) error {
+func initSession(sysLogger *logger.Logger) error {
 	var err error
 	fields := ""
 
@@ -114,13 +114,13 @@ func initSession(sysLogger *logwriter.LogWriter) error {
 
 // InitLdapParams() initializes the 'ldap' section of the config file.
 // Function currently does nothing.
-func InitLdapParams(sysLogger *logwriter.LogWriter) error {
+func InitLdapParams(sysLogger *logger.Logger) error {
 	return nil
 }
 
 // InitPdpParams() initializes the 'pdp' section of the config file and
 // loads certificates for the given file paths.
-func InitPdpParams(sysLogger *logwriter.LogWriter) error {
+func InitPdpParams(sysLogger *logger.Logger) error {
 	var err error
 	fields := ""
 
@@ -171,7 +171,7 @@ func InitPdpParams(sysLogger *logwriter.LogWriter) error {
 
 // InitSfplParams() initializes the 'sfp_logic' section of the config file and
 // loads certificates for the given file paths.
-func InitSfplParams(sysLogger *logwriter.LogWriter) error {
+func InitSfplParams(sysLogger *logger.Logger) error {
 	var err error
 	fields := ""
 
@@ -224,7 +224,7 @@ func InitSfplParams(sysLogger *logwriter.LogWriter) error {
 // InitServicePoolParams() initializes the 'service_pool' section of the config file.
 // It loads the certificates for the given file paths and preparses the URLs.
 // Additionally, it creates a map to access services by SNI directly.
-func InitServicePoolParams(sysLogger *logwriter.LogWriter) error {
+func InitServicePoolParams(sysLogger *logger.Logger) error {
 	var err error
 
 	if config.Config.ServicePool == nil {
@@ -321,7 +321,7 @@ func InitServicePoolParams(sysLogger *logwriter.LogWriter) error {
 
 // InitSfPoolParams() initializes the 'sf_pool' section of the config file and
 // loads the certificates for the given file paths and preparses the URLs.
-func InitSfPoolParams(sysLogger *logwriter.LogWriter) error {
+func InitSfPoolParams(sysLogger *logger.Logger) error {
 	var err error
 
 	if config.Config.SfPool == nil {
@@ -388,7 +388,7 @@ func InitSfPoolParams(sysLogger *logwriter.LogWriter) error {
 }
 
 // LoadX509KeyPair() unifies the loading of X509 key pairs for different components
-func loadX509KeyPair(sysLogger *logwriter.LogWriter, certfile, keyfile, componentName, certAttr string) (tls.Certificate, error) {
+func loadX509KeyPair(sysLogger *logger.Logger, certfile, keyfile, componentName, certAttr string) (tls.Certificate, error) {
 	keyPair, err := tls.LoadX509KeyPair(certfile, keyfile)
 	if err != nil {
 		return tls.Certificate{}, fmt.Errorf("init: loadX509KeyPair(): loading %s X509KeyPair for %s from %s and %s - FAIL: %v",
@@ -399,7 +399,7 @@ func loadX509KeyPair(sysLogger *logwriter.LogWriter, certfile, keyfile, componen
 }
 
 // function unifies the loading of CA certificates for different components
-func loadCACertificate(sysLogger *logwriter.LogWriter, certfile string, componentName string, certPool *x509.CertPool) error {
+func loadCACertificate(sysLogger *logger.Logger, certfile string, componentName string, certPool *x509.CertPool) error {
 	// Read the certificate file content
 	caRoot, err := ioutil.ReadFile(certfile)
 	if err != nil {

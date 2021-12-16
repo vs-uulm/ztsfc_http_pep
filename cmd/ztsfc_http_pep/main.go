@@ -3,43 +3,43 @@ package main
 import (
 	"crypto/x509"
 	"flag"
+	"log"
 	"net/http"
 
-	"github.com/sirupsen/logrus"
+	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	confInit "github.com/vs-uulm/ztsfc_http_pep/internal/app/init"
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/proxies"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/router"
 )
 
 var (
 	confFilePath string
-	sysLogger    *logwriter.LogWriter
+	sysLogger    *logger.Logger
 )
 
 func init() {
 	var err error
 
 	// Operating input parameters
-	flag.StringVar(&confFilePath, "c", "./config/conf.yml", "Path to user defined yml config file")
+	flag.StringVar(&confFilePath, "c", "", "Path to user defined YML config file")
 	flag.Parse()
 
 	// Loading all config parameter from config file defined in "confFilePath"
 	err = config.LoadConfig(confFilePath)
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 
 	// Create an instance of the system logger
 	confInit.InitSysLoggerParams()
-	sysLogger, err = logwriter.New(config.Config.SysLogger.LogFilePath,
+	sysLogger, err = logger.New(config.Config.SysLogger.LogFilePath,
 		config.Config.SysLogger.LogLevel,
 		config.Config.SysLogger.IfTextFormatter,
-		logrus.Fields{"type": "system"},
+		logger.Fields{"type": "system"},
 	)
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 	sysLogger.Debugf("loading logger configuration from %s - OK", confFilePath)
 

@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"strconv"
 
+	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/proxies"
 )
@@ -25,11 +25,11 @@ type authResponse struct {
 	SFC   []string `json:"sfc"`
 }
 
-//var logWriter *logwriter.LogWriter
+//var sysLogger *logger.Logger
 
-// SetLogWriter() sets the logWriter to send the log messages to
-//func SetLogWriter(lw *logwriter.LogWriter) {
-//	logWriter = lw
+// SetLogger() sets the sysLogger to send the log messages to
+//func SetLogger(lw *logger.Logger) {
+//	sysLogger = lw
 //}
 
 // PerformAuthorization decides for a specific client request, wether it should
@@ -38,26 +38,26 @@ type authResponse struct {
 // together with an SFC.
 // The functions writes some meta data about the request into cpm and also
 // stores the answers of the PDP in here.
-func PerformAuthorization(sysLogger *logwriter.LogWriter, clientReq *http.Request, cpm *metadata.CpMetadata) error {
+func PerformAuthorization(sysLogger *logger.Logger, clientReq *http.Request, cpm *metadata.CpMetadata) error {
 	collectAttributes(clientReq, cpm)
 
 	// send request to correct address and API endpoint
 	req, err := http.NewRequest("GET", config.Config.Pdp.TargetPdpAddr+requestEndpoint, nil)
 	if err != nil {
-		return fmt.Errorf("Error when creating authorization request for PDP: %v", err)
+		return fmt.Errorf("unable to create authorization request for PDP: %w", err)
 	}
 
 	prepareAuthRequest(req, cpm)
 	resp, err := proxies.PdpClientPool[rand.Int()%50].Do(req)
 	if err != nil {
-		return fmt.Errorf("Error when sending to PDP: %v", err)
+		return fmt.Errorf("unable to send to PDP: %w", err)
 	}
 
 	// Decode json body received from PDP
 	var authRes authResponse
 	err = json.NewDecoder(resp.Body).Decode(&authRes)
 	if err != nil {
-		return fmt.Errorf("Could not parse json answer from PDP: %v", err)
+		return fmt.Errorf("unable to parse json answer from PDP: %w", err)
 	}
 
 	if sysLogger != nil {

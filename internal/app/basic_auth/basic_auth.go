@@ -13,8 +13,8 @@ import (
 
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/jtblin/go-ldap-client"
+	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
-	"github.com/vs-uulm/ztsfc_http_pep/internal/app/logwriter"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 )
 
@@ -41,11 +41,11 @@ func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
 	return true
 }
 
-func BasicAuth(sysLogger *logwriter.LogWriter, w http.ResponseWriter, req *http.Request) bool {
+func BasicAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request) bool {
 	return performPasswdAuth(sysLogger, w, req)
 }
 
-func performPasswdAuth(sysLogger *logwriter.LogWriter, w http.ResponseWriter, req *http.Request) bool {
+func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request) bool {
 	var username, password string
 
 	// TODO: Check for JW Token initially
@@ -213,7 +213,7 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
 	fmt.Fprint(w, form)
 }
 
-func userIsInLDAP(sysLogger *logwriter.LogWriter, userName, password string) bool {
+func userIsInLDAP(sysLogger *logger.Logger, userName, password string) bool {
 	// retrieve connection parameters from config file instead of hard coding
 
 	client := &ldap.LDAPClient{

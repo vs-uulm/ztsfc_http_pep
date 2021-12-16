@@ -23,7 +23,7 @@ By default the PEP sends all log messages into the ```pep.log``` file in the cur
 
 User can redirect the log output to a file with ```-log-to``` argument.
 
-The parameter ```log-to``` with the value ```stdout``` will print all logwriter messages to the terminal.
+The parameter ```log-to``` with the value ```stdout``` will print all log messages to the terminal.
 
 ## Logging level
 By default the PEP has an "Error" logging level. Only Errors and Fatal messages will be shown.
@@ -38,7 +38,7 @@ Logging level value in the command line is case insensitive.
 
 
 ## Logging mode
-The PEP logwriter supports two main logging modes: text and JSON.
+The PEP logger supports two main logging modes: text and JSON.
 
 JSON mode is turned on by default.
 
