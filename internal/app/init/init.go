@@ -102,12 +102,12 @@ func initSession(sysLogger *logger.Logger) error {
 		return fmt.Errorf("init: initSession(): in the section 'session' the following required fields are missed: '%s'", strings.TrimSuffix(fields, ","))
 	}
 
-	config.Config.BasicAuth.Session.JwtPubKey, err = basic_auth.ParseRsaPublicKeyFromPemFile(config.Config.BasicAuth.Session.Path_to_jwt_pub_key)
+	config.Config.BasicAuth.Session.JwtPubKey, err = basic_auth.ParseRsaPublicKeyFromPemStr(config.Config.BasicAuth.Session.Path_to_jwt_pub_key)
 	if err != nil {
 		return err
 	}
 
-	config.Config.BasicAuth.Session.MySigningKey, err = basic_auth.ParseRsaPrivateKeyFromPemFile(config.Config.BasicAuth.Session.Path_to_jwt_signing_key)
+	config.Config.BasicAuth.Session.MySigningKey, err = basic_auth.ParseRsaPrivateKeyFromPemStr(config.Config.BasicAuth.Session.Path_to_jwt_signing_key)
 	if err != nil {
 		return err
 	}
