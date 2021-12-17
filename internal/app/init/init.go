@@ -410,10 +410,10 @@ func loadCACertificate(sysLogger *logger.Logger, certfile string, componentName 
 	}
 	sysLogger.Debugf("init: loadCACertificate(): loading %s CA certificate from '%s' - OK", componentName, certfile)
 
-	// ToDo: check if certPool exists
-	// if certPool == ??? {}
-	//     return errors.New("provided certPool is nil")
-	// }
+	// Return error if provided certificate is nil
+	if certPool == nil {
+		return errors.New("provided certPool is nil")
+	}
 
 	// Append a certificate to the pool
 	certPool.AppendCertsFromPEM(caRoot)
