@@ -6,9 +6,11 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -154,44 +156,78 @@ func performX509auth(req *http.Request) bool {
 //
 //}
 
-func ParseRsaPublicKeyFromPemStr(pubPEMLocation string) (*rsa.PublicKey, error) {
-	pubReadIn, err := ioutil.ReadFile(pubPEMLocation)
+// ParseRsaPublicKeyFromPemFile() loads rsa.PublicKey from a PEM file
+func ParseRsaPublicKeyFromPemFile(pubPEMLocation string) (*rsa.PublicKey, error) {
+	// Read a file content and convert it to a PEM block
+	pemBlock, err := readFirstPEMBlockFromFile(pubPEMLocation)
 	if err != nil {
-		return nil, fmt.Errorf("basic_auth: ParseRsaPublicKeyFromPemStr(): unable to read JWT Public Key from file '%s': %w",
-			pubPEMLocation, err)
+		return nil, fmt.Errorf("basic_auth: ParseRsaPublicKeyFromPemFile(): %w", err)
 	}
 
-	block, _ := pem.Decode(pubReadIn)
-	if block == nil {
-		return nil, fmt.Errorf("basic_auth: ParseRsaPublicKeyFromPemStr(): unable to decode the read in block: %w", err)
+	if !strings.Contains(pemBlock.Type, "PUBLIC KEY") {
+		fmt.Printf("pemBlock.Type = %#v\n", pemBlock.Type)
+		return nil, errors.New("basic_auth: ParseRsaPublicKeyFromPemFile(): provided file does not contain a PEM public key")
 	}
 
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("basic_auth: ParseRsaPublicKeyFromPemStr(): unable to parse JWT pub key: %w", err)
+	pub, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
+	if err == nil {
+		return pub.(*rsa.PublicKey), nil
 	}
 
-	return pub.(*rsa.PublicKey), nil
+	pub, err = x509.ParsePKCS1PublicKey(pemBlock.Bytes)
+	if err == nil {
+		return pub.(*rsa.PublicKey), nil
+	}
+
+	// Another Public keys form parsing functions can be added here later
+	// ...
+
+	return nil, fmt.Errorf("basic_auth: ParseRsaPublicKeyFromPemFile(): unable to parse JWT public key: %w", err)
 }
 
-func ParseRsaPrivateKeyFromPemStr(privPEMLocation string) (*rsa.PrivateKey, error) {
-	privReadIn, err := ioutil.ReadFile(privPEMLocation)
+// ParseRsaPrivateKeyFromPemFile() loads rsa.PrivateKey from a PEM file
+func ParseRsaPrivateKeyFromPemFile(privPEMLocation string) (*rsa.PrivateKey, error) {
+	// Read a file content and convert it to a PEM block
+	pemBlock, err := readFirstPEMBlockFromFile(privPEMLocation)
 	if err != nil {
-		return nil, fmt.Errorf("basic_auth: ParseRsaPrivateKeyFromPemStr(): unable to read JWT Signing Key from file '%s': %w",
-			privPEMLocation, err)
+		return nil, fmt.Errorf("basic_auth: ParseRsaPrivateKeyFromPemFile(): %w", err)
 	}
 
-	block, _ := pem.Decode(privReadIn)
+	if !strings.Contains(pemBlock.Type, "PRIVATE KEY") {
+		return nil, errors.New("basic_auth: ParseRsaPrivateKeyFromPemFile(): provided file does not contain a PEM private key")
+	}
+
+	priv, err := x509.ParsePKCS8PrivateKey(pemBlock.Bytes)
+	if err == nil {
+		return priv.(*rsa.PrivateKey), nil
+	}
+
+	priv, err = x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
+	if err == nil {
+		return priv.(*rsa.PrivateKey), nil
+	}
+
+	// Another Private keys form parsing functions can be added here later
+	// ...
+
+	return nil, fmt.Errorf("basic_auth: ParseRsaPrivateKeyFromPemFile(): unable to parse JWT private key: %w", err)
+}
+
+// ReadFirstPEMBlockFromFile() loads the first PEM block of a given PEM key file into a pem.Block structure
+func readFirstPEMBlockFromFile(path string) (*pem.Block, error) {
+	// Read the file content
+	pubReadIn, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode the file content as a PEM block
+	block, _ := pem.Decode(pubReadIn)
 	if block == nil {
-		return nil, fmt.Errorf("basic_auth: ParseRsaPrivateKeyFromPemStr(): unable to decode the read in block: %w", err)
+		return nil, fmt.Errorf("unable to decode a byte slice as a PEM block: %w", err)
 	}
 
-	priv, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("basic_auth: ParseRsaPrivateKeyFromPemStr(): unable to parse JWT signing key: %w", err)
-	}
-
-	return priv.(*rsa.PrivateKey), nil
+	return block, nil
 }
 
 func handleFormReponse(msg string, w http.ResponseWriter) {
