@@ -10,7 +10,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/basic_auth"
@@ -415,4 +418,15 @@ func loadCACertificate(sysLogger *logger.Logger, certfile string, componentName 
 	// Append a certificate to the pool
 	certPool.AppendCertsFromPEM(caRoot)
 	return nil
+}
+
+func SetupCloseHandler(logger *logger.Logger) {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		logger.Debug("- 'Ctrl + C' was pressed in the Terminal. Terminating...")
+		logger.Terminate()
+		os.Exit(0)
+	}()
 }

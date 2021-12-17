@@ -41,6 +41,8 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	confInit.SetupCloseHandler(sysLogger)
+
 	sysLogger.Debugf("loading logger configuration from %s - OK", confFilePath)
 
 	// Create Certificate Pools for the CA certificates used by the PEP
