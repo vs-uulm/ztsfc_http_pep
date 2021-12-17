@@ -2,20 +2,20 @@
 package config
 
 import (
-	"errors"
-	"fmt"
-	"os"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
+	"fmt"
 	"net/url"
+	"os"
 
 	"gopkg.in/yaml.v2"
 )
 
 // Config contains all input from the config file and is is globally accessible
 var (
-    Config ConfigT
+	Config ConfigT
 )
 
 type sysLoggerT struct {
