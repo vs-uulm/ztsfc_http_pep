@@ -119,7 +119,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// RM FOR PRODUCTIVE
 	if !md.AuthDecision {
 		router.sysLogger.Info("Request was rejected due to too low trust score")
-		w.WriteHeader(503)
+		w.WriteHeader(403)
 		return
 	}
 	router.sysLogger.Debugf("Request passed PDP. SFC: %s", md.SFC)
