@@ -23,13 +23,13 @@ func init() {
 	var err error
 
 	// Operating input parameters
-	flag.StringVar(&confFilePath, "c", "./config/conf.yml", "Path to user defined YML config file")
+	flag.StringVar(&confFilePath, "c", "", "Path to user defined YML config file")
 	flag.Parse()
 
 	// Loading all config parameter from config file defined in "confFilePath"
 	err = yaml.LoadYamlFile(confFilePath, &config.Config)
 	if err != nil {
-		log.Fatalf("main: init(): %s", err.Error())
+		log.Fatal(err)
 	}
 
 	// Create an instance of the system logger
@@ -40,7 +40,7 @@ func init() {
 		logger.Fields{"type": "system"},
 	)
 	if err != nil {
-		log.Fatalf("main: init(): %s", err.Error())
+		log.Fatal(err)
 	}
 	confInit.SetupCloseHandler(sysLogger)
 
@@ -57,43 +57,43 @@ func init() {
 	// pep
 	err = confInit.InitPepParams(sysLogger)
 	if err != nil {
-		sysLogger.Fatalf("main: init(): %w", err)
+		sysLogger.Fatal(err)
 	}
 
 	// nit BasicAuth, session, JWT certs
 	err = confInit.InitBasicAuth(sysLogger)
 	if err != nil {
-		sysLogger.Fatalf("main: init(): %w", err)
+		sysLogger.Fatal(err)
 	}
 
 	// ldap
 	err = confInit.InitLdapParams(sysLogger)
 	if err != nil {
-		sysLogger.Fatalf("main: init(): %w", err)
+		sysLogger.Fatal(err)
 	}
 
 	// pdp
 	err = confInit.InitPdpParams(sysLogger)
 	if err != nil {
-		sysLogger.Fatalf("main: init(): %w", err)
+		sysLogger.Fatal(err)
 	}
 
 	// sfp_logic
 	err = confInit.InitSfplParams(sysLogger)
 	if err != nil {
-		sysLogger.Fatalf("main: init(): %w", err)
+		sysLogger.Fatal(err)
 	}
 
 	// service_pool
 	err = confInit.InitServicePoolParams(sysLogger)
 	if err != nil {
-		sysLogger.Fatalf("main: init(): %w", err)
+		sysLogger.Fatal(err)
 	}
 
 	// sf_pool
 	err = confInit.InitSfPoolParams(sysLogger)
 	if err != nil {
-		sysLogger.Fatalf("main: init(): %w", err)
+		sysLogger.Fatal(err)
 	}
 
 	// Init Reverse Proxies used for the modules
