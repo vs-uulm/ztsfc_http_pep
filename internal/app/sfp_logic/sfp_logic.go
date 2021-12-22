@@ -66,7 +66,7 @@ func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 
 	err = json.NewDecoder(resp.Body).Decode(&sfpRes)
 	if err != nil {
-		return fmt.Errorf("could not parse json answer from sfp logic: %w", err)
+		return fmt.Errorf("sfp_logic: TransformSFCintoSFP(): could not parse json answer from sfp logic: %w", err)
 	}
 
 	if sysLogger != nil {

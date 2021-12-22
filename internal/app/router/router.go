@@ -27,7 +27,7 @@ type Router struct {
 	sysLogger *logger.Logger
 }
 
-func NewRouter(logger *logger.Logger) (*Router, error) {
+func New(logger *logger.Logger) (*Router, error) {
 	router := new(Router)
 
 	// Set sysLogger to the one created in the init function
@@ -40,14 +40,13 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 		MaxVersion:             tls.VersionTLS13,
 		SessionTicketsDisabled: true,
 		Certificates:           nil,
-		//ClientAuth:             tls.RequireAndVerifyClientCert,
-		ClientAuth: tls.VerifyClientCertIfGiven,
-		ClientCAs:  config.Config.CAcertPoolPepAcceptsFromExt,
+		ClientAuth:             tls.VerifyClientCertIfGiven, // tls.RequireAndVerifyClientCert
+		ClientCAs:              config.Config.CAcertPoolPepAcceptsFromExt,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// use SNI map to load suitable certificate
 			service, ok := config.Config.ServiceSniMap[cli.ServerName]
 			if !ok {
-				return nil, fmt.Errorf("error: could not serve a suitable certificate for %s", cli.ServerName)
+				return nil, fmt.Errorf("router: New(): could not serve a suitable certificate for '%s'", cli.ServerName)
 			}
 			return &service.X509KeyPairShownByPepToClient, nil
 		},

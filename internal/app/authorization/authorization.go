@@ -25,13 +25,6 @@ type authResponse struct {
 	SFC   []string `json:"sfc"`
 }
 
-//var sysLogger *logger.Logger
-
-// SetLogger() sets the sysLogger to send the log messages to
-//func SetLogger(lw *logger.Logger) {
-//	sysLogger = lw
-//}
-
 // PerformAuthorization decides for a specific client request, wether it should
 // allowed and if so, under which conditions. Therefore, it communicates with
 // the PDP over HTTPS. The PDP makes the authorization decision and returns it
@@ -41,27 +34,27 @@ type authResponse struct {
 func PerformAuthorization(sysLogger *logger.Logger, clientReq *http.Request, cpm *metadata.CpMetadata) error {
 	collectAttributes(clientReq, cpm)
 
-	// send request to correct address and API endpoint
+	// send the request to correct address and API endpoint
 	req, err := http.NewRequest("GET", config.Config.Pdp.TargetPdpAddr+requestEndpoint, nil)
 	if err != nil {
-		return fmt.Errorf("unable to create authorization request for PDP: %w", err)
+		return fmt.Errorf("authorization: PerformAuthorization(): unable to create authorization request for PDP: %w", err)
 	}
 
 	prepareAuthRequest(req, cpm)
 	resp, err := proxies.PdpClientPool[rand.Int()%50].Do(req)
 	if err != nil {
-		return fmt.Errorf("unable to send to PDP: %w", err)
+		return fmt.Errorf("authorization: PerformAuthorization(): unable to send to PDP: %w", err)
 	}
 
 	// Decode json body received from PDP
 	var authRes authResponse
 	err = json.NewDecoder(resp.Body).Decode(&authRes)
 	if err != nil {
-		return fmt.Errorf("unable to parse json answer from PDP: %w", err)
+		return fmt.Errorf("authorization: PerformAuthorization(): unable to parse json answer from PDP: %w", err)
 	}
 
 	if sysLogger != nil {
-		sysLogger.Debugf("authorization: PerformAuthorization(): Response from PDP: %v", authRes)
+		sysLogger.Debugf("authorization: PerformAuthorization(): response from PDP: %v", authRes)
 	}
 	cpm.SFC = authRes.SFC
 	cpm.AuthDecision = authRes.Allow

@@ -79,7 +79,12 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 			return false
 		}
 
-		if !userIsInLDAP(sysLogger, username, password) {
+		isAuthenticated, err := userIsInLDAP(username, password)
+		if err != nil {
+			handleFormReponse("Authentication failed for user", w)
+			return false
+		}
+		if !isAuthenticated {
 			handleFormReponse("Authentication failed for user", w)
 			return false
 		}
@@ -124,6 +129,7 @@ func createJWToken(mySigningKey *rsa.PrivateKey, username string) string {
 
 func performX509auth(req *http.Request) bool {
 	// Check if a verified client certificate is present
+	// ! ToDo: remove hardcoding!
 	if len(req.TLS.VerifiedChains) > 0 && req.TLS.ServerName == "service1.testbed.informatik.uni-ulm.de" {
 		return true
 	}
@@ -224,7 +230,7 @@ func readFirstPEMBlockFromFile(path string) (*pem.Block, error) {
 	// Decode the file content as a PEM block
 	block, _ := pem.Decode(pubReadIn)
 	if block == nil {
-		return nil, fmt.Errorf("unable to decode a byte slice as a PEM block: %w", err)
+		return nil, fmt.Errorf("basic_auth: readFirstPEMBlockFromFile(): unable to decode a byte slice as a PEM block: %w", err)
 	}
 
 	return block, nil
@@ -249,7 +255,7 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
 	fmt.Fprint(w, form)
 }
 
-func userIsInLDAP(sysLogger *logger.Logger, userName, password string) bool {
+func userIsInLDAP(userName, password string) (bool, error) {
 	// retrieve connection parameters from config file instead of hard coding
 
 	client := &ldap.LDAPClient{
@@ -268,12 +274,10 @@ func userIsInLDAP(sysLogger *logger.Logger, userName, password string) bool {
 
 	ok, _, err := client.Authenticate(userName, password)
 	if err != nil {
-		sysLogger.Errorf("Error authenticating user %s: %+v\n", userName, err)
-		return false
+		return false, fmt.Errorf("basic_auth: userIsInLDAP(): unable to authenticate the user '%s': %w", userName, err)
 	}
 	if !ok {
-		sysLogger.Errorf("Authenticating failed for user %s\n", userName)
-		return false
+		return false, fmt.Errorf("basic_auth: userIsInLDAP(): authenticating failed for user '%s'", userName)
 	}
-	return true
+	return true, nil
 }

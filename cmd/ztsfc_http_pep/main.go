@@ -109,7 +109,7 @@ func main() {
 	// defer profile.Start(profile.GoroutineProfile, profile.ProfilePath(".")).Stop()
 
 	// Create a new PEP router
-	pep, err := router.NewRouter(sysLogger)
+	pep, err := router.New(sysLogger)
 	if err != nil {
 		sysLogger.Fatalf("main: main(): unable to create a new router: %w", err)
 	}
