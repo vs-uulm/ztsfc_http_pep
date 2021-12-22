@@ -112,17 +112,17 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// observe errors and abort routine if something goes wrong
 	// @author:marie
 	if err != nil {
-		router.sysLogger.WithField("issuer", "PDP").Error(err)
+		router.sysLogger.WithField("issuer", "PDP").Errorf("router: ServeHTTP(): %w", err)
 		return
 	}
 
 	// RM FOR PRODUCTIVE
 	if !md.AuthDecision {
-		router.sysLogger.Info("Request was rejected due to too low trust score")
+		router.sysLogger.Info("router: ServeHTTP(): Request was rejected due to too low trust score")
 		w.WriteHeader(403)
 		return
 	}
-	router.sysLogger.Debugf("Request passed PDP. SFC: %s", md.SFC)
+	router.sysLogger.Debugf("router: ServeHTTP(): Request passed PDP. SFC: %s", md.SFC)
 
 	// If user could be authenticated, create ReverseProxy variable for the connection to serve
 	var proxy *httputil.ReverseProxy
@@ -132,7 +132,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//serviceConf, ok := config.Config.ServiceSniMap[md.Resource]
 	serviceConf, ok := config.Config.ServiceSniMap[req.Host]
 	if !ok {
-		router.sysLogger.WithField("sni", req.Host).Error("Requested SNI has no match in config file.")
+		router.sysLogger.WithField("sni", req.Host).Error("router: ServeHTTP(): Requested SNI has no match in the config file.")
 		return
 	}
 
@@ -142,7 +142,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// @author:marie
 	//if len(md.SFC) == 0 {
 
-	//	router.sysLogger.Debug("SFC is empty. Thus, no forwarding to SFP logic")
+	//	router.sysLogger.Debug("router: ServeHTTP(): SFC is empty. Thus, no forwarding to SFP logic")
 	//	serviceURL = serviceConf.TargetServiceUrl
 	//	certShownByPEP = serviceConf.X509KeyPairShownByPepToService
 
@@ -152,28 +152,28 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//	// observe errors and abort routine if something goes wrong
 	//	// @author:marie
 	//	if err != nil {
-	//		router.sysLogger.WithField("issuer", "SFP Logic").Error(err)
+	//		router.sysLogger.WithField("issuer", "SFP Logic").Errorf("router: ServeHTTP(): %w", err)
 	//		return
 	//	}
-	//	router.sysLogger.Debugf("Request passed SFP logic. SFP: %s", md.SFP)
+	//	router.sysLogger.Debugf("router: ServeHTTP(): Request passed SFP logic. SFP: %s", md.SFP)
 
 	//	if len(md.SFP) == 0 {
-	//		router.sysLogger.Error("SFP is empty, even though SFC is not")
+	//		router.sysLogger.Error("router: ServeHTTP(): SFP is empty, even though SFC is not")
 	//		return
 	//	}
 
 	//	// identify next hop, find its config and set serviceURL and cert respectively
 	//	// @author:marie
 	//	nextHop := md.SFP[0]
-	//	router.sysLogger.Debugf("Next Hop: %s", nextHop)
+	//	router.sysLogger.Debugf("router: ServeHTTP(): Next Hop: %s", nextHop)
 	//	nextHopConf, ok := config.Config.SfPool[nextHop.Name]
 	//	if !ok {
-	//		router.sysLogger.WithField("sf", nextHop).Error("First SF from the SFP does not exist in config file.")
+	//		router.sysLogger.WithField("sf", nextHop).Error("router: ServeHTTP(): First SF from the SFP does not exist in config file.")
 	//		return
 	//	}
 	//	serviceURL, err = url.Parse(nextHop.Address)
 	//	if err != nil {
-	//		router.sysLogger.WithField("address", nextHop.Address).Error("Could not parse address value as URL.")
+	//		router.sysLogger.WithField("address", nextHop.Address).Error("router: ServeHTTP(): Could not parse address value as URL.")
 	//	}
 	//	certShownByPEP = nextHopConf.X509KeyPairShownByPepToSf
 
@@ -189,16 +189,16 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//	// @author:marie
 	//	ipAddresses = append(ipAddresses, serviceConf.TargetServiceAddr)
 	//	addressesStr := strings.Join(ipAddresses, ",")
-	//	router.sysLogger.Debugf("SFP as presented to following SFs: %s", addressesStr)
+	//	router.sysLogger.Debugf("router: ServeHTTP(): SFP as presented to following SFs: %s", addressesStr)
 
 	//	req.Header.Set("sfp", addressesStr)
 
 	//}
-	//router.sysLogger.Debugf("Service URL: %s", serviceURL.String())
+	//router.sysLogger.Debugf("router: ServeHTTP(): Service URL: %s", serviceURL.String())
 	serviceURL = serviceConf.TargetServiceUrl
-	router.sysLogger.Debugf("Service URL: %s", serviceURL.String())
+	router.sysLogger.Debugf("router: ServeHTTP(): Service URL: %s", serviceURL.String())
 	certShownByPEP = serviceConf.X509KeyPairShownByPepToService
-	router.sysLogger.Debugf("Service URL: %s", serviceConf.TargetServiceAddr)
+	router.sysLogger.Debugf("router: ServeHTTP(): Service URL: %s", serviceConf.TargetServiceAddr)
 
 	proxy = httputil.NewSingleHostReverseProxy(serviceURL)
 

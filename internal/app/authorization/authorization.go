@@ -61,7 +61,7 @@ func PerformAuthorization(sysLogger *logger.Logger, clientReq *http.Request, cpm
 	}
 
 	if sysLogger != nil {
-		sysLogger.Debugf("Response from PDP: %v", authRes)
+		sysLogger.Debugf("authorization: PerformAuthorization(): Response from PDP: %v", authRes)
 	}
 	cpm.SFC = authRes.SFC
 	cpm.AuthDecision = authRes.Allow

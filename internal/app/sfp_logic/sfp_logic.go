@@ -46,13 +46,13 @@ func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 	// send request to correct address and API endpoint
 	// @author:marie
 	req, err := http.NewRequest("GET", config.Config.SfpLogic.TargetSfplAddr+requestEndpoint, nil)
-	if err != nil { // @author:marie catch error
+	if err != nil {
 		return err
 	}
 	prepareSFPRequest(req, cpm)
 
 	if sysLogger != nil {
-		sysLogger.Debugf("Request to sfp logic: %v", req)
+		sysLogger.Debugf("sfp_logic: TransformSFCintoSFP(): Request to sfp logic: %v", req)
 	}
 
 	resp, err := proxies.SfpLogicClientPool[rand.Int()%50].Do(req)
@@ -70,7 +70,7 @@ func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 	}
 
 	if sysLogger != nil {
-		sysLogger.Debugf("Response from SFP logic: %v", sfpRes)
+		sysLogger.Debugf("sfp_logic: TransformSFCintoSFP(): Response from SFP logic: %v", sfpRes)
 	}
 
 	for _, sf := range sfpRes.SFP {
@@ -84,7 +84,6 @@ func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 }
 
 func prepareSFPRequest(req *http.Request, cpm *metadata.CpMetadata) {
-
 	// @author:marie
 	// send SFC as a query parameter instead of custom header
 	q := req.URL.Query()
@@ -92,5 +91,4 @@ func prepareSFPRequest(req *http.Request, cpm *metadata.CpMetadata) {
 		q.Add("sf", sf)
 	}
 	req.URL.RawQuery = q.Encode()
-
 }

@@ -5,12 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
-	"fmt"
 	"net/url"
-	"os"
-
-	"gopkg.in/yaml.v3"
 )
 
 // Config contains all input from the config file and is is globally accessible
@@ -115,29 +110,4 @@ type ConfigT struct {
 	CAcertPoolPepAcceptsFromExt *x509.CertPool
 	CAcertPoolPepAcceptsFromInt *x509.CertPool
 	ServiceSniMap               map[string]*ServiceT
-}
-
-// LoadConfig() parses a configuration yaml file into the global Config variable
-func LoadConfig(configPath string) error {
-	// If the config file path was not provided
-	if configPath == "" {
-		return errors.New("no configuration file is provided")
-	}
-
-	// Open config file
-	file, err := os.Open(configPath)
-	if err != nil {
-		return fmt.Errorf("unable to open the YAML configuration file '%s': %w", configPath, err)
-	}
-	defer file.Close()
-
-	// Init new YAML decode
-	d := yaml.NewDecoder(file)
-
-	// Decode configuration from the YAML config file
-	err = d.Decode(&Config)
-	if err != nil {
-		return fmt.Errorf("unable to decode the YAML configuration file '%s': %w", configPath, err)
-	}
-	return nil
 }

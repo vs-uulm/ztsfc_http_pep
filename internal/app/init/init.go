@@ -425,7 +425,7 @@ func SetupCloseHandler(logger *logger.Logger) {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		logger.Debug("- 'Ctrl + C' was pressed in the Terminal. Terminating...")
+		logger.Debug(" 'Ctrl + C' was pressed in the Terminal. Terminating...")
 		logger.Terminate()
 		os.Exit(0)
 	}()

@@ -28,7 +28,7 @@ func init() {
 	// Loading all config parameter from config file defined in "confFilePath"
 	err = config.LoadConfig(confFilePath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("main: init(): %s", err.Error())
 	}
 
 	// Create an instance of the system logger
@@ -39,11 +39,11 @@ func init() {
 		logger.Fields{"type": "system"},
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("main: init(): %s", err.Error())
 	}
 	confInit.SetupCloseHandler(sysLogger)
 
-	sysLogger.Debugf("loading logger configuration from %s - OK", confFilePath)
+	sysLogger.Debugf("main: init(): loading logger configuration from '%s' - OK", confFilePath)
 
 	// Create Certificate Pools for the CA certificates used by the PEP
 	config.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
@@ -56,43 +56,43 @@ func init() {
 	// pep
 	err = confInit.InitPepParams(sysLogger)
 	if err != nil {
-		sysLogger.Fatal(err)
+		sysLogger.Fatalf("main: init(): %w", err)
 	}
 
 	// nit BasicAuth, session, JWT certs
 	err = confInit.InitBasicAuth(sysLogger)
 	if err != nil {
-		sysLogger.Fatal(err)
+		sysLogger.Fatalf("main: init(): %w", err)
 	}
 
 	// ldap
 	err = confInit.InitLdapParams(sysLogger)
 	if err != nil {
-		sysLogger.Fatal(err)
+		sysLogger.Fatalf("main: init(): %w", err)
 	}
 
 	// pdp
 	err = confInit.InitPdpParams(sysLogger)
 	if err != nil {
-		sysLogger.Fatal(err)
+		sysLogger.Fatalf("main: init(): %w", err)
 	}
 
 	// sfp_logic
 	err = confInit.InitSfplParams(sysLogger)
 	if err != nil {
-		sysLogger.Fatal(err)
+		sysLogger.Fatalf("main: init(): %w", err)
 	}
 
 	// service_pool
 	err = confInit.InitServicePoolParams(sysLogger)
 	if err != nil {
-		sysLogger.Fatal(err)
+		sysLogger.Fatalf("main: init(): %w", err)
 	}
 
 	// sf_pool
 	err = confInit.InitSfPoolParams(sysLogger)
 	if err != nil {
-		sysLogger.Fatal(err)
+		sysLogger.Fatalf("main: init(): %w", err)
 	}
 
 	// Init Reverse Proxies used for the modules
@@ -113,7 +113,7 @@ func main() {
 	if err != nil {
 		sysLogger.Fatalf("main: unable to create a new router: %w", err)
 	}
-	sysLogger.Debug("main: new router was successfully created")
+	sysLogger.Debug("main: main(): new router was successfully created")
 
 	http.Handle("/", pep)
 
