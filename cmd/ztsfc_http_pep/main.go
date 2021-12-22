@@ -11,6 +11,7 @@ import (
 	confInit "github.com/vs-uulm/ztsfc_http_pep/internal/app/init"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/proxies"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/router"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/yaml"
 )
 
 var (
@@ -26,7 +27,7 @@ func init() {
 	flag.Parse()
 
 	// Loading all config parameter from config file defined in "confFilePath"
-	err = config.LoadConfig(confFilePath)
+	err = yaml.LoadYamlFile(confFilePath, &config.Config)
 	if err != nil {
 		log.Fatalf("main: init(): %s", err.Error())
 	}
