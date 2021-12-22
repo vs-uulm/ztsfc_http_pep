@@ -43,7 +43,6 @@ func init() {
 		log.Fatal(err)
 	}
 	confInit.SetupCloseHandler(sysLogger)
-
 	sysLogger.Debugf("main: init(): loading logger configuration from '%s' - OK", confFilePath)
 
 	// Create Certificate Pools for the CA certificates used by the PEP
@@ -60,7 +59,7 @@ func init() {
 		sysLogger.Fatal(err)
 	}
 
-	// nit BasicAuth, session, JWT certs
+	// Init BasicAuth, session, JWT certs
 	err = confInit.InitBasicAuth(sysLogger)
 	if err != nil {
 		sysLogger.Fatal(err)
@@ -109,10 +108,10 @@ func main() {
 	// defer profile.Start(profile.BlockProfile, profile.ProfilePath(".")).Stop()
 	// defer profile.Start(profile.GoroutineProfile, profile.ProfilePath(".")).Stop()
 
-	// Create new PEP router
+	// Create a new PEP router
 	pep, err := router.NewRouter(sysLogger)
 	if err != nil {
-		sysLogger.Fatalf("main: unable to create a new router: %w", err)
+		sysLogger.Fatalf("main: main(): unable to create a new router: %w", err)
 	}
 	sysLogger.Debug("main: main(): new router was successfully created")
 
@@ -120,6 +119,6 @@ func main() {
 
 	err = pep.ListenAndServeTLS()
 	if err != nil {
-		sysLogger.Fatalf("main: ListenAndServeTLS() fatal error: %w", err)
+		sysLogger.Fatalf("main: main(): ListenAndServeTLS() fatal error: %w", err)
 	}
 }
