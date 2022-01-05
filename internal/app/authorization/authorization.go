@@ -6,13 +6,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+    "net"
 	"net/http"
 	"strconv"
+    "strings"
 
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/proxies"
+
+    "github.com/mileusna/useragent"
 )
 
 const (
@@ -20,100 +24,96 @@ const (
 	requestEndpoint = "/v1/authorization"
 )
 
-type authResponse struct {
+type authoResponse struct {
 	Allow bool     `json:"allow"`
 	SFC   []string `json:"sfc"`
 }
 
-//var sysLogger *logger.Logger
-
-// SetLogger() sets the sysLogger to send the log messages to
-//func SetLogger(lw *logger.Logger) {
-//	sysLogger = lw
-//}
-
-// PerformAuthorization decides for a specific client request, wether it should
-// allowed and if so, under which conditions. Therefore, it communicates with
-// the PDP over HTTPS. The PDP makes the authorization decision and returns it
-// together with an SFC.
-// The functions writes some meta data about the request into cpm and also
-// stores the answers of the PDP in here.
+// Sends an auhtorization request to the PEP for to the passed client resource access request 
+// Step 1: Extracts all needed authorization metadata from the passed client request
 func PerformAuthorization(sysLogger *logger.Logger, clientReq *http.Request, cpm *metadata.CpMetadata) error {
 	collectAttributes(clientReq, cpm)
 
 	// send request to correct address and API endpoint
-	req, err := http.NewRequest("GET", config.Config.Pdp.TargetPdpAddr+requestEndpoint, nil)
+	authoReq, err := http.NewRequest("GET", config.Config.Pdp.TargetPdpAddr+requestEndpoint, nil)
 	if err != nil {
 		return fmt.Errorf("unable to create authorization request for PDP: %w", err)
 	}
 
-	prepareAuthRequest(req, cpm)
-	resp, err := proxies.PdpClientPool[rand.Int()%50].Do(req)
+	prepareAuthRequest(authoReq, cpm)
+	pdpResp, err := proxies.PdpClientPool[rand.Int()%50].Do(authoReq)
 	if err != nil {
 		return fmt.Errorf("unable to send to PDP: %w", err)
 	}
 
-	// Decode json body received from PDP
-	var authRes authResponse
-	err = json.NewDecoder(resp.Body).Decode(&authRes)
+	// Decode json body received from PDP (pdpResp)
+	var authoResp authoResponse
+	err = json.NewDecoder(pdpResp.Body).Decode(&authoResp)
 	if err != nil {
 		return fmt.Errorf("unable to parse json answer from PDP: %w", err)
 	}
 
 	if sysLogger != nil {
-		sysLogger.Debugf("Response from PDP: %v", authRes)
+		sysLogger.Debugf("Response from PDP: %v", authoResp)
 	}
-	cpm.SFC = authRes.SFC
-	cpm.AuthDecision = authRes.Allow
+	cpm.SFC = authoResp.SFC
+	cpm.AuthDecision = authoResp.Allow
 
 	return nil
 }
 
-func prepareAuthRequest(req *http.Request, cpm *metadata.CpMetadata) {
-	// @author:marie
+func prepareAuthRequest(authoReq *http.Request, cpm *metadata.CpMetadata) {
 	// send parameters as a query parameter instead of custom header
-	q := req.URL.Query()
+	q := authoReq.URL.Query()
 	q.Set("user", cpm.User)
 	q.Set("pwAuthenticated", strconv.FormatBool(cpm.PwAuthenticated))
 	q.Set("certAuthenticated", strconv.FormatBool(cpm.CertAuthenticated))
 	q.Set("resource", cpm.Resource)
 	q.Set("action", cpm.Action)
 	q.Set("device", cpm.Device)
-	q.Set("requestToday", cpm.RequestToday)
-	q.Set("failedToday", cpm.FailedToday)
+	//q.Set("requestToday", cpm.RequestToday)
+	//q.Set("failedToday", cpm.FailedToday)
 	q.Set("location", cpm.Location)
-	req.URL.RawQuery = q.Encode()
+	authoReq.URL.RawQuery = q.Encode()
 }
 
-func collectAttributes(req *http.Request, cpm *metadata.CpMetadata) {
-	collectResource(req, cpm)
-	collectAction(req, cpm)
-	collectDevice(req, cpm)
-	collectRequestToday(req, cpm)
-	collectFailedToday(req, cpm)
-	collectLocation(req, cpm)
+func collectAttributes(clientReq *http.Request, cpm *metadata.CpMetadata) {
+	collectResource(clientReq, cpm)
+	collectAction(clientReq, cpm)
+	collectDevice(clientReq, cpm)
+	//collectRequestToday(clientReq, cpm)
+	//collectFailedToday(clientReq, cpm)
+	collectLocation(clientReq, cpm)
 }
 
-func collectResource(req *http.Request, cpm *metadata.CpMetadata) {
-	cpm.Resource = req.Host
+func collectResource(clientReq *http.Request, cpm *metadata.CpMetadata) {
+	cpm.Resource = clientReq.Host
 }
 
-func collectAction(req *http.Request, cpm *metadata.CpMetadata) {
-	cpm.Action = req.Method
+func collectAction(clientReq *http.Request, cpm *metadata.CpMetadata) {
+	cpm.Action = strings.ToLower(clientReq.Method)
 }
 
-func collectDevice(req *http.Request, cpm *metadata.CpMetadata) {
-	cpm.Device = req.Header.Get("device")
+func collectDevice(clientReq *http.Request, cpm *metadata.CpMetadata) {
+    ua := ua.Parse(clientReq.Header.Get("User-Agent"))
+	cpm.Device = ua.Device + ";" + ua.Name + ";" + ua.OS + ";" + ua.OSVersion
 }
 
-func collectRequestToday(req *http.Request, cpm *metadata.CpMetadata) {
-	cpm.RequestToday = req.Header.Get("requestToday")
+func collectRequestToday(clientReq *http.Request, cpm *metadata.CpMetadata) {
+	cpm.RequestToday = clientReq.Header.Get("clientRequestToday")
 }
 
-func collectFailedToday(req *http.Request, cpm *metadata.CpMetadata) {
-	cpm.FailedToday = req.Header.Get("failedToday")
+func collectFailedToday(clientReq *http.Request, cpm *metadata.CpMetadata) {
+	cpm.FailedToday = clientReq.Header.Get("failedToday")
 }
 
-func collectLocation(req *http.Request, cpm *metadata.CpMetadata) {
-	cpm.Location = req.Header.Get("location")
+// TODO: Harden this function
+func collectLocation(clientReq *http.Request, cpm *metadata.CpMetadata) error {
+    host, _, err := net.SplitHostPort(clientReq.RemoteAddr)
+    if err != nil {
+        return fmt.Errorf("authorization: collectLocation(): provided req.RemoteAddr not in valid host:port form %w", err)
+    }
+
+	cpm.Location = host
+    return nil
 }

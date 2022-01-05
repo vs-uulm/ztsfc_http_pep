@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-
 	"time"
+    "io"
 
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	pdp "github.com/vs-uulm/ztsfc_http_pep/internal/app/authorization"
@@ -79,7 +79,6 @@ func addHSTSHeader(w http.ResponseWriter) {
 // help of the PEP, transformation from SFCs into SFPs with help of the SFP
 // Logic, and then forwards the package along the SFP.
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-
 	// Add HSTS Header
 	addHSTSHeader(w)
 
@@ -118,7 +117,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// RM FOR PRODUCTIVE
 	if !md.AuthDecision {
-		router.sysLogger.Info("Request was rejected due to too low trust score")
+		router.sysLogger.Info("router: ServeHTTP(): request from user %s was rejected due to too low trust score", md.User)
+        io.WriteString(w, "Request has been rejected due to a too low trust score. Contact your security advisor for more information.")
 		w.WriteHeader(403)
 		return
 	}
