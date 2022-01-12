@@ -18,6 +18,7 @@ import (
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/basic_auth"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/blocklist"
 	//	sfpl "github.com/vs-uulm/ztsfc_http_pep/internal/app/sfp_logic"
 )
 
@@ -81,6 +82,13 @@ func addHSTSHeader(w http.ResponseWriter) {
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Add HSTS Header
 	addHSTSHeader(w)
+
+    // Check if req.RemoteAddr is on one of the blocklists
+    if blocklist.BlockRequest(req) {
+        io.WriteString(w, "Request has been rejected since you are on a blocklist. Contact your security advisor for more information.")
+		w.WriteHeader(403)
+        return
+    }
 
 	// Used for measuring the time ServeHTTP runs
 	//start := time.Now()

@@ -24,6 +24,11 @@ type sysLoggerT struct {
 	IfTextFormatter string `yaml:"system_logger_format"`
 }
 
+type BlocklistsT struct {
+    PathToBotnetList string `yaml:"path_to_botnet_list"`
+    BotnetList map[string]struct{}
+}
+
 // The struct PepT is for parsing the section 'pep' of the config file.
 type PepT struct {
 	ListenAddr                        string   `yaml:"listen_addr"`
@@ -104,6 +109,7 @@ type ServFunctionT struct {
 // ConfigT struct is for parsing the basic structure of the config file
 type ConfigT struct {
 	SysLogger sysLoggerT `yaml:"system_logger"`
+    Blocklists BlocklistsT `yaml:"blocklists"`
 	Pep       PepT       `yaml:"pep"`
 	BasicAuth BasicAuthT `yaml:"basic_auth"`
 	Ldap      LdapT      `yaml:"ldap"`

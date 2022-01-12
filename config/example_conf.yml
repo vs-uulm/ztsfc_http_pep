@@ -13,6 +13,9 @@ system_logger:
   system_logger_destination: stdout
   system_logger_format: text
 
+blocklists:
+  path_to_botnet_list: "./path"
+
 # Section pep contains basic configuration for the PEP.
 # The default_pool_size is used for connections to PDP and SFP Logic, if no
 # pool size values are provided in the respective sections

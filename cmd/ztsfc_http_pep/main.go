@@ -31,8 +31,10 @@ func init() {
 		log.Fatal(err)
 	}
 
-	// Create an instance of the system logger
+    // init system logger
 	confInit.InitSysLoggerParams()
+
+	// Create an instance of the system logger
 	sysLogger, err = logger.New(config.Config.SysLogger.LogFilePath,
 		config.Config.SysLogger.LogLevel,
 		config.Config.SysLogger.IfTextFormatter,
@@ -53,43 +55,49 @@ func init() {
 	// (One function for each section in config.yml)
 	confInit.InitDefaultValues(sysLogger)
 
-	// pep
+    // init blocklists
+    err = confInit.InitBlocklists(sysLogger)
+	if err != nil {
+		sysLogger.Fatal(err)
+	}
+
+	// init pep
 	err = confInit.InitPepParams(sysLogger)
 	if err != nil {
 		sysLogger.Fatal(err)
 	}
 
-	// nit BasicAuth, session, JWT certs
+	// init BasicAuth, session, JWT certs
 	err = confInit.InitBasicAuth(sysLogger)
 	if err != nil {
 		sysLogger.Fatal(err)
 	}
 
-	// ldap
+	// init ldap
 	err = confInit.InitLdapParams(sysLogger)
 	if err != nil {
 		sysLogger.Fatal(err)
 	}
 
-	// pdp
+	// init pdp
 	err = confInit.InitPdpParams(sysLogger)
 	if err != nil {
 		sysLogger.Fatal(err)
 	}
 
-	// sfp_logic
+	// init  sfp_logic
 	err = confInit.InitSfplParams(sysLogger)
 	if err != nil {
 		sysLogger.Fatal(err)
 	}
 
-	// service_pool
+	// init service_pool
 	err = confInit.InitServicePoolParams(sysLogger)
 	if err != nil {
 		sysLogger.Fatal(err)
 	}
 
-	// sf_pool
+	// init sf_pool
 	err = confInit.InitSfPoolParams(sysLogger)
 	if err != nil {
 		sysLogger.Fatal(err)
