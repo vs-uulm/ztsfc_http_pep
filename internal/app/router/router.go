@@ -90,6 +90,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
     if blocklist.BlockRequest(req) {
         io.WriteString(w, "Request has been rejected since you are on a blocklist. Contact your security advisor for more information.")
 		w.WriteHeader(403)
+        router.sysLogger.Infof("router: ServerHTTP(): Request from %s has been blocked since it is on a blocklist", req.RemoteAddr)
         return
     }
 
