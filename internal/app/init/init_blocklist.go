@@ -6,6 +6,7 @@ import (
     "net"
     "strings"
     "io/ioutil"
+    "time"
 
     "github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
     logger "github.com/vs-uulm/ztsfc_http_logger"
@@ -23,8 +24,6 @@ func initBotnetBlocklist(sysLogger *logger.Logger) error {
     if config.Config.Blocklists.PathToBotnetList == "" {
         return errors.New("InitBlocklist(): path to botnet blocklist is not defined")
     }
-
-    //return fmt.Errorf("init: InitServicePoolParams(): unable to parse a target service URL for service function '%s': %w", sfName, err)
 
     botnetListData, err := ioutil.ReadFile(config.Config.Blocklists.PathToBotnetList)
     if err != nil {
@@ -45,5 +44,40 @@ func initBotnetBlocklist(sysLogger *logger.Logger) error {
         config.Config.Blocklists.BotnetList[ip] = struct{}{}
     }
 
+    go reloadRoutine(sysLogger)
+
     return nil
+}
+
+func reloadRoutine(sysLogger *logger.Logger) {
+    reloadInterval := time.Tick(1 * time.Minute)
+    for _ = range reloadInterval {
+        if reloadBotnetList(sysLogger) {
+            sysLogger.Info("init: reloadRoutine(): successfully updated botnet blocklist")
+        } else {
+            sysLogger.Info("init: reloadRoutine(): updating the botnet blocklist failed... trying again in 5 minutes")
+        }
+    }
+}
+
+func reloadBotnetList(sysLogger *logger.Logger) bool {
+    botnetListData, err := ioutil.ReadFile(config.Config.Blocklists.PathToBotnetList)
+    if err != nil {
+        return false
+    }
+
+    arrOfBotnetIPs := strings.Split(string(botnetListData), "\n")
+
+    for _, ip := range arrOfBotnetIPs {
+        if net.ParseIP(ip) == nil {
+            continue
+        }
+
+        if _, exist := config.Config.Blocklists.BotnetList[ip]; exist {
+            continue
+        } else {
+            config.Config.Blocklists.BotnetList[ip] = struct{}{}
+        }
+    }
+    return true
 }
