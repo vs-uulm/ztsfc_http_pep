@@ -66,6 +66,7 @@ func reloadBotnetList(sysLogger *logger.Logger) bool {
         return false
     }
 
+    newBotnetList := make(map[string]struct{})
     arrOfBotnetIPs := strings.Split(string(botnetListData), "\n")
 
     for _, ip := range arrOfBotnetIPs {
@@ -73,11 +74,16 @@ func reloadBotnetList(sysLogger *logger.Logger) bool {
             continue
         }
 
-        if _, exist := config.Config.Blocklists.BotnetList[ip]; exist {
+        if _, exist := newBotnetList[ip]; exist {
             continue
         } else {
-            config.Config.Blocklists.BotnetList[ip] = struct{}{}
+            newBotnetList[ip] = struct{}{}
         }
     }
+
+    config.Config.Blocklists.WaitBotnetList.Add(1)
+    config.Config.Blocklists.BotnetList = newBotnetList
+    config.Config.Blocklists.WaitBotnetList.Add(-1)
+
     return true
 }

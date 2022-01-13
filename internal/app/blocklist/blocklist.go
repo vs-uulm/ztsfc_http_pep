@@ -18,6 +18,7 @@ func BlockRequest(req *http.Request) bool {
         return true
     }
 
+    config.Config.Blocklists.WaitBotnetList.Wait()
     _, ok := config.Config.Blocklists.BotnetList[host]
     if ok {
         return true

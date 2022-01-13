@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+    "sync"
 
 	"gopkg.in/yaml.v3"
 )
@@ -27,6 +28,7 @@ type sysLoggerT struct {
 type BlocklistsT struct {
     PathToBotnetList string `yaml:"path_to_botnet_list"`
     BotnetList map[string]struct{}
+    WaitBotnetList  sync.WaitGroup
 }
 
 // The struct PepT is for parsing the section 'pep' of the config file.

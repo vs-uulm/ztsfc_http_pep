@@ -80,6 +80,9 @@ func addHSTSHeader(w http.ResponseWriter) {
 // help of the PEP, transformation from SFCs into SFPs with help of the SFP
 // Logic, and then forwards the package along the SFP.
 func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
+	router.sysLogger.LogHTTPRequest(req)
+
 	// Add HSTS Header
 	addHSTSHeader(w)
 
@@ -96,9 +99,6 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//var err error
 	// RM FOR PRODUCTIVE
 	md := new(metadata.CpMetadata)
-
-	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
-	router.sysLogger.LogHTTPRequest(req)
 
 	// BASIC AUTHENTICATION
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
