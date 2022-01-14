@@ -52,18 +52,19 @@ func initBotnetBlocklist(sysLogger *logger.Logger) error {
 func reloadRoutine(sysLogger *logger.Logger) {
     reloadInterval := time.Tick(1 * time.Minute)
     for _ = range reloadInterval {
-        if reloadBotnetList(sysLogger) {
+        err := reloadBotnetList(sysLogger)
+        if err == nil {
             sysLogger.Info("init: reloadRoutine(): successfully updated botnet blocklist")
         } else {
-            sysLogger.Info("init: reloadRoutine(): updating the botnet blocklist failed... trying again in 5 minutes")
+            sysLogger.Infof("init: reloadRoutine(): %v: updating the botnet blocklist failed... trying again in 5 minutes", err)
         }
     }
 }
 
-func reloadBotnetList(sysLogger *logger.Logger) bool {
+func reloadBotnetList(sysLogger *logger.Logger) error {
     botnetListData, err := ioutil.ReadFile(config.Config.Blocklists.PathToBotnetList)
     if err != nil {
-        return false
+        return fmt.Errorf("reloadBotnetList(): %v", err)
     }
 
     newBotnetList := make(map[string]struct{})
@@ -85,5 +86,5 @@ func reloadBotnetList(sysLogger *logger.Logger) bool {
     config.Config.Blocklists.BotnetList = newBotnetList
     config.Config.Blocklists.WaitBotnetList.Add(-1)
 
-    return true
+    return nil
 }
