@@ -32,7 +32,7 @@ func initBotnetBlocklist(sysLogger *logger.Logger) error {
 
     arrOfBotnetIPs := strings.Split(string(botnetListData), "\n")
     if len(arrOfBotnetIPs) == 1 {
-        sysLogger.Debugf("init: InitBlocklist(): initBotnetBlocklist(): botnet blocklist contains only one entry. is this correct?")
+        sysLogger.Infof("init: InitBlocklist(): initBotnetBlocklist(): botnet blocklist contains only one entry. is this correct?")
     }
 
     config.Config.Blocklists.BotnetList = make(map[string]struct{})

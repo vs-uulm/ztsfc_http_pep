@@ -19,7 +19,7 @@ type CpMetadata struct {
 	SFC               []string
 	SFP               []struct {
 		Name    string
-		Address string
+		URL string
 	}
 }
 
@@ -39,6 +39,6 @@ func (cpm *CpMetadata) ClearMetadata() {
 	cpm.SFC = []string{}
 	cpm.SFP = []struct {
 		Name    string
-		Address string
+		URL string
 	}{}
 }

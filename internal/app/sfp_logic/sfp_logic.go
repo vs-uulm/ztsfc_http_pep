@@ -15,8 +15,6 @@ import (
 )
 
 const (
-	// @author:marie
-	// Last part of the endpoint's request URI of the PDP API
 	requestEndpoint = "/v1/sfp"
 )
 
@@ -24,15 +22,8 @@ type sfpResponse struct {
 	SFC []string `json:"sfc"`
 	SFP []struct {
 		Name    string `json:"name"`
-		Address string `json:"address"`
+		URL string `json:"url"`
 	} `json:"sfp"`
-}
-
-var sysLogger *logger.Logger
-
-// SetLogger() sets the sysLogger to send the log messages to
-func SetLogger(logger *logger.Logger) {
-	sysLogger = logger
 }
 
 // TransformSFCintoSFP creates a service function path out of a service
@@ -41,43 +32,41 @@ func SetLogger(logger *logger.Logger) {
 // and then returns the result, the SFP.
 // The functions reads the SFC from cpm and also writes the SFP into this
 // struct.
-func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
+func TransformSFCIntoSFP(sysLogger *logger.Logger, cpm *metadata.CpMetadata) error {
 
 	// send request to correct address and API endpoint
-	// @author:marie
 	req, err := http.NewRequest("GET", config.Config.SfpLogic.TargetSfplAddr+requestEndpoint, nil)
-	if err != nil { // @author:marie catch error
-		return err
+	if err != nil {
+		return fmt.Errorf("sfp_logic: TransformSFCIntoSFP(): could not create new SFPL request: %v", err)
 	}
+
 	prepareSFPRequest(req, cpm)
 
-	if sysLogger != nil {
-		sysLogger.Debugf("Request to sfp logic: %v", req)
-	}
+    sysLogger.Debugf("sfp_log: TransformSFCIntoSFP(): Request to sfp logic: %v", req)
 
 	resp, err := proxies.SfpLogicClientPool[rand.Int()%50].Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("sfp_logic: TransformSFCIntoSFP(): could not sent sfpl reqest: %v", err)
 	}
 
-	// @author:marie
 	// Decode json body received from SFP logic
 	var sfpRes sfpResponse
 
 	err = json.NewDecoder(resp.Body).Decode(&sfpRes)
 	if err != nil {
-		return fmt.Errorf("could not parse json answer from sfp logic: %w", err)
+		return fmt.Errorf("sfp_logic: TransformSFCIntoSFP(): could not parse json answer from sfp logic: %w", err)
 	}
 
-	if sysLogger != nil {
-		sysLogger.Debugf("Response from SFP logic: %v", sfpRes)
-	}
+    sysLogger.Debugf("sfp_logic: TransformSFCIntoSFP(): response from SFP logic: %v", sfpRes)
 
 	for _, sf := range sfpRes.SFP {
 		cpm.SFP = append(cpm.SFP, struct {
 			Name    string
-			Address string
-		}{Name: sf.Name, Address: sf.Address})
+			URL string
+		}{
+            Name: sf.Name,
+            URL: sf.URL,
+        })
 	}
 
 	return nil
@@ -85,11 +74,10 @@ func TransformSFCintoSFP(cpm *metadata.CpMetadata) error {
 
 func prepareSFPRequest(req *http.Request, cpm *metadata.CpMetadata) {
 
-	// @author:marie
-	// send SFC as a query parameter instead of custom header
+	// send SFC as a query parameter
 	q := req.URL.Query()
 	for _, sf := range cpm.SFC {
-		q.Add("sf", sf)
+		q.Add("sfc", sf)
 	}
 	req.URL.RawQuery = q.Encode()
 
