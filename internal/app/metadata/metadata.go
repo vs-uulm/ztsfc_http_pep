@@ -2,6 +2,16 @@
 // during processing inside the PEP.
 package metadata
 
+type AuthoResponse struct {
+        Allow bool     `json:"allow"`
+        SFC   []Sf `json:"sfc"`
+}
+
+type Sf struct {
+    Name string `json:"name"`
+    Md string `json:"md"`
+}
+
 // The struct CpMetadata is for storing several meta data for a client
 // request. The struct can be passed across the PEP, such that several
 // components can collect different information in here.
@@ -16,7 +26,7 @@ type CpMetadata struct {
 	RequestToday      string
 	FailedToday       string
 	Location          string
-	SFC               []string
+	SFC               []Sf
 	SFP               []struct {
 		Name    string
 		URL string
@@ -36,7 +46,7 @@ func (cpm *CpMetadata) ClearMetadata() {
 	cpm.RequestToday = ""
 	cpm.FailedToday = ""
 	cpm.Location = ""
-	cpm.SFC = []string{}
+	cpm.SFC = []Sf{}
 	cpm.SFP = []struct {
 		Name    string
 		URL string

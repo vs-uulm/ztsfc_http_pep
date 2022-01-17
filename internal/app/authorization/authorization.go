@@ -24,11 +24,6 @@ const (
 	requestEndpoint = "/v1/authorization"
 )
 
-type authoResponse struct {
-	Allow bool     `json:"allow"`
-	SFC   []string `json:"sfc"`
-}
-
 // Sends an auhtorization request to the PEP for to the passed client resource access request 
 // Step 1: Extracts all needed authorization metadata from the passed client request
 func PerformAuthorization(sysLogger *logger.Logger, clientReq *http.Request, cpm *metadata.CpMetadata) error {
@@ -47,7 +42,7 @@ func PerformAuthorization(sysLogger *logger.Logger, clientReq *http.Request, cpm
 	}
 
 	// Decode json body received from PDP (pdpResp)
-	var authoResp authoResponse
+	var authoResp metadata.AuthoResponse
 	err = json.NewDecoder(pdpResp.Body).Decode(&authoResp)
 	if err != nil {
 		return fmt.Errorf("unable to parse json answer from PDP: %w", err)

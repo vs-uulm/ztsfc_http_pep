@@ -76,6 +76,15 @@ func addHSTSHeader(w http.ResponseWriter) {
 	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 }
 
+func prepareSfMdHeader(req *http.Request, cpm *metadata.CpMetadata) {
+    for _, sf := range cpm.SFC {
+        switch sf.Name {
+            case "logger":
+                req.Header.Set("Logger_MD", sf.Md)
+        }
+    }
+}
+
 // ServeHTTP gets called if a request receives the PEP. The function implements
 // the PEP's main routine: It performs basic authentication, authorization with
 // help of the PEP, transformation from SFCs into SFPs with help of the SFP
@@ -161,7 +170,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	    // identify next hop, find its config and set nextHopURL and cert respectively
 	    nextHop := md.SFP[0]
         // TODO: make this dynamic later
-        req.Header.Set("Sfloggerlevel", "16383")
+        prepareSfMdHeader(req, md)
+        fmt.Printf("LoGGER MD Header: %s\n", req.Header.Values("Logger_MD"))
 
 	    router.sysLogger.Debugf("router: ServeHTTP(): next hop: %s", nextHop)
 

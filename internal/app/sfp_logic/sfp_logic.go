@@ -77,7 +77,7 @@ func prepareSFPRequest(req *http.Request, cpm *metadata.CpMetadata) {
 	// send SFC as a query parameter
 	q := req.URL.Query()
 	for _, sf := range cpm.SFC {
-		q.Add("sfc", sf)
+		q.Add("sfc", sf.Name)
 	}
 	req.URL.RawQuery = q.Encode()
 
