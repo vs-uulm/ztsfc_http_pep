@@ -28,19 +28,22 @@ pep:
 # Section ldap contains configuration necessary to connect to an LDAP server
 # performing basic authentication
 ldap:
-  base: "ou=people,dc=planetexpress,dc=com"
+#  base: "ou=people,dc=planetexpress,dc=com"
   host: "127.0.0.1"
   port: 10389
-  use_ssl: false
-  bind_dn: "cn=admin,dc=planetexpress,dc=com"
-  bind_password: "GoodNewsEveryone"
+#  use_ssl: false
+#  bind_dn: "cn=admin,dc=planetexpress,dc=com"
+#  bind_password: "GoodNewsEveryone"
   user_filter: "(uid=%s)"
-  group_filter: "(memberUid=%s)"
+#  group_filter: "(memberUid=%s)"
   attributes:
     - "givenName"
     - "sn"
     - "mail"
     - "uid"
+  cert_shown_by_pep_to_ldap: ./certs/ztsfc_pep_prototype.crt
+  privkey_for_cert_shown_by_pep_to_ldap: ./certs/ztsfc_pep_prototype_priv.key
+  cert_pep_accepts_shown_by_ldap: ./certs/bwnet_root.crt
 
 # Section pdp contains configuration to connect with the PDP. Those are address
 # and certificate files for mutual TLS. Further, you can define the number of
