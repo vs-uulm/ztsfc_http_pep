@@ -12,6 +12,7 @@ import (
     "sync"
 
 	"gopkg.in/yaml.v3"
+    "gopkg.in/ldap.v2"
 )
 
 // Config contains all input from the config file and is is globally accessible
@@ -60,6 +61,12 @@ type LdapT struct {
 	UserFilter   string   `yaml:"user_filter"`
 	GroupFilter  string   `yaml:"group_filter"`
 	Attributes   []string `yaml:"attributes"`
+
+	CertShownByPepToLdap           string `yaml:"cert_shown_by_pep_to_ldap"`
+	PrivkeyForCertShownByPepToLdap string `yaml:"privkey_for_cert_shown_by_pep_to_ldap"`
+	CertPepAcceptsShownByLdap      string `yaml:"cert_pep_accepts_shown_by_ldap"`
+	X509KeyPairShownByPepToLdap    tls.Certificate
+    LdapConn *ldap.Conn
 }
 
 // The struct PdpT is for parsing the section 'pdp' of the config file.

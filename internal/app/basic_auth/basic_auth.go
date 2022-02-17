@@ -14,7 +14,6 @@ import (
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v4"
-	"github.com/jtblin/go-ldap-client"
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
@@ -250,30 +249,14 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
 }
 
 func userIsInLDAP(sysLogger *logger.Logger, userName, password string) bool {
-	// retrieve connection parameters from config file instead of hard coding
 
-	client := &ldap.LDAPClient{
-		Base:         config.Config.Ldap.Base,
-		Host:         config.Config.Ldap.Host,
-		Port:         config.Config.Ldap.Port,
-		UseSSL:       config.Config.Ldap.UseSSL,
-		BindDN:       config.Config.Ldap.BindDN,
-		BindPassword: config.Config.Ldap.BindPassword,
-		UserFilter:   config.Config.Ldap.UserFilter,
-		GroupFilter:  config.Config.Ldap.GroupFilter,
-		Attributes:   config.Config.Ldap.Attributes,
-	}
-	// It is the responsibility of the caller to close the connection
-	defer client.Close()
+    fmt.Printf("userName=%s, password=%s, userFilter=%s\n", userName, password, fmt.Sprintf(config.Config.Ldap.UserFilter, userName))
 
-	ok, _, err := client.Authenticate(userName, password)
-	if err != nil {
-		sysLogger.Errorf("Error authenticating user %s: %+v\n", userName, err)
-		return false
-	}
-	if !ok {
-		sysLogger.Errorf("Authenticating failed for user %s\n", userName)
-		return false
-	}
-	return true
+    err := config.Config.Ldap.LdapConn.Bind(fmt.Sprintf(config.Config.Ldap.UserFilter, userName), password)
+    if err != nil {
+        sysLogger.Errorf("basic_auth: userIsInLDAP(): unable to bind to the LDAP server: %s", err.Error())
+        return false
+    }
+
+    return true
 }

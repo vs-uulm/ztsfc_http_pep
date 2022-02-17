@@ -12,9 +12,9 @@ import (
     logger "github.com/vs-uulm/ztsfc_http_logger"
 )
 
-func InitBlocklists(sysLogger *logger.Logger) error {
+func initBlocklists(sysLogger *logger.Logger) error {
     if err := initBotnetBlocklist(sysLogger); err != nil {
-        return fmt.Errorf("init: InitBlocklist(): %v", err)
+        return fmt.Errorf("initBlocklist(): %v", err)
     }
 
     return nil

@@ -51,57 +51,9 @@ func init() {
 	config.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
 	config.Config.CAcertPoolPepAcceptsFromInt = x509.NewCertPool()
 
-	// Preload diverse parameters from config
-	// (One function for each section in config.yml)
-	confInit.InitDefaultValues(sysLogger)
-
-    // init blocklists
-    err = confInit.InitBlocklists(sysLogger)
-	if err != nil {
-		sysLogger.Fatal(err)
-	}
-
-	// init pep
-	err = confInit.InitPepParams(sysLogger)
-	if err != nil {
-		sysLogger.Fatal(err)
-	}
-
-	// init BasicAuth, session, JWT certs
-	err = confInit.InitBasicAuth(sysLogger)
-	if err != nil {
-		sysLogger.Fatal(err)
-	}
-
-	// init ldap
-	err = confInit.InitLdapParams(sysLogger)
-	if err != nil {
-		sysLogger.Fatal(err)
-	}
-
-	// init pdp
-	err = confInit.InitPdpParams(sysLogger)
-	if err != nil {
-		sysLogger.Fatal(err)
-	}
-
-	// init  sfp_logic
-	err = confInit.InitSfplParams(sysLogger)
-	if err != nil {
-		sysLogger.Fatal(err)
-	}
-
-	// init service_pool
-	err = confInit.InitServicePoolParams(sysLogger)
-	if err != nil {
-		sysLogger.Fatal(err)
-	}
-
-	// init sf_pool
-	err = confInit.InitSfPoolParams(sysLogger)
-	if err != nil {
-		sysLogger.Fatal(err)
-	}
+    if err = confInit.InitConfig(sysLogger); err != nil {
+        sysLogger.Fatalf("main: init(): %v", err)
+    }
 
 	// Init Reverse Proxies used for the modules
 	// Basic_auth_proxy currently not needed since BasicAuth is performed as part of the PEP

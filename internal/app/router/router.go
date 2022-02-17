@@ -81,6 +81,8 @@ func prepareSfMdHeader(req *http.Request, cpm *metadata.CpMetadata) {
         switch sf.Name {
             case "logger":
                 req.Header.Set("Logger_MD", sf.Md)
+            case "ips":
+                req.Header.Set("ips_md", sf.Md)
         }
     }
 }
@@ -171,7 +173,6 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	    nextHop := md.SFP[0]
         // TODO: make this dynamic later
         prepareSfMdHeader(req, md)
-        fmt.Printf("LoGGER MD Header: %s\n", req.Header.Values("Logger_MD"))
 
 	    router.sysLogger.Debugf("router: ServeHTTP(): next hop: %s", nextHop)
 
