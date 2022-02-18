@@ -16,6 +16,8 @@ import (
 // InitLdapParams() initializes the 'ldap' section of the config file.
 // Function currently does nothing.
 func initLdap(sysLogger *logger.Logger) error {
+    sysLogger.Debugf("LDAP HERE")
+
 	var err error
 	fields := ""
 
@@ -63,6 +65,7 @@ func initLdap(sysLogger *logger.Logger) error {
 		return fmt.Errorf("init: InitLdap(): in the section 'ldap' the following required fields are missed: '%s'", strings.TrimSuffix(fields, ","))
 	}
 
+
 	// Preload X509KeyPair and write it to config
 	config.Config.Ldap.X509KeyPairShownByPepToLdap, err = loadX509KeyPair(sysLogger, config.Config.Ldap.CertShownByPepToLdap, config.Config.Ldap.PrivkeyForCertShownByPepToLdap, "LDAP", "")
 	if err != nil {
@@ -83,7 +86,7 @@ func initLdap(sysLogger *logger.Logger) error {
         ClientAuth:   tls.RequireAndVerifyClientCert,
         MinVersion:   tls.VersionTLS13,
         MaxVersion:   tls.VersionTLS13,
-        InsecureSkipVerify: true,
+//        InsecureSkipVerify: true,
     }
 
     config.Config.Ldap.LdapConn, err = ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", config.Config.Ldap.Host, config.Config.Ldap.Port), tlsConf)
