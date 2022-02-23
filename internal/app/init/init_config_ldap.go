@@ -16,8 +16,6 @@ import (
 // InitLdapParams() initializes the 'ldap' section of the config file.
 // Function currently does nothing.
 func initLdap(sysLogger *logger.Logger) error {
-    sysLogger.Debugf("LDAP HERE")
-
 	var err error
 	fields := ""
 
