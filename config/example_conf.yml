@@ -28,12 +28,14 @@ pep:
 # Section ldap contains configuration necessary to connect to an LDAP server
 # performing basic authentication
 ldap:
-#  base: "ou=people,dc=planetexpress,dc=com"
+  base: "ou=people,dc=planetexpress,dc=com"
   host: "127.0.0.1"
   port: 10389
 #  use_ssl: false
 #  bind_dn: "cn=admin,dc=planetexpress,dc=com"
 #  bind_password: "GoodNewsEveryone"
+  readonly_dn: "cn=readonly,dc=planetexpress,dc=com"
+  readonly_pw_path: "ro_pass.txt"
   user_filter: "(uid=%s)"
 #  group_filter: "(memberUid=%s)"
   attributes:

@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-    "sync"
+	"sync"
 
+	"gopkg.in/ldap.v2"
 	"gopkg.in/yaml.v3"
-    "gopkg.in/ldap.v2"
 )
 
 // Config contains all input from the config file and is is globally accessible
@@ -27,9 +27,9 @@ type sysLoggerT struct {
 }
 
 type BlocklistsT struct {
-    PathToBotnetList string `yaml:"path_to_botnet_list"`
-    BotnetList map[string]struct{}
-    WaitBotnetList  sync.WaitGroup
+	PathToBotnetList string `yaml:"path_to_botnet_list"`
+	BotnetList       map[string]struct{}
+	WaitBotnetList   sync.WaitGroup
 }
 
 // The struct PepT is for parsing the section 'pep' of the config file.
@@ -52,21 +52,24 @@ type SessionT struct {
 
 // The struct LdapT is for parsing the section 'ldap' of the config file.
 type LdapT struct {
-	Base         string   `yaml:"base"`
-	Host         string   `yaml:"host"`
-	Port         int      `yaml:"port"`
-	UseSSL       bool     `yaml:"use_ssl"`
-	BindDN       string   `yaml:"bind_dn"`
-	BindPassword string   `yaml:"bind_password"`
-	UserFilter   string   `yaml:"user_filter"`
-	GroupFilter  string   `yaml:"group_filter"`
-	Attributes   []string `yaml:"attributes"`
+	Base           string   `yaml:"base"`
+	Host           string   `yaml:"host"`
+	Port           int      `yaml:"port"`
+	UseSSL         bool     `yaml:"use_ssl"`
+	BindDN         string   `yaml:"bind_dn"`
+	BindPassword   string   `yaml:"bind_password"`
+	ReadonlyDN     string   `yaml:"readonly_dn"`
+	ReadonlyPwPath string   `yaml:"readonly_pw_path"`
+	UserFilter     string   `yaml:"user_filter"`
+	GroupFilter    string   `yaml:"group_filter"`
+	Attributes     []string `yaml:"attributes"`
 
 	CertShownByPepToLdap           string `yaml:"cert_shown_by_pep_to_ldap"`
 	PrivkeyForCertShownByPepToLdap string `yaml:"privkey_for_cert_shown_by_pep_to_ldap"`
 	CertPepAcceptsShownByLdap      string `yaml:"cert_pep_accepts_shown_by_ldap"`
 	X509KeyPairShownByPepToLdap    tls.Certificate
-    LdapConn *ldap.Conn
+	LdapConn                       *ldap.Conn
+	ReadonlyPW                     string
 }
 
 // The struct PdpT is for parsing the section 'pdp' of the config file.
@@ -117,13 +120,13 @@ type ServFunctionT struct {
 
 // ConfigT struct is for parsing the basic structure of the config file
 type ConfigT struct {
-	SysLogger sysLoggerT `yaml:"system_logger"`
-    Blocklists BlocklistsT `yaml:"blocklists"`
-	Pep       PepT       `yaml:"pep"`
-	BasicAuth BasicAuthT `yaml:"basic_auth"`
-	Ldap      LdapT      `yaml:"ldap"`
-	Pdp       PdpT       `yaml:"pdp"`
-	SfpLogic  SfplT      `yaml:"sfp_logic"`
+	SysLogger  sysLoggerT  `yaml:"system_logger"`
+	Blocklists BlocklistsT `yaml:"blocklists"`
+	Pep        PepT        `yaml:"pep"`
+	BasicAuth  BasicAuthT  `yaml:"basic_auth"`
+	Ldap       LdapT       `yaml:"ldap"`
+	Pdp        PdpT        `yaml:"pdp"`
+	SfpLogic   SfplT       `yaml:"sfp_logic"`
 	// TODO: Use Structs of ServiceT and ServFunctionT instead of pointers to the structs?
 	ServicePool                 map[string]*ServiceT      `yaml:"service_pool"`
 	SfPool                      map[string]*ServFunctionT `yaml:"sf_pool"`
