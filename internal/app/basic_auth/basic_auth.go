@@ -288,6 +288,8 @@ func GetUserDNfromLDAP(sysLogger *logger.Logger, userName string) (string, bool)
 		nil,
 	)
 
+    fmt.Printf("LDAP REQUEST: %v\n", searchRequest)
+
 	// Perform the search
 	sr, err := config.Config.Ldap.LdapConn.Search(searchRequest)
 	if err != nil {
