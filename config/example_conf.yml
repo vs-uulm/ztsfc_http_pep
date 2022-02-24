@@ -1,20 +1,40 @@
-# This is an example configuration for the ZTSFC PEP prototype.
-# Copy it to config.yaml and adapt it to your needs.
+## OLD CONFIG FILE
+# pep:
+#   listen_addr: ":443"
+#   certs_pep_accepts_when_shown_by_clients:
+#     - /etc/the_pep/certs/external_client_certs/bwnet_root.crt
+# 
+# service_pool:
+#   ztsfc_http_service:
+#     sni: service1.testbed.informatik.uni-ulm.de
+#     target_service_addr: "https://10.5.0.53:443"
+#     cert_shown_by_pep_to_clients_matching_sni: /etc/letsencrypt/live/service1.testbed.informatik.uni-ulm.de/fullchain.pem
+#     privkey_for_cert_shown_by_pep_to_client: /etc/letsencrypt/live/service1.testbed.informatik.uni-ulm.de/privkey.pem
+#     cert_shown_by_pep_to_service: /etc/the_pep/certs/dataPlane_pep_certs/ztsfc_http_pep.crt
+#     privkey_for_cert_shown_by_pep_to_service: /etc/the_pep/certs/dataPlane_pep_certs/ztsfc_http_pep_priv.key
+#     cert_pep_accepts_when_shown_by_service: /etc/the_pep/certs/external_client_certs/bwnet_root.crt
+#   ztsfc_http_service2:
+#     sni: service2.testbed.informatik.uni-ulm.de
+#     target_service_addr: "https://10.5.0.53:443"
+#     cert_shown_by_pep_to_clients_matching_sni: /etc/letsencrypt/live/service2.testbed.informatik.uni-ulm.de/fullchain.pem
+#     privkey_for_cert_shown_by_pep_to_client: /etc/letsencrypt/live/service2.testbed.informatik.uni-ulm.de/privkey.pem
+#     cert_shown_by_pep_to_service: /etc/the_pep/certs/dataPlane_pep_certs/ztsfc_http_pep.crt
+#     privkey_for_cert_shown_by_pep_to_service: /etc/the_pep/certs/dataPlane_pep_certs/ztsfc_http_pep_priv.key
+#     cert_pep_accepts_when_shown_by_service: /etc/the_pep/certs/external_client_certs/bwnet_root.crt
+# sf_pool:
+#   dummy:
+#     target_sf_addr: "https://10.5.0.54:443"
+#     cert_shown_by_pep_to_sf: /etc/the_pep/certs/dataPlane_pep_certs/ztsfc_http_pep.crt
+#     privkey_for_cert_shown_by_pep_to_sf: /etc/the_pep/certs/dataPlane_pep_certs/ztsfc_http_pep_priv.key
+#     cert_pep_accepts_shown_by_sf: /etc/the_pep/certs/external_client_certs/bwnet_root.crt
 
-# Section system_logger contains basic configuration for the internal logger.
-# The system_logger_logging_level is used to determine how rich should be the logger output
-# Supported values are: Trace, Debug, Info, Warning, Error, Fatal and Panic (case insensitive)
-# The system_logger_destination can be a log file path, where the logger will write its messages to,
-# or keyword "stdout", if the log messages should be printed to the standard output.
-# The system_logger_format defines, which formatter will be used to format the log messages.
-# The option supports two values: text, json.
 system_logger:
   system_logger_logging_level: debug
   system_logger_destination: stdout
   system_logger_format: text
 
 blocklists:
-  path_to_botnet_list: "./path"
+  path_to_botnet_list: "./blocklists/botnet_v4.txt"
 
 # Section pep contains basic configuration for the PEP.
 # The default_pool_size is used for connections to PDP and SFP Logic, if no
@@ -22,38 +42,47 @@ blocklists:
 pep:
   listen_addr: ":443"
   certs_pep_accepts_when_shown_by_clients:
-    - ca/key/for/client/certs.crt
+    - ./certs/root_CA.crt
   default_pool_size: 50
+
+# Basic Auth section
+basic_auth:
+  session:
+    path_to_jwt_pub_key: "./certs/jwt_test_pub.pem"
+    path_to_jwt_signing_key: "./certs/jwt_test_priv.pem"
 
 # Section ldap contains configuration necessary to connect to an LDAP server
 # performing basic authentication
 ldap:
-#  base: "ou=people,dc=planetexpress,dc=com"
-  host: "127.0.0.1"
-  port: 10389
-#  use_ssl: false
+  base: "dc=example,dc=com"
+  host: "ldap.example.com"
+  port: 636
+#  use_ssl: true
 #  bind_dn: "cn=admin,dc=planetexpress,dc=com"
 #  bind_password: "GoodNewsEveryone"
-  user_filter: "(uid=%s)"
+  readonly_dn: "cn=readonly,dc=example,dc=com"
+  readonly_pw_path: "./certs/readonly_pw.txt"
+#  user_filter: "(uid=%s)"
+  user_filter: "cn=%s,ou=users,ou=Ulm University,dc=example,dc=com"
 #  group_filter: "(memberUid=%s)"
   attributes:
     - "givenName"
     - "sn"
     - "mail"
     - "uid"
-  cert_shown_by_pep_to_ldap: ./certs/ztsfc_pep_prototype.crt
-  privkey_for_cert_shown_by_pep_to_ldap: ./certs/ztsfc_pep_prototype_priv.key
-  cert_pep_accepts_shown_by_ldap: ./certs/bwnet_root.crt
+  cert_shown_by_pep_to_ldap: ./certs/example_http_pep.crt
+  privkey_for_cert_shown_by_pep_to_ldap: ./certs/example_http_pep_priv.key
+  cert_pep_accepts_shown_by_ldap: ./certs/root_CA.crt
 
 # Section pdp contains configuration to connect with the PDP. Those are address
 # and certificate files for mutual TLS. Further, you can define the number of
 # clients which to prepare for PDP communication in order to improve
 # performance (if not provided, the PEP's default pool size is used instead)
 pdp:
-  target_pdp_addr: "https://127.0.0.1:8888"
-  cert_shown_by_pep_to_pdp: path/to/some/publickey.crt
-  privkey_for_cert_shown_by_pep_to_pdp: path/to/some/privatekey.key
-  cert_pep_accepts_shown_by_pdp: path/to/the/other/components/certificate.crt 
+  target_pdp_addr: "https://pdp.example.com:443"
+  cert_shown_by_pep_to_pdp: ./certs/example_http_pep.crt
+  privkey_for_cert_shown_by_pep_to_pdp: ./certs/example_http_pep_priv.key
+  cert_pep_accepts_shown_by_pdp: ./certs/bwnet_root.crt
   pdp_client_pool_size: 50
 
 # Section sfp_logic contains configuration to connect with the SFP Logic. Those
@@ -62,10 +91,10 @@ pdp:
 # improve performance (if not provided, the PEP's default pool size is used
 # instead)
 sfp_logic:
-  target_sfpl_addr: "https://127.0.0.1:8889"
-  cert_shown_by_pep_to_sfpl: path/to/some/publickey.crt
-  privkey_for_cert_shown_by_pep_to_sfpl: path/to/some/privatekey.key
-  cert_pep_accepts_shown_by_sfpl: path/to/the/other/components/certificate.crt 
+  target_sfpl_addr: "https://sfpl.example.com:443"
+  cert_shown_by_pep_to_sfpl: ./certs/example_http_pep.crt
+  privkey_for_cert_shown_by_pep_to_sfpl: ./certs/example_http_pep_priv.key
+  cert_pep_accepts_shown_by_sfpl: ./certs/bwnet_root.crt
   sfpl_client_pool_size: 50
 
 # Section service_pool defines all services which are accessible through the 
@@ -75,13 +104,13 @@ sfp_logic:
 # which wish to access the service, and the service using mutual TLS
 service_pool:
   webserver:
-    sni: webservice.our-protected-system.com
-    target_service_addr: "https://127.0.0.1:443"
-    cert_shown_by_pep_to_clients_matching_sni: path/to/some/publickey.crt
-    privkey_for_cert_shown_by_pep_to_client: path/to/some/privatekey.key
-    cert_shown_by_pep_to_service: path/to/some/other/publickey.crt
-    privkey_for_cert_shown_by_pep_to_service: path/to/some/other/privatekey.key
-    cert_pep_accepts_when_shown_by_service: path/to/the/other/components/certificate.crt 
+    sni: service1.testbed.informatik.uni-ulm.de
+    target_service_addr: "https://service.example.com"
+    cert_shown_by_pep_to_clients_matching_sni: /etc/letsencrypt/live/service1.testbed.informatik.uni-ulm.de/fullchain.pem
+    privkey_for_cert_shown_by_pep_to_client: /etc/letsencrypt/live/service1.testbed.informatik.uni-ulm.de/privkey.pem
+    cert_shown_by_pep_to_service: ./certs/example_http_pep.crt
+    privkey_for_cert_shown_by_pep_to_service: ./certs/example_http_pep_priv.key
+    cert_pep_accepts_when_shown_by_service: ./certs/bwnet_root.crt
 
 # Section sf_pool defines all service functions which are available in the Zero
 # Trust SFC network. Provide one entry for each SF.
@@ -90,12 +119,10 @@ service_pool:
 # exchange this IDs
 sf_pool:
   logger:
-    target_sf_addr: "https://127.0.0.1:8887"
-    cert_shown_by_pep_to_sf: path/to/some/publickey.crt
-    privkey_for_cert_shown_by_pep_to_sf: path/to/some/privatekey.key
-    cert_pep_accepts_shown_by_sf: path/to/the/other/components/certificate.crt 
-  dpi:
-    target_sf_addr: "https://127.0.0.1:8886"
-    cert_shown_by_pep_to_sf: path/to/some/publickey.crt
-    privkey_for_cert_shown_by_pep_to_sf: path/to/some/privatekey.key
-    cert_pep_accepts_shown_by_sf: path/to/the/other/components/certificate.crt 
+    cert_shown_by_pep_to_sf: ./certs/example_http_pep.crt
+    privkey_for_cert_shown_by_pep_to_sf: ./certs/example_http_pep_priv.key
+    cert_pep_accepts_shown_by_sf: ./certs/bwnet_root.crt
+  ips:
+    cert_shown_by_pep_to_sf: ./certs/example_http_pep.crt
+    privkey_for_cert_shown_by_pep_to_sf: ./certs/example_http_pep_priv.key
+    cert_pep_accepts_shown_by_sf: ./certs/bwnet_root.crt
