@@ -258,15 +258,16 @@ func areUserLDAPCredentialsValid(sysLogger *logger.Logger, userName, password st
 		return false
 	}
 
-	// The user exists. Chech user's password by binding to the LDAP database
+	// The user exists. Check user's password by binding to the LDAP database
 	err := config.Config.Ldap.LdapConn.Bind(dn, password)
 	if err != nil {
+		// User's password does not match
 		sysLogger.Debugf("basic_auth: areUserLDAPCredentialsValid(): unable to bind with the given credentials (username='%s'): %s", userName, err.Error())
 		return false
 	}
 
-	// User's password does not match
-	sysLogger.Errorf("basic_auth: areUserLDAPCredentialsValid(): unable to bind to the LDAP server: %s", err.Error())
+	// Everything is ok
+	sysLogger.Debugf("basic_auth: areUserLDAPCredentialsValid(): credentials of the user '%s' are valid", userName)
 	return true
 }
 
@@ -288,7 +289,7 @@ func GetUserDNfromLDAP(sysLogger *logger.Logger, userName string) (string, bool)
 		nil,
 	)
 
-    fmt.Printf("LDAP REQUEST: %v\n", searchRequest)
+	fmt.Printf("LDAP REQUEST: %v\n", searchRequest)
 
 	// Perform the search
 	sr, err := config.Config.Ldap.LdapConn.Search(searchRequest)
