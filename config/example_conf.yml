@@ -61,7 +61,7 @@ ldap:
 #  bind_dn: "cn=admin,dc=planetexpress,dc=com"
 #  bind_password: "GoodNewsEveryone"
   readonly_dn: "cn=readonly,dc=example,dc=com"
-  readonly_pw_path: "./certs/readonly_pw.txt"
+  readonly_pw: "readonlypa$$w0rd"
   user_filter: "(&(cn=%s))"
   attributes:
     - "givenName"

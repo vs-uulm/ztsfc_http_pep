@@ -52,24 +52,23 @@ type SessionT struct {
 
 // The struct LdapT is for parsing the section 'ldap' of the config file.
 type LdapT struct {
-	Base           string   `yaml:"base"`
-	Host           string   `yaml:"host"`
-	Port           int      `yaml:"port"`
-	UseSSL         bool     `yaml:"use_ssl"`
-	BindDN         string   `yaml:"bind_dn"`
-	BindPassword   string   `yaml:"bind_password"`
-	ReadonlyDN     string   `yaml:"readonly_dn"`
-	ReadonlyPwPath string   `yaml:"readonly_pw_path"`
-	UserFilter     string   `yaml:"user_filter"`
-	GroupFilter    string   `yaml:"group_filter"`
-	Attributes     []string `yaml:"attributes"`
+	Base         string   `yaml:"base"`
+	Host         string   `yaml:"host"`
+	Port         int      `yaml:"port"`
+	UseSSL       bool     `yaml:"use_ssl"`
+	BindDN       string   `yaml:"bind_dn"`
+	BindPassword string   `yaml:"bind_password"`
+	ReadonlyDN   string   `yaml:"readonly_dn"`
+	ReadonlyPW   string   `yaml:"readonly_pw"`
+	UserFilter   string   `yaml:"user_filter"`
+	GroupFilter  string   `yaml:"group_filter"`
+	Attributes   []string `yaml:"attributes"`
 
 	CertShownByPepToLdap           string `yaml:"cert_shown_by_pep_to_ldap"`
 	PrivkeyForCertShownByPepToLdap string `yaml:"privkey_for_cert_shown_by_pep_to_ldap"`
 	CertPepAcceptsShownByLdap      string `yaml:"cert_pep_accepts_shown_by_ldap"`
 	X509KeyPairShownByPepToLdap    tls.Certificate
 	LdapConn                       *ldap.Conn
-	ReadonlyPW                     string
 }
 
 // The struct PdpT is for parsing the section 'pdp' of the config file.

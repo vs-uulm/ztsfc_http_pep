@@ -6,7 +6,6 @@ package init
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
 	logger "github.com/vs-uulm/ztsfc_http_logger"
@@ -56,8 +55,8 @@ func initLdap(sysLogger *logger.Logger) error {
 	}
 
 	// TODO: Check if the field make sense as well!
-	if config.Config.Ldap.ReadonlyPwPath == "" {
-		fields += "readonly_pw_path,"
+	if config.Config.Ldap.ReadonlyPW == "" {
+		fields += "readonly_pw,"
 	}
 
 	// TODO: Check if the field make sense as well!
@@ -73,14 +72,6 @@ func initLdap(sysLogger *logger.Logger) error {
 	if fields != "" {
 		return fmt.Errorf("init: InitLdap(): in the section 'ldap' the following required fields are missed: '%s'", strings.TrimSuffix(fields, ","))
 	}
-
-	// Read password from a file for readonly user
-	readonlyPWByteSlice, err := ioutil.ReadFile(config.Config.Ldap.ReadonlyPwPath)
-	if err != nil {
-		return fmt.Errorf("init: InitLdap(): unable to read a file '%s' with a password for the 'readonly' user: '%s'", config.Config.Ldap.ReadonlyPwPath, err.Error())
-	}
-
-	config.Config.Ldap.ReadonlyPW = string(readonlyPWByteSlice)
 
 	// Preload X509KeyPair and write it to config
 	config.Config.Ldap.X509KeyPairShownByPepToLdap, err = loadX509KeyPair(sysLogger, config.Config.Ldap.CertShownByPepToLdap, config.Config.Ldap.PrivkeyForCertShownByPepToLdap, "LDAP", "")
