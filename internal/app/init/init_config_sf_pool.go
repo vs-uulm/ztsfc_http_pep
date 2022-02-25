@@ -26,15 +26,9 @@ func initSfPool(sysLogger *logger.Logger) error {
 
 		// This case is TRUE if a SF section such as logger is completely empty; in this case sfConfig is a nil pointer
 		if sfConfig == nil {
-			fields += "target_sf_addr,cert_shown_by_pep_to_sf,privkey_for_cert_shown_by_pep_to_sf,cert_pep_accepts_shown_by_sf"
+			fields += "cert_shown_by_pep_to_sf,privkey_for_cert_shown_by_pep_to_sf,cert_pep_accepts_shown_by_sf"
 			return fmt.Errorf("init: InitSfPoolParams(): in the section '%s' the following required fields are missed: '%s'",
 				sfName, strings.TrimSuffix(fields, ","))
-		}
-
-		// Checking the yaml parameter if they are present and meaningful
-		// TODO: Check if the field make sense as well!
-		if sfConfig.TargetSfAddr == "" {
-			fields += "target_sf_addr,"
 		}
 
 		// TODO: Check if the field make sense as well!
