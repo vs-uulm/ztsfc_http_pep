@@ -4,13 +4,13 @@
 package init
 
 import (
-    "fmt"
-    "crypto/tls"
-    "strings"
+	"crypto/tls"
+	"fmt"
+	"strings"
 
-   "github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	logger "github.com/vs-uulm/ztsfc_http_logger"
-    "gopkg.in/ldap.v2"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
+	"gopkg.in/ldap.v2"
 )
 
 // InitLdapParams() initializes the 'ldap' section of the config file.
@@ -20,9 +20,9 @@ func initLdap(sysLogger *logger.Logger) error {
 	fields := ""
 
 	// TODO: Check if the field make sense as well!
-	//if config.Config.Ldap.Base == "" {
-	//	fields += "base,"
-	//}
+	if config.Config.Ldap.Base == "" {
+		fields += "base,"
+	}
 
 	// TODO: Check if the field make sense as well!
 	if config.Config.Ldap.Host == "" {
@@ -50,6 +50,16 @@ func initLdap(sysLogger *logger.Logger) error {
 	}
 
 	// TODO: Check if the field make sense as well!
+	if config.Config.Ldap.ReadonlyDN == "" {
+		fields += "readonly_dn,"
+	}
+
+	// TODO: Check if the field make sense as well!
+	if config.Config.Ldap.ReadonlyPW == "" {
+		fields += "readonly_pw,"
+	}
+
+	// TODO: Check if the field make sense as well!
 	//if config.Config.Ldap.GroupFilter == "" {
 	//	fields += "group_filter,"
 	//}
@@ -63,7 +73,6 @@ func initLdap(sysLogger *logger.Logger) error {
 		return fmt.Errorf("init: InitLdap(): in the section 'ldap' the following required fields are missed: '%s'", strings.TrimSuffix(fields, ","))
 	}
 
-
 	// Preload X509KeyPair and write it to config
 	config.Config.Ldap.X509KeyPairShownByPepToLdap, err = loadX509KeyPair(sysLogger, config.Config.Ldap.CertShownByPepToLdap, config.Config.Ldap.PrivkeyForCertShownByPepToLdap, "LDAP", "")
 	if err != nil {
@@ -76,21 +85,21 @@ func initLdap(sysLogger *logger.Logger) error {
 		return err
 	}
 
-    // Create an LDAP connection
-    tlsConf := &tls.Config{
-        Certificates: []tls.Certificate{config.Config.Ldap.X509KeyPairShownByPepToLdap},
-        RootCAs:      config.Config.CAcertPoolPepAcceptsFromInt,
-        ServerName:   config.Config.Ldap.Host,
-        ClientAuth:   tls.RequireAndVerifyClientCert,
-        MinVersion:   tls.VersionTLS13,
-        MaxVersion:   tls.VersionTLS13,
-//        InsecureSkipVerify: true,
-    }
+	// Create an LDAP connection
+	tlsConf := &tls.Config{
+		Certificates: []tls.Certificate{config.Config.Ldap.X509KeyPairShownByPepToLdap},
+		RootCAs:      config.Config.CAcertPoolPepAcceptsFromInt,
+		ServerName:   config.Config.Ldap.Host,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		MinVersion:   tls.VersionTLS13,
+		MaxVersion:   tls.VersionTLS13,
+		//        InsecureSkipVerify: true,
+	}
 
-    config.Config.Ldap.LdapConn, err = ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", config.Config.Ldap.Host, config.Config.Ldap.Port), tlsConf)
-    if err != nil {
-        return fmt.Errorf("init: initLdap(): unable to connect to the LDAP server: %s", err.Error())
-    }
+	config.Config.Ldap.LdapConn, err = ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", config.Config.Ldap.Host, config.Config.Ldap.Port), tlsConf)
+	if err != nil {
+		return fmt.Errorf("init: initLdap(): unable to connect to the LDAP server: %s", err.Error())
+	}
 
 	return nil
 }

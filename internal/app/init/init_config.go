@@ -17,41 +17,41 @@ import (
 )
 
 func InitConfig(sysLogger *logger.Logger) error {
-    initDefaultValues(sysLogger)
+	initDefaultValues(sysLogger)
 
-    if err := initBlocklists(sysLogger); err != nil {
-        return fmt.Errorf("init: InitConfig(): %v", err)
-    }
+	if err := initBlocklists(sysLogger); err != nil {
+		return fmt.Errorf("init: InitConfig(): %v", err)
+	}
 
-    if err := initPep(sysLogger); err != nil {
-        return fmt.Errorf("init: InitConfig(): %v", err)
-    }
+	if err := initPep(sysLogger); err != nil {
+		return fmt.Errorf("init: InitConfig(): %v", err)
+	}
 
-    if err := initBasicAuth(sysLogger); err != nil {
-        return fmt.Errorf("init: InitConfig(): %v", err)
-    }
+	if err := initBasicAuth(sysLogger); err != nil {
+		return fmt.Errorf("init: InitConfig(): %v", err)
+	}
 
-    if err := initLdap(sysLogger); err != nil {
-        return fmt.Errorf("init: InitConfig(): %v", err)
-    }
+	if err := initLdap(sysLogger); err != nil {
+		return fmt.Errorf("init: InitConfig(): %v", err)
+	}
 
-    if err := initPdp(sysLogger); err != nil {
-        return fmt.Errorf("init: InitConfig(): %v", err)
-    }
+	if err := initPdp(sysLogger); err != nil {
+		return fmt.Errorf("init: InitConfig(): %v", err)
+	}
 
-    if err := initSfpl(sysLogger); err != nil {
-        return fmt.Errorf("init: InitConfig(): %v", err)
-    }
+	if err := initSfpl(sysLogger); err != nil {
+		return fmt.Errorf("init: InitConfig(): %v", err)
+	}
 
-    if err := initServicePool(sysLogger); err != nil {
-        return fmt.Errorf("init: InitConfig(): %v", err)
-    }
+	if err := initServicePool(sysLogger); err != nil {
+		return fmt.Errorf("init: InitConfig(): %v", err)
+	}
 
-    if err := initSfPool(sysLogger); err != nil {
-        return fmt.Errorf("init: InitConfig(): %v", err)
-    }
+	if err := initSfPool(sysLogger); err != nil {
+		return fmt.Errorf("init: InitConfig(): %v", err)
+	}
 
-    return nil
+	return nil
 }
 
 // LoadX509KeyPair() unifies the loading of X509 key pairs for different components

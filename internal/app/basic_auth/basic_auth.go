@@ -17,6 +17,7 @@ import (
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
+	"gopkg.in/ldap.v2"
 )
 
 func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
@@ -78,7 +79,7 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 			return false
 		}
 
-		if !userIsInLDAP(sysLogger, username, password) {
+		if !areUserLDAPCredentialsValid(sysLogger, username, password) {
 			handleFormReponse("Authentication failed for user", w)
 			return false
 		}
@@ -248,15 +249,68 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
 	fmt.Fprint(w, form)
 }
 
-func userIsInLDAP(sysLogger *logger.Logger, userName, password string) bool {
+// AreUserLDAPCredentialsValid() checks a user credentials by binding to the given LDAP server
+func areUserLDAPCredentialsValid(sysLogger *logger.Logger, userName, password string) bool {
+	// If a user with the given name exists, obtain their full LDAP dn
+	dn, ok := GetUserDNfromLDAP(sysLogger, userName)
+	if !ok {
+		sysLogger.Errorf("basic_auth: areUserLDAPCredentialsValid(): unable to find the user '%s'", userName)
+		return false
+	}
 
-    fmt.Printf("userName=%s, password=%s, userFilter=%s\n", userName, password, fmt.Sprintf(config.Config.Ldap.UserFilter, userName))
+	// The user exists. Check user's password by binding to the LDAP database
+	err := config.Config.Ldap.LdapConn.Bind(dn, password)
+	if err != nil {
+		// User's password does not match
+		sysLogger.Debugf("basic_auth: areUserLDAPCredentialsValid(): unable to bind with the given credentials (username='%s'): %s", userName, err.Error())
+		return false
+	}
 
-    err := config.Config.Ldap.LdapConn.Bind(fmt.Sprintf(config.Config.Ldap.UserFilter, userName), password)
-    if err != nil {
-        sysLogger.Errorf("basic_auth: userIsInLDAP(): unable to bind to the LDAP server: %s", err.Error())
-        return false
-    }
+	// Everything is ok
+	sysLogger.Debugf("basic_auth: areUserLDAPCredentialsValid(): credentials of the user '%s' are valid", userName)
+	return true
+}
 
-    return true
+// GetUserDNfromLDAP() returns a user's full LDAP dn if the user's record exists in the database.
+func GetUserDNfromLDAP(sysLogger *logger.Logger, userName string) (string, bool) {
+	// Connect to the LDAP database with the readonly user credentials
+	err := config.Config.Ldap.LdapConn.Bind(config.Config.Ldap.ReadonlyDN, config.Config.Ldap.ReadonlyPW)
+	if err != nil {
+		sysLogger.Errorf("basic_auth: userNameIsInLDAP(): unable to bind to the LDAP server as the readonly user: %s", err.Error())
+		return "", false
+	}
+
+	// Create a search request
+	searchRequest := ldap.NewSearchRequest(
+		config.Config.Ldap.Base,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		fmt.Sprintf(config.Config.Ldap.UserFilter, userName),
+		[]string{"dn"},
+		nil,
+	)
+
+	fmt.Printf("LDAP REQUEST: %v\n", searchRequest)
+
+	// Perform the search
+	sr, err := config.Config.Ldap.LdapConn.Search(searchRequest)
+	if err != nil {
+		sysLogger.Errorf("basic_auth: userNameIsInLDAP(): LDAP searching error: %s", err.Error())
+		return "", false
+	}
+
+	// Nothing has been found
+	if len(sr.Entries) == 0 {
+		sysLogger.Debugf("basic_auth: userNameIsInLDAP(): no user '%s' in the LDAP database", userName)
+		return "", false
+	}
+
+	// Too much has been found
+	if len(sr.Entries) > 1 {
+		sysLogger.Debugf("basic_auth: userNameIsInLDAP(): more then 1 occurence with the given filter '%s' have been found in the LDAP database", userName)
+		return "", false
+	}
+
+	// Exacty what we were looking for
+	sysLogger.Debugf("basic_auth: userNameIsInLDAP(): user '%s' has been found in the LDAP database", userName)
+	return sr.Entries[0].DN, true
 }
