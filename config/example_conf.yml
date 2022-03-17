@@ -102,10 +102,10 @@ sfp_logic:
 # which wish to access the service, and the service using mutual TLS
 service_pool:
   webserver:
-    sni: service1.testbed.informatik.uni-ulm.de
+    sni: service.example.de
     target_service_addr: "https://service.example.com"
-    cert_shown_by_pep_to_clients_matching_sni: /etc/letsencrypt/live/service1.testbed.informatik.uni-ulm.de/fullchain.pem
-    privkey_for_cert_shown_by_pep_to_client: /etc/letsencrypt/live/service1.testbed.informatik.uni-ulm.de/privkey.pem
+    cert_shown_by_pep_to_clients_matching_sni: /etc/letsencrypt/live/service.example.de/fullchain.pem
+    privkey_for_cert_shown_by_pep_to_client: /etc/letsencrypt/live/service.example.de/privkey.pem
     cert_shown_by_pep_to_service: ./certs/example_http_pep.crt
     privkey_for_cert_shown_by_pep_to_service: ./certs/example_http_pep_priv.key
     cert_pep_accepts_when_shown_by_service: ./certs/bwnet_root.crt
