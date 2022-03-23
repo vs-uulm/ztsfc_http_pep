@@ -16,7 +16,7 @@ import (
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/proxies"
 
-    "github.com/mileusna/useragent"
+    //"github.com/mileusna/useragent"
 )
 
 const (
@@ -90,8 +90,18 @@ func collectAction(clientReq *http.Request, cpm *metadata.CpMetadata) {
 }
 
 func collectDevice(clientReq *http.Request, cpm *metadata.CpMetadata) {
-    ua := ua.Parse(clientReq.Header.Get("User-Agent"))
-	cpm.Device = ua.Device + ";" + ua.Name + ";" + ua.OS + ";" + ua.OSVersion
+    if len(clientReq.TLS.PeerCertificates) == 0 {
+        cpm.Device = ""
+        return
+    }
+    clientCert := clientReq.TLS.PeerCertificates[0]
+    if clientCert == nil {
+        cpm.Device = ""
+        return
+    }
+    cpm.Device = clientCert.Subject.CommonName
+    //ua := ua.Parse(clientReq.Header.Get("User-Agent"))
+	//cpm.Device = ua.Device + ";" + ua.Name + ";" + ua.OS + ";" + ua.OSVersion
 }
 
 func collectRequestToday(clientReq *http.Request, cpm *metadata.CpMetadata) {
