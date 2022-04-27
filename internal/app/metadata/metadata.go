@@ -4,6 +4,7 @@ package metadata
 
 type AuthoResponse struct {
         Allow bool     `json:"allow"`
+        Reason string `json:"reason"`
         SFC   []Sf `json:"sfc"`
 }
 
@@ -17,6 +18,7 @@ type Sf struct {
 // components can collect different information in here.
 type CpMetadata struct {
 	AuthDecision      bool
+    AuthReason string
 	User              string
 	PwAuthenticated   bool
 	CertAuthenticated bool

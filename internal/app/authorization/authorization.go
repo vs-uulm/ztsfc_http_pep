@@ -53,6 +53,7 @@ func PerformAuthorization(sysLogger *logger.Logger, clientReq *http.Request, cpm
 	}
 	cpm.SFC = authoResp.SFC
 	cpm.AuthDecision = authoResp.Allow
+    cpm.AuthReason = authoResp.Reason
 
 	return nil
 }

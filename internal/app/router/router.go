@@ -138,9 +138,9 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !md.AuthDecision {
-        io.WriteString(w, "Request has been rejected due to a too low trust score. Contact your security advisor for more information.")
+        io.WriteString(w, md.AuthReason + ". Contact your security advisor for more information.")
 		w.WriteHeader(403)
-		router.sysLogger.Infof("router: ServeHTTP(): request from user %s was rejected due to too low trust score", md.User)
+		router.sysLogger.Infof("router: ServeHTTP(): request from user %s was rejected due to the reason: %s", md.User, md.AuthReason)
 		return
 	}
 	router.sysLogger.Debugf("router: ServeHTTP(): request from %s passed PDP. SFC: %s", req.RemoteAddr , md.SFC)
