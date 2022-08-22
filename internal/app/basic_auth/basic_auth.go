@@ -72,15 +72,27 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 			return false
 		}
 
+        _, existsInDB := GetUserDNfromLDAP(sysLogger, username)
+        if !existsInDB {
+			handleFormReponse("Username not present or wrong", w)
+			return false
+        }
+
 		passwordl, exist := req.PostForm["password"]
 		password = passwordl[0]
 		if !exist {
 			handleFormReponse("Password not present or wrong", w)
+            if err := pushPWAuthenticationFail(sysLogger, username); err != nil {
+                sysLogger.Errorf("%v", err)
+            }
 			return false
 		}
 
 		if !areUserLDAPCredentialsValid(sysLogger, username, password) {
 			handleFormReponse("Authentication failed for user", w)
+            if err := pushPWAuthenticationFail(sysLogger, username); err != nil {
+                sysLogger.Errorf("%v", err)
+            }
 			return false
 		}
 
@@ -313,4 +325,27 @@ func GetUserDNfromLDAP(sysLogger *logger.Logger, userName string) (string, bool)
 	// Exacty what we were looking for
 	sysLogger.Debugf("basic_auth: userNameIsInLDAP(): user '%s' has been found in the LDAP database", userName)
 	return sr.Entries[0].DN, true
+}
+
+func pushPWAuthenticationFail(sysLogger *logger.Logger, username string) error {
+    pushReq, err := http.NewRequest("POST", config.Config.Pip.TargetAddr+config.Config.Pip.PushUserAttributesUpdateEndpoint, nil)
+    if err != nil {
+        return fmt.Errorf("attributes: pushPWAuthenticationFail(): unable to create push user update attribute request for PIP: %w", err)
+    }
+
+    pushReqQuery := pushReq.URL.Query()
+    pushReqQuery.Set("user", username)
+    pushReqQuery.Set("failed-pw-authentication", "1")
+    pushReq.URL.RawQuery = pushReqQuery.Encode()
+
+    pipResp, err := config.Config.Pip.PipClient.Do(pushReq)
+    if err != nil {
+        return fmt.Errorf("attributes: pushPWAuthenticationFail(): unable to send push user attribute request to PIP: %w", err)
+    }
+
+    if pipResp.StatusCode != 200 {
+        return nil
+    }
+
+    return nil
 }

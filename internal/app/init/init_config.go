@@ -39,6 +39,10 @@ func InitConfig(sysLogger *logger.Logger) error {
 		return fmt.Errorf("init: InitConfig(): %v", err)
 	}
 
+	if err := initPip(); err != nil {
+		return fmt.Errorf("init: InitConfig(): %v", err)
+	}
+
 	if err := initSfpl(sysLogger); err != nil {
 		return fmt.Errorf("init: InitConfig(): %v", err)
 	}

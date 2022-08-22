@@ -4,7 +4,8 @@ go 1.17
 
 require (
 	github.com/golang-jwt/jwt/v4 v4.2.0
-	github.com/vs-uulm/ztsfc_http_logger v0.0.0-20211216171154-dd2ea2ce1e4d
+	github.com/leobrada/golang_convenience_tools v0.0.0-20220404052613-f43df838ca46
+	github.com/vs-uulm/ztsfc_http_logger v0.0.0-20220114090830-1511ee49f8df
 	gopkg.in/ldap.v2 v2.5.1
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )

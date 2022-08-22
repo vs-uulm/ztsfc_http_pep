@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"sync"
+    "net/http"
 
 	"gopkg.in/ldap.v2"
 	"gopkg.in/yaml.v3"
@@ -81,6 +82,20 @@ type PdpT struct {
 	X509KeyPairShownByPepToPdp    tls.Certificate
 }
 
+type PipT struct {
+    TargetAddr string `yaml:"target_addr"`
+    PushUserAttributesUpdateEndpoint string `yaml:"push_user_attribute_update_endpoint"`
+
+    CertsPepAcceptsWhenShownByPip []string `yaml:"certs_pep_accepts_when_shown_by_pip"`
+    CertShownByPepToPip           string   `yaml:"cert_shown_by_pep_to_pip"`
+    PrivkeyForCertShownByPepToPip string   `yaml:"privkey_for_cert_shown_by_pep_to_pip"`
+
+    CaCertPoolPepAcceptsFromPip *x509.CertPool
+    X509KeyPairShownByPepToPip  tls.Certificate
+
+    PipClient *http.Client
+}
+
 // The struct SfplT is for parsing the section 'sfp_logic' of the config file.
 type SfplT struct {
 	TargetSfplAddr                 string `yaml:"target_sfpl_addr"`
@@ -125,6 +140,7 @@ type ConfigT struct {
 	BasicAuth  BasicAuthT  `yaml:"basic_auth"`
 	Ldap       LdapT       `yaml:"ldap"`
 	Pdp        PdpT        `yaml:"pdp"`
+	Pip        PipT        `yaml:"pip"`
 	SfpLogic   SfplT       `yaml:"sfp_logic"`
 	// TODO: Use Structs of ServiceT and ServFunctionT instead of pointers to the structs?
 	ServicePool                 map[string]*ServiceT      `yaml:"service_pool"`
