@@ -42,8 +42,8 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 		MaxVersion:             tls.VersionTLS13,
 		SessionTicketsDisabled: true,
 		Certificates:           nil,
-		//ClientAuth:             tls.RequireAndVerifyClientCert,
-		ClientAuth: tls.VerifyClientCertIfGiven,
+		ClientAuth:             tls.RequireAndVerifyClientCert,
+		//ClientAuth: tls.VerifyClientCertIfGiven,
 		ClientCAs:  config.Config.CAcertPoolPepAcceptsFromExt,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// use SNI map to load suitable certificate

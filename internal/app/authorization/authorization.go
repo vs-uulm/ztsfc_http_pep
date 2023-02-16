@@ -92,15 +92,18 @@ func collectAction(clientReq *http.Request, cpm *metadata.CpMetadata) {
 
 func collectDevice(clientReq *http.Request, cpm *metadata.CpMetadata) {
     if len(clientReq.TLS.PeerCertificates) == 0 {
+        fmt.Printf("1 PEP METADATA CERTIFICATE COMMON NAME\n")
         cpm.Device = ""
         return
     }
     clientCert := clientReq.TLS.PeerCertificates[0]
     if clientCert == nil {
+        fmt.Printf("2 PEP METADATA CERTIFICATE COMMON NAME: %s\n", clientCert.Subject.CommonName)
         cpm.Device = ""
         return
     }
     cpm.Device = clientCert.Subject.CommonName
+    fmt.Printf("3 PEP METADATA CERTIFICATE COMMON NAME: %s\n", clientCert.Subject.CommonName)
     //ua := ua.Parse(clientReq.Header.Get("User-Agent"))
 	//cpm.Device = ua.Device + ";" + ua.Name + ";" + ua.OS + ";" + ua.OSVersion
 }
