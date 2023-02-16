@@ -3,6 +3,7 @@
 package basic_auth
 
 import (
+    "crypto/sha512"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -68,33 +69,43 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 		usernamel, exist := req.PostForm["username"]
 		username = usernamel[0]
 		if !exist {
-			handleFormReponse("Username not present or wrong", w)
+			handleFormReponse("Username not present.", w)
 			return false
 		}
 
-        _, existsInDB := GetUserDNfromLDAP(sysLogger, username)
-        if !existsInDB {
-			handleFormReponse("Username not present or wrong", w)
-			return false
+        if !validUser(sysLogger, username) {
+            sysLogger.Errorf("basic_auth: validUser(): presented username '%s' does not exist or is wrong.", username)
+            return false
         }
+
+//        _, existsInDB := GetUserDNfromLDAP(sysLogger, username)
+//        if !existsInDB {
+//			handleFormReponse("Username not present or wrong", w)
+//			return false
+//        }
 
 		passwordl, exist := req.PostForm["password"]
 		password = passwordl[0]
 		if !exist {
-			handleFormReponse("Password not present or wrong", w)
+			handleFormReponse("Password not present.", w)
             if err := pushPWAuthenticationFail(sysLogger, username); err != nil {
                 sysLogger.Errorf("%v", err)
             }
 			return false
 		}
 
-		if !areUserLDAPCredentialsValid(sysLogger, username, password) {
-			handleFormReponse("Authentication failed for user", w)
-            if err := pushPWAuthenticationFail(sysLogger, username); err != nil {
-                sysLogger.Errorf("%v", err)
-            }
-			return false
-		}
+        if !validPassword(sysLogger, username, password) {
+            sysLogger.Errorf("basic_auth: userNameIsInLDAP(): presented password for user '%s' is incorrect.", username)
+            return false
+        }
+
+//    	if !areUserLDAPCredentialsValid(sysLogger, username, password) {
+//    		handleFormReponse("Authentication failed for user", w)
+//            if err := pushPWAuthenticationFail(sysLogger, username); err != nil {
+//                sysLogger.Errorf("%v", err)
+//            }
+//    		return false
+//    	}
 
 		// Create JWT
 		//config.Config.BasicAuth.Session.MySigningKey := parseRsaiPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
@@ -348,4 +359,29 @@ func pushPWAuthenticationFail(sysLogger *logger.Logger, username string) error {
     }
 
     return nil
+}
+
+func validUser(sysLogger *logger.Logger, username string) bool {
+    if username != "Leo" {
+        return false
+    }
+    return true
+}
+
+func validPassword(sysLogger *logger.Logger, username, password string) bool {
+    // Just for Testing
+    salt := "salt1234"
+    digest := "0c3eaecff0f2c5ba6fb853ef9ab91ef8874527c755d64a1ee81d9d688d30d9ed025e62bf6fdb11b8d4ebcba0eb70e166c8807825c8fa16173773558e67027ef0"
+
+    if calcSaltedHash(username, salt) == digest {
+        return true
+    } else {
+        return false
+    }
+}
+
+func calcSaltedHash(username, salt string) string {
+    usernameWithSalt := username + salt
+    digest := sha512.Sum512([]byte(usernameWithSalt))
+    return fmt.Sprintf("%x", digest)
 }
