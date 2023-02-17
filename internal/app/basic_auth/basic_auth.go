@@ -18,7 +18,6 @@ import (
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
-	"gopkg.in/ldap.v2"
 )
 
 func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
@@ -78,12 +77,6 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
             return false
         }
 
-//        _, existsInDB := GetUserDNfromLDAP(sysLogger, username)
-//        if !existsInDB {
-//			handleFormReponse("Username not present or wrong", w)
-//			return false
-//        }
-
 		passwordl, exist := req.PostForm["password"]
 		password = passwordl[0]
 		if !exist {
@@ -95,17 +88,9 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 		}
 
         if !validPassword(sysLogger, username, password) {
-            sysLogger.Errorf("basic_auth: userNameIsInLDAP(): presented password for user '%s' is incorrect.", username)
+            sysLogger.Errorf("basic_auth: validPassword(): presented password for user '%s' is incorrect.", username)
             return false
         }
-
-//    	if !areUserLDAPCredentialsValid(sysLogger, username, password) {
-//    		handleFormReponse("Authentication failed for user", w)
-//            if err := pushPWAuthenticationFail(sysLogger, username); err != nil {
-//                sysLogger.Errorf("%v", err)
-//            }
-//    		return false
-//    	}
 
 		// Create JWT
 		//config.Config.BasicAuth.Session.MySigningKey := parseRsaiPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
@@ -153,31 +138,6 @@ func performX509auth(req *http.Request) bool {
 
 	return false
 }
-
-// Just for LCN paper; function currently not in use
-//func PerformMoodleLogin(w http.ResponseWriter, req *http.Request) bool {
-//	_, err := req.Cookie("li")
-//	if err != nil {
-//		// Transform existing http request into log POST form
-//		//        req.Method = "POST"
-//
-//		// Set cookie presenting that user is logged in
-//		fmt.Printf("Performing Moodle log in...\n")
-//		liCookie := &http.Cookie{
-//			Name:   "li",
-//			Value:  "yes",
-//			MaxAge: 36000,
-//			Path:   "/",
-//		}
-//		//req.AddCookie(liCookie)
-//		http.SetCookie(w, liCookie)
-//		return true
-//	}
-//
-//	fmt.Printf("Cookie is present, user is logged in\n")
-//	return false
-//
-//}
 
 // ParseRsaPublicKeyFromPemFile() loads rsa.PublicKey from a PEM file
 func ParseRsaPublicKeyFromPemFile(pubPEMLocation string) (*rsa.PublicKey, error) {
@@ -272,72 +232,6 @@ func handleFormReponse(msg string, w http.ResponseWriter) {
 	fmt.Fprint(w, form)
 }
 
-// AreUserLDAPCredentialsValid() checks a user credentials by binding to the given LDAP server
-func areUserLDAPCredentialsValid(sysLogger *logger.Logger, userName, password string) bool {
-	// If a user with the given name exists, obtain their full LDAP dn
-	dn, ok := GetUserDNfromLDAP(sysLogger, userName)
-	if !ok {
-		sysLogger.Errorf("basic_auth: areUserLDAPCredentialsValid(): unable to find the user '%s'", userName)
-		return false
-	}
-
-	// The user exists. Check user's password by binding to the LDAP database
-	err := config.Config.Ldap.LdapConn.Bind(dn, password)
-	if err != nil {
-		// User's password does not match
-		sysLogger.Debugf("basic_auth: areUserLDAPCredentialsValid(): unable to bind with the given credentials (username='%s'): %s", userName, err.Error())
-		return false
-	}
-
-	// Everything is ok
-	sysLogger.Debugf("basic_auth: areUserLDAPCredentialsValid(): credentials of the user '%s' are valid", userName)
-	return true
-}
-
-// GetUserDNfromLDAP() returns a user's full LDAP dn if the user's record exists in the database.
-func GetUserDNfromLDAP(sysLogger *logger.Logger, userName string) (string, bool) {
-	// Connect to the LDAP database with the readonly user credentials
-	err := config.Config.Ldap.LdapConn.Bind(config.Config.Ldap.ReadonlyDN, config.Config.Ldap.ReadonlyPW)
-	if err != nil {
-		sysLogger.Errorf("basic_auth: userNameIsInLDAP(): unable to bind to the LDAP server as the readonly user: %s", err.Error())
-		return "", false
-	}
-
-	// Create a search request
-	searchRequest := ldap.NewSearchRequest(
-		config.Config.Ldap.Base,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf(config.Config.Ldap.UserFilter, userName),
-		[]string{"dn"},
-		nil,
-	)
-
-	fmt.Printf("LDAP REQUEST: %v\n", searchRequest)
-
-	// Perform the search
-	sr, err := config.Config.Ldap.LdapConn.Search(searchRequest)
-	if err != nil {
-		sysLogger.Errorf("basic_auth: userNameIsInLDAP(): LDAP searching error: %s", err.Error())
-		return "", false
-	}
-
-	// Nothing has been found
-	if len(sr.Entries) == 0 {
-		sysLogger.Debugf("basic_auth: userNameIsInLDAP(): no user '%s' in the LDAP database", userName)
-		return "", false
-	}
-
-	// Too much has been found
-	if len(sr.Entries) > 1 {
-		sysLogger.Debugf("basic_auth: userNameIsInLDAP(): more then 1 occurence with the given filter '%s' have been found in the LDAP database", userName)
-		return "", false
-	}
-
-	// Exacty what we were looking for
-	sysLogger.Debugf("basic_auth: userNameIsInLDAP(): user '%s' has been found in the LDAP database", userName)
-	return sr.Entries[0].DN, true
-}
-
 func pushPWAuthenticationFail(sysLogger *logger.Logger, username string) error {
     pushReq, err := http.NewRequest("POST", config.Config.Pip.TargetAddr+config.Config.Pip.PushUserAttributesUpdateEndpoint, nil)
     if err != nil {
@@ -362,26 +256,23 @@ func pushPWAuthenticationFail(sysLogger *logger.Logger, username string) error {
 }
 
 func validUser(sysLogger *logger.Logger, username string) bool {
-    if username != "Leo" {
+	_, ok := config.Config.BasicAuth.Passwd.PasswdList[username] 
+    if !ok {
         return false
     }
     return true
 }
 
 func validPassword(sysLogger *logger.Logger, username, password string) bool {
-    // Just for Testing
-    salt := "salt1234"
-    digest := "0c3eaecff0f2c5ba6fb853ef9ab91ef8874527c755d64a1ee81d9d688d30d9ed025e62bf6fdb11b8d4ebcba0eb70e166c8807825c8fa16173773558e67027ef0"
-
-    if calcSaltedHash(username, salt) == digest {
+    if calcSaltedHash(password, config.Config.BasicAuth.Passwd.PasswdList[username].Salt) == config.Config.BasicAuth.Passwd.PasswdList[username].Digest {
         return true
     } else {
         return false
     }
 }
 
-func calcSaltedHash(username, salt string) string {
-    usernameWithSalt := username + salt
-    digest := sha512.Sum512([]byte(usernameWithSalt))
+func calcSaltedHash(password, salt string) string {
+    passwordWithSalt := password + salt
+    digest := sha512.Sum512([]byte(passwordWithSalt))
     return fmt.Sprintf("%x", digest)
 }

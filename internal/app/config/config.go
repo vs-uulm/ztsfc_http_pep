@@ -11,8 +11,6 @@ import (
 	"os"
 	"sync"
     "net/http"
-
-	"gopkg.in/ldap.v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -41,7 +39,19 @@ type PepT struct {
 }
 
 type BasicAuthT struct {
+	Passwd PasswdT `yaml:"passwd"`
 	Session SessionT `yaml:"session"`
+}
+
+type PasswdT struct {
+	PathToPasswd string `yaml:"path_to_passwd"`
+	PasswdList       map[string]ShadowT
+	WaitPasswdList   sync.WaitGroup
+}
+
+type ShadowT struct {
+	Salt string
+	Digest string
 }
 
 type SessionT struct {
@@ -49,27 +59,6 @@ type SessionT struct {
 	Path_to_jwt_signing_key string `yaml:"path_to_jwt_signing_key"`
 	JwtPubKey               *rsa.PublicKey
 	MySigningKey            *rsa.PrivateKey
-}
-
-// The struct LdapT is for parsing the section 'ldap' of the config file.
-type LdapT struct {
-	Base         string   `yaml:"base"`
-	Host         string   `yaml:"host"`
-	Port         int      `yaml:"port"`
-	UseSSL       bool     `yaml:"use_ssl"`
-	BindDN       string   `yaml:"bind_dn"`
-	BindPassword string   `yaml:"bind_password"`
-	ReadonlyDN   string   `yaml:"readonly_dn"`
-	ReadonlyPW   string   `yaml:"readonly_pw"`
-	UserFilter   string   `yaml:"user_filter"`
-	GroupFilter  string   `yaml:"group_filter"`
-	Attributes   []string `yaml:"attributes"`
-
-	CertShownByPepToLdap           string `yaml:"cert_shown_by_pep_to_ldap"`
-	PrivkeyForCertShownByPepToLdap string `yaml:"privkey_for_cert_shown_by_pep_to_ldap"`
-	CertPepAcceptsShownByLdap      string `yaml:"cert_pep_accepts_shown_by_ldap"`
-	X509KeyPairShownByPepToLdap    tls.Certificate
-	LdapConn                       *ldap.Conn
 }
 
 // The struct PdpT is for parsing the section 'pdp' of the config file.
@@ -138,7 +127,6 @@ type ConfigT struct {
 	Blocklists BlocklistsT `yaml:"blocklists"`
 	Pep        PepT        `yaml:"pep"`
 	BasicAuth  BasicAuthT  `yaml:"basic_auth"`
-	Ldap       LdapT       `yaml:"ldap"`
 	Pdp        PdpT        `yaml:"pdp"`
 	Pip        PipT        `yaml:"pip"`
 	SfpLogic   SfplT       `yaml:"sfp_logic"`
