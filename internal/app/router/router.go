@@ -210,16 +210,25 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	proxy.ErrorLog = log.New(router.sysLogger.GetWriter(), "", 0)
 
-	// When the PEP is acting as a client; this defines his behavior
-	proxy.Transport = &http.Transport{
-		IdleConnTimeout:     10 * time.Second,
-		MaxIdleConnsPerHost: 10000,
-		TLSClientConfig: &tls.Config{
-			Certificates:       []tls.Certificate{certShownByPEPToNextHop},
-			InsecureSkipVerify: true,
-			ClientAuth:         tls.RequireAndVerifyClientCert,
-			ClientCAs:          config.Config.CAcertPoolPepAcceptsFromInt,
-		},
+	router.sysLogger.Infof("router: ServeHTTP(): serving scheme: %s", nextHopURL.Scheme)
+	if nextHopURL.Scheme == "https" {
+		// When the PEP is acting as a client; this defines his behavior
+		proxy.Transport = &http.Transport{
+			IdleConnTimeout:     10 * time.Second,
+			MaxIdleConnsPerHost: 10000,
+			TLSClientConfig: &tls.Config{
+				Certificates:       []tls.Certificate{certShownByPEPToNextHop},
+				InsecureSkipVerify: true,
+				ClientAuth:         tls.RequireAndVerifyClientCert,
+				ClientCAs:          config.Config.CAcertPoolPepAcceptsFromInt,
+			},
+		}
+	}
+	if nextHopURL.Scheme == "http" {
+		proxy.Transport = &http.Transport{
+			IdleConnTimeout:     10 * time.Second,
+			MaxIdleConnsPerHost: 10000,
+		}
 	}
 
 	proxy.ServeHTTP(w, req)
