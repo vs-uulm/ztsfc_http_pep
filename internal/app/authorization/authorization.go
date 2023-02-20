@@ -35,6 +35,8 @@ func PerformAuthorization(sysLogger *logger.Logger, clientReq *http.Request, cpm
 		return fmt.Errorf("unable to create authorization request for PDP: %w", err)
 	}
 
+    sysLogger.Infof("Cert Authenticated: %t", cpm.CertAuthenticated)
+
 	prepareAuthRequest(authoReq, cpm)
 	pdpResp, err := proxies.PdpClientPool[rand.Int()%50].Do(authoReq)
 	if err != nil {
@@ -74,6 +76,7 @@ func prepareAuthRequest(authoReq *http.Request, cpm *metadata.CpMetadata) {
 }
 
 func collectAttributes(clientReq *http.Request, cpm *metadata.CpMetadata) {
+    // pwAuthenticated & certAuthenticated are already set by BasicAuth()
 	collectResource(clientReq, cpm)
 	collectAction(clientReq, cpm)
 	collectDevice(clientReq, cpm)
@@ -92,18 +95,15 @@ func collectAction(clientReq *http.Request, cpm *metadata.CpMetadata) {
 
 func collectDevice(clientReq *http.Request, cpm *metadata.CpMetadata) {
     if len(clientReq.TLS.PeerCertificates) == 0 {
-        fmt.Printf("1 PEP METADATA CERTIFICATE COMMON NAME\n")
         cpm.Device = ""
         return
     }
     clientCert := clientReq.TLS.PeerCertificates[0]
     if clientCert == nil {
-        fmt.Printf("2 PEP METADATA CERTIFICATE COMMON NAME: %s\n", clientCert.Subject.CommonName)
         cpm.Device = ""
         return
     }
     cpm.Device = clientCert.Subject.CommonName
-    fmt.Printf("3 PEP METADATA CERTIFICATE COMMON NAME: %s\n", clientCert.Subject.CommonName)
     //ua := ua.Parse(clientReq.Header.Get("User-Agent"))
 	//cpm.Device = ua.Device + ";" + ua.Name + ";" + ua.OS + ";" + ua.OSVersion
 }

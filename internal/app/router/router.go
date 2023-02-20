@@ -123,7 +123,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// TODO: return error to client?
 	// Check if user has a valid session already
 	if !basic_auth.UserSessionIsValid(req, md) {
-		if !basic_auth.BasicAuth(router.sysLogger, w, req) {
+		if !basic_auth.BasicAuth(router.sysLogger, w, req, md) {
 			// Used for measuring the time ServeHTTP runs
 			// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
 			return

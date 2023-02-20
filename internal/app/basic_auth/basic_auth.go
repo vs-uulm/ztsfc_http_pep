@@ -43,8 +43,16 @@ func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
 	return true
 }
 
-func BasicAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request) bool {
-	return performPasswdAuth(sysLogger, w, req)
+func BasicAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request, cpm *metadata.CpMetadata) bool {
+    cpm.CertAuthenticated = performX509auth(req)
+    if !cpm.CertAuthenticated {
+        return false
+    }
+    cpm.PwAuthenticated = performPasswdAuth(sysLogger, w, req)
+    if !cpm.PwAuthenticated {
+        return false
+    }
+    return true
 }
 
 func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request) bool {
@@ -132,7 +140,7 @@ func createJWToken(mySigningKey *rsa.PrivateKey, username string) string {
 
 func performX509auth(req *http.Request) bool {
 	// Check if a verified client certificate is present
-	if len(req.TLS.VerifiedChains) > 0 && req.TLS.ServerName == "service1.testbed.informatik.uni-ulm.de" {
+	if len(req.TLS.VerifiedChains) > 0 {
 		return true
 	}
 
