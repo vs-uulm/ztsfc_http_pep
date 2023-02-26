@@ -4,17 +4,11 @@ package basic_auth
 
 import (
     "crypto/sha512"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
-	jwt "github.com/golang-jwt/jwt/v4"
+	jwt "github.com/golang-jwt/jwt/v5"
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
@@ -25,13 +19,16 @@ func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
 	if err != nil {
 		return false
 	}
-	ss := jwtCookie.Value
+	jwtString := jwtCookie.Value
 
-	token, err := jwt.Parse(ss, func(token *jwt.Token) (interface{}, error) {
-		return config.Config.BasicAuth.Session.JwtPubKey, nil
+	token, err := jwt.Parse(jwtString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+			}
+			return []byte(config.Config.BasicAuth.Session.JwtSigningKey), nil
 	})
 
-	if err != nil {
+	if err != nil || !token.Valid {
 		return false
 	}
 
@@ -101,13 +98,15 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
         }
 
 		// Create JWT
-		//config.Config.BasicAuth.Session.MySigningKey := parseRsaiPrivateKeyFromPemStr("./basic_auth/jwt_test_priv.pem")
-		ss := createJWToken(config.Config.BasicAuth.Session.MySigningKey, username)
+		jwtToken, err := createJWToken(username)
+		if err != nil {
+			return false
+		}
 
 		ztsfcCookie := http.Cookie{
 			Name:   "ztsfc_session",
-			Value:  ss,
-			MaxAge: 1800,
+			Value:  jwtToken,
+			MaxAge: 86400,
 			Path:   "/",
 		}
 		http.SetCookie(w, &ztsfcCookie)
@@ -124,18 +123,22 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 	}
 }
 
-func createJWToken(mySigningKey *rsa.PrivateKey, username string) string {
-	// ! ToDo: deprecated! REplace by jwt.RegisteredClaims
-	claims := &jwt.StandardClaims{
-		ExpiresAt: time.Now().Add(time.Hour * 1).Unix(),
-		Issuer:    "ztsfc_bauth",
+func createJWToken(username string) (string, error) {
+	claims := &jwt.RegisteredClaims{
+		Issuer:    "ztsfc_pep",
 		Subject:   username,
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
+		IssuedAt:  jwt.NewNumericDate(time.Now()),
+		NotBefore: jwt.NewNumericDate(time.Now()),
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
-	ss, _ := token.SignedString(mySigningKey)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	jwtString, err := token.SignedString([]byte(config.Config.BasicAuth.Session.JwtSigningKey))
+	if err != nil {
+		return "", fmt.Errorf("basic_auth: createJWToken(): could not sign token: %v", err)
+	}
 
-	return ss
+	return jwtString, nil
 }
 
 func performX509auth(req *http.Request) bool {
@@ -145,80 +148,6 @@ func performX509auth(req *http.Request) bool {
 	}
 
 	return false
-}
-
-// ParseRsaPublicKeyFromPemFile() loads rsa.PublicKey from a PEM file
-func ParseRsaPublicKeyFromPemFile(pubPEMLocation string) (*rsa.PublicKey, error) {
-	// Read a file content and convert it to a PEM block
-	pemBlock, err := readFirstPEMBlockFromFile(pubPEMLocation)
-	if err != nil {
-		return nil, fmt.Errorf("basic_auth: ParseRsaPublicKeyFromPemFile(): %w", err)
-	}
-
-	if !strings.Contains(pemBlock.Type, "PUBLIC KEY") {
-		fmt.Printf("pemBlock.Type = %#v\n", pemBlock.Type)
-		return nil, errors.New("basic_auth: ParseRsaPublicKeyFromPemFile(): provided file does not contain a PEM public key")
-	}
-
-	pub, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
-	if err == nil {
-		return pub.(*rsa.PublicKey), nil
-	}
-
-	pub, err = x509.ParsePKCS1PublicKey(pemBlock.Bytes)
-	if err == nil {
-		return pub.(*rsa.PublicKey), nil
-	}
-
-	// Another Public keys form parsing functions can be added here later
-	// ...
-
-	return nil, fmt.Errorf("basic_auth: ParseRsaPublicKeyFromPemFile(): unable to parse JWT public key: %w", err)
-}
-
-// ParseRsaPrivateKeyFromPemFile() loads rsa.PrivateKey from a PEM file
-func ParseRsaPrivateKeyFromPemFile(privPEMLocation string) (*rsa.PrivateKey, error) {
-	// Read a file content and convert it to a PEM block
-	pemBlock, err := readFirstPEMBlockFromFile(privPEMLocation)
-	if err != nil {
-		return nil, fmt.Errorf("basic_auth: ParseRsaPrivateKeyFromPemFile(): %w", err)
-	}
-
-	if !strings.Contains(pemBlock.Type, "PRIVATE KEY") {
-		return nil, errors.New("basic_auth: ParseRsaPrivateKeyFromPemFile(): provided file does not contain a PEM private key")
-	}
-
-	priv, err := x509.ParsePKCS8PrivateKey(pemBlock.Bytes)
-	if err == nil {
-		return priv.(*rsa.PrivateKey), nil
-	}
-
-	priv, err = x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
-	if err == nil {
-		return priv.(*rsa.PrivateKey), nil
-	}
-
-	// Another Private keys form parsing functions can be added here later
-	// ...
-
-	return nil, fmt.Errorf("basic_auth: ParseRsaPrivateKeyFromPemFile(): unable to parse JWT private key: %w", err)
-}
-
-// ReadFirstPEMBlockFromFile() loads the first PEM block of a given PEM key file into a pem.Block structure
-func readFirstPEMBlockFromFile(path string) (*pem.Block, error) {
-	// Read the file content
-	pubReadIn, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	// Decode the file content as a PEM block
-	block, _ := pem.Decode(pubReadIn)
-	if block == nil {
-		return nil, fmt.Errorf("unable to decode a byte slice as a PEM block: %w", err)
-	}
-
-	return block, nil
 }
 
 func handleFormReponse(msg string, w http.ResponseWriter) {

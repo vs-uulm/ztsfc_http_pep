@@ -2,7 +2,6 @@
 package config
 
 import (
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -54,11 +53,16 @@ type ShadowT struct {
 	Digest string
 }
 
+//type SessionT struct {
+//	Path_to_jwt_pub_key     string `yaml:"path_to_jwt_pub_key"`
+//	Path_to_jwt_signing_key string `yaml:"path_to_jwt_signing_key"`
+//	JwtPubKey               *rsa.PublicKey
+//	MySigningKey            *rsa.PrivateKey
+//}
+
 type SessionT struct {
-	Path_to_jwt_pub_key     string `yaml:"path_to_jwt_pub_key"`
-	Path_to_jwt_signing_key string `yaml:"path_to_jwt_signing_key"`
-	JwtPubKey               *rsa.PublicKey
-	MySigningKey            *rsa.PrivateKey
+	PathToJwtSigningKey string `yaml:"path_to_jwt_signing_key"`
+	JwtSigningKey string
 }
 
 // The struct PdpT is for parsing the section 'pdp' of the config file.

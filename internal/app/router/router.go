@@ -118,7 +118,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
     // Declares a new metadata instance in which all necessary data to process the client's request are stored in
 	md := new(metadata.CpMetadata)
 
-	// BASIC AUTHENTICATION: prompts the user for the authentication factors and evalautes them
+	// AUTHENTICATION: prompts the user for the authentication factors and evalautes them
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
 	// TODO: return error to client?
 	// Check if user has a valid session already
@@ -210,7 +210,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	proxy.ErrorLog = log.New(router.sysLogger.GetWriter(), "", 0)
 
-	router.sysLogger.Infof("router: ServeHTTP(): serving scheme: %s", nextHopURL.Scheme)
+    // set proxy settings depending on the next hop scheme: http or https
+    // HTTPS
 	if nextHopURL.Scheme == "https" {
 		// When the PEP is acting as a client; this defines his behavior
 		proxy.Transport = &http.Transport{
@@ -224,6 +225,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			},
 		}
 	}
+    // HTTP
 	if nextHopURL.Scheme == "http" {
 		proxy.Transport = &http.Transport{
 			IdleConnTimeout:     10 * time.Second,
