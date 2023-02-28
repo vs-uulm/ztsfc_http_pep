@@ -6,10 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
-    "net"
 	"net/http"
 	"strconv"
-    "strings"
 
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
@@ -27,8 +25,6 @@ const (
 // Sends an auhtorization request to the PEP for to the passed client resource access request 
 // Step 1: Extracts all needed authorization metadata from the passed client request
 func PerformAuthorization(sysLogger *logger.Logger, clientReq *http.Request, cpm *metadata.CpMetadata) error {
-	collectAttributes(clientReq, cpm)
-
 	// send request to correct address and API endpoint
 	authoReq, err := http.NewRequest("GET", config.Config.Pdp.TargetPdpAddr+requestEndpoint, nil)
 	if err != nil {
@@ -73,56 +69,4 @@ func prepareAuthRequest(authoReq *http.Request, cpm *metadata.CpMetadata) {
 	//q.Set("failedToday", cpm.FailedToday)
 	q.Set("location", cpm.Location)
 	authoReq.URL.RawQuery = q.Encode()
-}
-
-func collectAttributes(clientReq *http.Request, cpm *metadata.CpMetadata) {
-    // pwAuthenticated & certAuthenticated are already set by BasicAuth()
-	collectResource(clientReq, cpm)
-	collectAction(clientReq, cpm)
-	collectDevice(clientReq, cpm)
-	//collectRequestToday(clientReq, cpm)
-	//collectFailedToday(clientReq, cpm)
-	collectLocation(clientReq, cpm)
-}
-
-func collectResource(clientReq *http.Request, cpm *metadata.CpMetadata) {
-	cpm.Resource = clientReq.Host
-}
-
-func collectAction(clientReq *http.Request, cpm *metadata.CpMetadata) {
-	cpm.Action = strings.ToLower(clientReq.Method)
-}
-
-func collectDevice(clientReq *http.Request, cpm *metadata.CpMetadata) {
-    if len(clientReq.TLS.PeerCertificates) == 0 {
-        cpm.Device = ""
-        return
-    }
-    clientCert := clientReq.TLS.PeerCertificates[0]
-    if clientCert == nil {
-        cpm.Device = ""
-        return
-    }
-    cpm.Device = clientCert.Subject.CommonName
-    //ua := ua.Parse(clientReq.Header.Get("User-Agent"))
-	//cpm.Device = ua.Device + ";" + ua.Name + ";" + ua.OS + ";" + ua.OSVersion
-}
-
-func collectRequestToday(clientReq *http.Request, cpm *metadata.CpMetadata) {
-	cpm.RequestToday = clientReq.Header.Get("clientRequestToday")
-}
-
-func collectFailedToday(clientReq *http.Request, cpm *metadata.CpMetadata) {
-	cpm.FailedToday = clientReq.Header.Get("failedToday")
-}
-
-// TODO: Harden this function
-func collectLocation(clientReq *http.Request, cpm *metadata.CpMetadata) error {
-    host, _, err := net.SplitHostPort(clientReq.RemoteAddr)
-    if err != nil {
-        return fmt.Errorf("authorization: collectLocation(): provided req.RemoteAddr not in valid host:port form %w", err)
-    }
-
-	cpm.Location = host
-    return nil
 }

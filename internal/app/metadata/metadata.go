@@ -2,6 +2,13 @@
 // during processing inside the PEP.
 package metadata
 
+import (
+	"net"
+	"net/http"
+	"strings"
+	"fmt"
+)
+
 type AuthoResponse struct {
         Allow bool     `json:"allow"`
         Reason string `json:"reason"`
@@ -53,4 +60,56 @@ func (cpm *CpMetadata) ClearMetadata() {
 		Name    string
 		URL string
 	}{}
+}
+
+func CollectMetadata(clientReq *http.Request, cpm *CpMetadata) {
+    // pwAuthenticated & certAuthenticated are already set by BasicAuth()
+	collectResource(clientReq, cpm)
+	collectAction(clientReq, cpm)
+	collectDevice(clientReq, cpm)
+	//collectRequestToday(clientReq, cpm)
+	//collectFailedToday(clientReq, cpm)
+	collectLocation(clientReq, cpm)
+}
+
+func collectResource(clientReq *http.Request, cpm *CpMetadata) {
+	cpm.Resource = clientReq.Host
+}
+
+func collectAction(clientReq *http.Request, cpm *CpMetadata) {
+	cpm.Action = strings.ToLower(clientReq.Method)
+}
+
+func collectDevice(clientReq *http.Request, cpm *CpMetadata) {
+    if len(clientReq.TLS.PeerCertificates) == 0 {
+        cpm.Device = ""
+        return
+    }
+    clientCert := clientReq.TLS.PeerCertificates[0]
+    if clientCert == nil {
+        cpm.Device = ""
+        return
+    }
+    cpm.Device = clientCert.Subject.CommonName
+    //ua := ua.Parse(clientReq.Header.Get("User-Agent"))
+	//cpm.Device = ua.Device + ";" + ua.Name + ";" + ua.OS + ";" + ua.OSVersion
+}
+
+func collectRequestToday(clientReq *http.Request, cpm *CpMetadata) {
+	cpm.RequestToday = clientReq.Header.Get("clientRequestToday")
+}
+
+func collectFailedToday(clientReq *http.Request, cpm *CpMetadata) {
+	cpm.FailedToday = clientReq.Header.Get("failedToday")
+}
+
+// TODO: Harden this function
+func collectLocation(clientReq *http.Request, cpm *CpMetadata) error {
+    host, _, err := net.SplitHostPort(clientReq.RemoteAddr)
+    if err != nil {
+        return fmt.Errorf("authorization: collectLocation(): provided req.RemoteAddr not in valid host:port form %w", err)
+    }
+
+	cpm.Location = host
+    return nil
 }

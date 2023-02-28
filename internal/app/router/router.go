@@ -117,6 +117,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
     // Declares a new metadata instance in which all necessary data to process the client's request are stored in
 	md := new(metadata.CpMetadata)
+	metadata.CollectMetadata(req, md)
 
 	// AUTHENTICATION: prompts the user for the authentication factors and evalautes them
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
