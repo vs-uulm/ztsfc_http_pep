@@ -135,6 +135,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	err := pdp.PerformAuthorization(router.sysLogger, req, md)
 	if err != nil {
 		router.sysLogger.WithField("issuer", "PDP").Error(err)
+		io.WriteString(w, "Internal ZTSFC error occured. Contact your security advisor if the error perists.")
+		w.WriteHeader(500)
 		return
 	}
 
