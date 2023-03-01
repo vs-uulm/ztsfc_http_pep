@@ -31,7 +31,7 @@ func PerformAuthorization(sysLogger *logger.Logger, clientReq *http.Request, cpm
 		return fmt.Errorf("unable to create authorization request for PDP: %w", err)
 	}
 
-    sysLogger.Infof("Cert Authenticated: %t", cpm.CertAuthenticated)
+	sysLogger.Debugf("%s", cpm.String())
 
 	prepareAuthRequest(authoReq, cpm)
 	pdpResp, err := proxies.PdpClientPool[rand.Int()%50].Do(authoReq)

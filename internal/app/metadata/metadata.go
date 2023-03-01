@@ -46,6 +46,7 @@ type CpMetadata struct {
 // zero values.
 func (cpm *CpMetadata) ClearMetadata() {
 	cpm.AuthDecision = false
+	cpm.AuthReason = ""
 	cpm.User = ""
 	cpm.PwAuthenticated = false
 	cpm.CertAuthenticated = false
@@ -60,6 +61,25 @@ func (cpm *CpMetadata) ClearMetadata() {
 		Name    string
 		URL string
 	}{}
+}
+
+func (cpm *CpMetadata) String() string {
+	header := "Metadata: "
+	authDecision := fmt.Sprintf("AuthDecision=%t, ", cpm.AuthDecision)
+	authReason := fmt.Sprintf("AuthReason=%s, ", cpm.AuthReason)
+	user := fmt.Sprintf("User=%s, ", cpm.User)
+	pwAuthenticated := fmt.Sprintf("PwAuthenticated=%t, ", cpm.PwAuthenticated)
+	certAuthenticated := fmt.Sprintf("CertAuthenticated=%t, ", cpm.CertAuthenticated)
+	resource := fmt.Sprintf("Resource=%s, ", cpm.Resource)
+	action := fmt.Sprintf("Action=%s, ", cpm.Action)
+	device := fmt.Sprintf("Device=%s, ", cpm.Device)
+	requestToday := fmt.Sprintf("RequestToday=%s, ", cpm.RequestToday)
+	failedToday := fmt.Sprintf("FailedToday=%s, ", cpm.FailedToday)
+	location := fmt.Sprintf("Location=%s, ", cpm.Location)
+	mdString := header + authDecision + authReason + user + pwAuthenticated + certAuthenticated +
+		resource + action + device + requestToday + failedToday + location
+
+	return mdString
 }
 
 func CollectMetadata(clientReq *http.Request, cpm *CpMetadata) {
