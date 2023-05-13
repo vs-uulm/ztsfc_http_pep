@@ -31,7 +31,7 @@ func init() {
 		log.Fatal(err)
 	}
 
-    // init system logger
+	// init system logger
 	confInit.InitSysLoggerParams()
 
 	// Create an instance of the system logger
@@ -51,9 +51,9 @@ func init() {
 	config.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
 	config.Config.CAcertPoolPepAcceptsFromInt = x509.NewCertPool()
 
-    if err = confInit.InitConfig(sysLogger); err != nil {
-        sysLogger.Fatalf("main: init(): %v", err)
-    }
+	if err = confInit.InitConfig(sysLogger); err != nil {
+		sysLogger.Fatalf("main: init(): %v", err)
+	}
 
 	// Init Reverse Proxies used for the modules
 	// Basic_auth_proxy currently not needed since BasicAuth is performed as part of the PEP
