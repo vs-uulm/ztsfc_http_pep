@@ -13,8 +13,7 @@ import (
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/proxies"
-
-    //"github.com/mileusna/useragent"
+	//"github.com/mileusna/useragent"
 )
 
 const (
@@ -22,7 +21,7 @@ const (
 	requestEndpoint = "/v1/authorization"
 )
 
-// Sends an auhtorization request to the PEP for to the passed client resource access request 
+// Sends an auhtorization request to the PEP for to the passed client resource access request
 // Step 1: Extracts all needed authorization metadata from the passed client request
 func PerformAuthorization(sysLogger *logger.Logger, clientReq *http.Request, cpm *metadata.CpMetadata) error {
 	// send request to correct address and API endpoint
@@ -51,7 +50,7 @@ func PerformAuthorization(sysLogger *logger.Logger, clientReq *http.Request, cpm
 	}
 	cpm.SFC = authoResp.SFC
 	cpm.AuthDecision = authoResp.Allow
-    cpm.AuthReason = authoResp.Reason
+	cpm.AuthReason = authoResp.Reason
 
 	return nil
 }
@@ -68,5 +67,7 @@ func prepareAuthRequest(authoReq *http.Request, cpm *metadata.CpMetadata) {
 	//q.Set("requestToday", cpm.RequestToday)
 	//q.Set("failedToday", cpm.FailedToday)
 	q.Set("location", cpm.Location)
+	q.Set("connectionSecurity", cpm.ConnectionSecurity)
+	q.Set("userAgent", cpm.UserAgent)
 	authoReq.URL.RawQuery = q.Encode()
 }

@@ -3,42 +3,43 @@
 package metadata
 
 import (
+	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
-	"fmt"
 )
 
 type AuthoResponse struct {
-        Allow bool     `json:"allow"`
-        Reason string `json:"reason"`
-        SFC   []Sf `json:"sfc"`
+	Allow  bool   `json:"allow"`
+	Reason string `json:"reason"`
+	SFC    []Sf   `json:"sfc"`
 }
 
 type Sf struct {
-    Name string `json:"name"`
-    Md string `json:"md"`
+	Name string `json:"name"`
+	Md   string `json:"md"`
 }
 
 // The struct CpMetadata is for storing several meta data for a client
 // request. The struct can be passed across the PEP, such that several
 // components can collect different information in here.
 type CpMetadata struct {
-	AuthDecision      bool
-    AuthReason string
-	User              string
-	PwAuthenticated   bool
-	CertAuthenticated bool
-	Resource          string
-	Action            string
-	Device            string
-	RequestToday      string
-	FailedToday       string
-	Location          string
-	SFC               []Sf
-	SFP               []struct {
-		Name    string
-		URL string
+	AuthDecision       bool
+	AuthReason         string
+	User               string
+	PwAuthenticated    bool
+	CertAuthenticated  bool
+	Resource           string
+	Action             string
+	Device             string
+	Location           string
+	ConnectionSecurity string
+	UserAgent          string
+	SFC                []Sf
+	SFP                []struct {
+		Name string
+		URL  string
 	}
 }
 
@@ -53,13 +54,13 @@ func (cpm *CpMetadata) ClearMetadata() {
 	cpm.Resource = ""
 	cpm.Action = ""
 	cpm.Device = ""
-	cpm.RequestToday = ""
-	cpm.FailedToday = ""
 	cpm.Location = ""
+	cpm.ConnectionSecurity = ""
+	cpm.UserAgent = ""
 	cpm.SFC = []Sf{}
 	cpm.SFP = []struct {
-		Name    string
-		URL string
+		Name string
+		URL  string
 	}{}
 }
 
@@ -73,23 +74,27 @@ func (cpm *CpMetadata) String() string {
 	resource := fmt.Sprintf("Resource=%s, ", cpm.Resource)
 	action := fmt.Sprintf("Action=%s, ", cpm.Action)
 	device := fmt.Sprintf("Device=%s, ", cpm.Device)
-	requestToday := fmt.Sprintf("RequestToday=%s, ", cpm.RequestToday)
-	failedToday := fmt.Sprintf("FailedToday=%s, ", cpm.FailedToday)
 	location := fmt.Sprintf("Location=%s, ", cpm.Location)
+	connectionSecurity := fmt.Sprintf("ConnectionSecurity=%s, ", cpm.ConnectionSecurity)
+	UserAgent := fmt.Sprintf("UserAgent=%s", cpm.UserAgent)
 	mdString := header + authDecision + authReason + user + pwAuthenticated + certAuthenticated +
-		resource + action + device + requestToday + failedToday + location
+		resource + action + device + location + connectionSecurity + UserAgent
 
 	return mdString
 }
 
 func CollectMetadata(clientReq *http.Request, cpm *CpMetadata) {
-    // pwAuthenticated & certAuthenticated are already set by BasicAuth()
+	// User is set by BasicAuth()
+	// PwAuthenticated is set by BasicAuth()
+	// CertAuthenticated is set by BasicAuth()
 	collectResource(clientReq, cpm)
 	collectAction(clientReq, cpm)
 	collectDevice(clientReq, cpm)
 	//collectRequestToday(clientReq, cpm)
 	//collectFailedToday(clientReq, cpm)
 	collectLocation(clientReq, cpm)
+	collectConnectionSecurity(clientReq, cpm)
+	collectUserAgent(clientReq, cpm)
 }
 
 func collectResource(clientReq *http.Request, cpm *CpMetadata) {
@@ -101,35 +106,36 @@ func collectAction(clientReq *http.Request, cpm *CpMetadata) {
 }
 
 func collectDevice(clientReq *http.Request, cpm *CpMetadata) {
-    if len(clientReq.TLS.PeerCertificates) == 0 {
-        cpm.Device = ""
-        return
-    }
-    clientCert := clientReq.TLS.PeerCertificates[0]
-    if clientCert == nil {
-        cpm.Device = ""
-        return
-    }
-    cpm.Device = clientCert.Subject.CommonName
-    //ua := ua.Parse(clientReq.Header.Get("User-Agent"))
-	//cpm.Device = ua.Device + ";" + ua.Name + ";" + ua.OS + ";" + ua.OSVersion
-}
-
-func collectRequestToday(clientReq *http.Request, cpm *CpMetadata) {
-	cpm.RequestToday = clientReq.Header.Get("clientRequestToday")
-}
-
-func collectFailedToday(clientReq *http.Request, cpm *CpMetadata) {
-	cpm.FailedToday = clientReq.Header.Get("failedToday")
+	if len(clientReq.TLS.PeerCertificates) == 0 {
+		cpm.Device = ""
+		return
+	}
+	clientCert := clientReq.TLS.PeerCertificates[0]
+	if clientCert == nil {
+		cpm.Device = ""
+		return
+	}
+	cpm.Device = clientCert.Subject.CommonName
+	// "github.com/mileusna/useragent"
+	// ua := ua.Parse(clientReq.Header.Get("User-Agent"))
+	// cpm.Device = ua.Device + ";" + ua.Name + ";" + ua.OS + ";" + ua.OSVersion
 }
 
 // TODO: Harden this function
 func collectLocation(clientReq *http.Request, cpm *CpMetadata) error {
-    host, _, err := net.SplitHostPort(clientReq.RemoteAddr)
-    if err != nil {
-        return fmt.Errorf("authorization: collectLocation(): provided req.RemoteAddr not in valid host:port form %w", err)
-    }
+	host, _, err := net.SplitHostPort(clientReq.RemoteAddr)
+	if err != nil {
+		return fmt.Errorf("authorization: collectLocation(): provided req.RemoteAddr not in valid host:port form %w", err)
+	}
 
 	cpm.Location = host
-    return nil
+	return nil
+}
+
+func collectConnectionSecurity(clientReq *http.Request, cpm *CpMetadata) {
+	cpm.ConnectionSecurity = tls.CipherSuiteName(clientReq.TLS.CipherSuite)
+}
+
+func collectUserAgent(clientReq *http.Request, cpm *CpMetadata) {
+	cpm.UserAgent = clientReq.Header.Get("User-Agent")
 }
