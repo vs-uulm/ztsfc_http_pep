@@ -6,10 +6,11 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"sync"
-    "net/http"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -38,18 +39,18 @@ type PepT struct {
 }
 
 type BasicAuthT struct {
-	Passwd PasswdT `yaml:"passwd"`
+	Passwd  PasswdT  `yaml:"passwd"`
 	Session SessionT `yaml:"session"`
 }
 
 type PasswdT struct {
-	PathToPasswd string `yaml:"path_to_passwd"`
-	PasswdList       map[string]ShadowT
-	WaitPasswdList   sync.WaitGroup
+	PathToPasswd   string `yaml:"path_to_passwd"`
+	PasswdList     map[string]ShadowT
+	WaitPasswdList sync.WaitGroup
 }
 
 type ShadowT struct {
-	Salt string
+	Salt   string
 	Digest string
 }
 
@@ -62,7 +63,7 @@ type ShadowT struct {
 
 type SessionT struct {
 	PathToJwtSigningKey string `yaml:"path_to_jwt_signing_key"`
-	JwtSigningKey string
+	JwtSigningKey       string
 }
 
 // The struct PdpT is for parsing the section 'pdp' of the config file.
@@ -76,17 +77,18 @@ type PdpT struct {
 }
 
 type PipT struct {
-    TargetAddr string `yaml:"target_addr"`
-    PushUserAttributesUpdateEndpoint string `yaml:"push_user_attribute_update_endpoint"`
+	TargetAddr                       string `yaml:"target_addr"`
+	PushUserAttributesUpdateEndpoint string `yaml:"push_user_attribute_update_endpoint"`
+	UserEndpoint                     string `yaml:"user_endpoint"`
 
-    CertsPepAcceptsWhenShownByPip []string `yaml:"certs_pep_accepts_when_shown_by_pip"`
-    CertShownByPepToPip           string   `yaml:"cert_shown_by_pep_to_pip"`
-    PrivkeyForCertShownByPepToPip string   `yaml:"privkey_for_cert_shown_by_pep_to_pip"`
+	CertsPepAcceptsWhenShownByPip []string `yaml:"certs_pep_accepts_when_shown_by_pip"`
+	CertShownByPepToPip           string   `yaml:"cert_shown_by_pep_to_pip"`
+	PrivkeyForCertShownByPepToPip string   `yaml:"privkey_for_cert_shown_by_pep_to_pip"`
 
-    CaCertPoolPepAcceptsFromPip *x509.CertPool
-    X509KeyPairShownByPepToPip  tls.Certificate
+	CaCertPoolPepAcceptsFromPip *x509.CertPool
+	X509KeyPairShownByPepToPip  tls.Certificate
 
-    PipClient *http.Client
+	PipClient *http.Client
 }
 
 // The struct SfplT is for parsing the section 'sfp_logic' of the config file.

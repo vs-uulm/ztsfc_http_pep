@@ -4,11 +4,13 @@ package basic_auth
 
 import (
 	"crypto/sha512"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
+	rattr "github.com/vs-uulm/ztsfc_http_attributes"
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
@@ -83,10 +85,23 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 			return false
 		}
 
+		failedAttempts, err := getPWAuthenticationFails(sysLogger, username)
+		if err != nil {
+			sysLogger.Errorf("basic_auth: validUser(): For presented username '%s' the failed PW authentication attempts could not retrieved from PIP: %v.", username, err)
+			handleFormResponse("Internal Error. Try again later", w)
+			return false
+		}
+		if failedAttempts > 3 {
+			sysLogger.Errorf("basic_auth: validUser(): Presented username '%s' has too many failed PW authentication attempts", username)
+			handleFormResponse("You user account has been suspended", w)
+			return false
+		}
+
 		passwordl, exist := req.PostForm["password"]
 		password = passwordl[0]
 		if !exist {
 			handleFormResponse("Password not present in POST form", w)
+			sysLogger.Errorf("basic_auth: validPassword(): user '%s' presented no password.", username)
 			if err := pushPWAuthenticationFail(sysLogger, username); err != nil {
 				sysLogger.Errorf("%v", err)
 			}
@@ -94,10 +109,15 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 		}
 
 		if !validPassword(sysLogger, username, password) {
-			sysLogger.Errorf("basic_auth: validPassword(): presented password for user '%s' is incorrect.", username)
 			handleFormResponse("Username or password are not correct", w)
+			sysLogger.Errorf("basic_auth: validPassword(): presented password for user '%s' is incorrect.", username)
+			if err := pushPWAuthenticationFail(sysLogger, username); err != nil {
+				sysLogger.Errorf("%v", err)
+			}
 			return false
 		}
+
+		pushPWAuthenticationSucess(sysLogger, username)
 
 		// Create JWT
 		jwtToken, err := createJWToken(username)
@@ -174,6 +194,58 @@ func pushPWAuthenticationFail(sysLogger *logger.Logger, username string) error {
 	}
 
 	return nil
+}
+
+func pushPWAuthenticationSucess(sysLogger *logger.Logger, username string) error {
+	pushReq, err := http.NewRequest("POST", config.Config.Pip.TargetAddr+config.Config.Pip.PushUserAttributesUpdateEndpoint, nil)
+	if err != nil {
+		return fmt.Errorf("attributes: pushPWAuthenticationFail(): unable to create push user update attribute request for PIP: %w", err)
+	}
+
+	pushReqQuery := pushReq.URL.Query()
+	pushReqQuery.Set("user", username)
+	pushReqQuery.Set("success-pw-authentication", "1")
+	pushReq.URL.RawQuery = pushReqQuery.Encode()
+
+	pipResp, err := config.Config.Pip.PipClient.Do(pushReq)
+	if err != nil {
+		return fmt.Errorf("attributes: pushPWAuthenticationFail(): unable to send push user attribute request to PIP: %w", err)
+	}
+
+	if pipResp.StatusCode != 200 {
+		return nil
+	}
+
+	return nil
+}
+
+// TODO: Writing an own endpoint for getting failed PW authentications?
+func getPWAuthenticationFails(sysLogger *logger.Logger, username string) (int, error) {
+
+	usr := rattr.NewEmptyUser()
+	usrReq, err := http.NewRequest("GET", config.Config.Pip.TargetAddr+config.Config.Pip.UserEndpoint, nil)
+	if err != nil {
+		return -1, fmt.Errorf("attributes: RequestUserAttributes(): unable to create device attribute request for PIP: %w", err)
+	}
+	usrReqQuery := usrReq.URL.Query()
+	usrReqQuery.Set("user", username)
+	usrReq.URL.RawQuery = usrReqQuery.Encode()
+
+	pipResp, err := config.Config.Pip.PipClient.Do(usrReq)
+	if err != nil {
+		return -1, fmt.Errorf("attributes: RequestUserAttributes(): unable to send user request to PIP: %w", err)
+	}
+
+	if pipResp.StatusCode != 200 {
+		return -1, fmt.Errorf("attributes: RequestUserAttributes(): PIP sent an status code unequal to 200: %w", err)
+	}
+
+	err = json.NewDecoder(pipResp.Body).Decode(usr)
+	if err != nil {
+		return -1, fmt.Errorf("attributes: RequestUserAttributes(): unable to decode the PIP response: %w", err)
+	}
+
+	return usr.FailedPWAuthentication, nil
 }
 
 func validUser(sysLogger *logger.Logger, username string) bool {
