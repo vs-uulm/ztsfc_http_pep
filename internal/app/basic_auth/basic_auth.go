@@ -16,7 +16,7 @@ import (
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
 )
 
-func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
+func UserSessionIsValid(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request, cpm *metadata.CpMetadata) bool {
 	jwtCookie, err := req.Cookie("ztsfc_session")
 	if err != nil {
 		return false
@@ -35,6 +35,21 @@ func UserSessionIsValid(req *http.Request, cpm *metadata.CpMetadata) bool {
 	}
 
 	username := token.Claims.(jwt.MapClaims)["sub"].(string)
+
+	/*
+		failedAttempts, err := getFailedAuthAttempts(sysLogger, username)
+		if err != nil {
+			sysLogger.Errorf("basic_auth: validUser(): For presented username '%s' the failed PW authentication attempts could not retrieved from PIP: %v.", username, err)
+			HandleFormResponse("Internal Error. Try again later", w)
+			return false
+		}
+		if failedAttempts > 3 {
+			sysLogger.Errorf("basic_auth: validUser(): Presented username '%s' has too many failed PW authentication attempts", username)
+			HandleFormResponse("You user account has been suspended", w)
+			return false
+		}
+	*/
+
 	cpm.User = username
 	cpm.PwAuthenticated = true
 	cpm.CertAuthenticated = performX509auth(req)
@@ -62,62 +77,62 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 	if req.Method == "POST" {
 
 		if err := req.ParseForm(); err != nil {
-			handleFormResponse("Parsing Error", w)
+			HandleFormResponse("Parsing Error", w)
 			return false
 		}
 
 		nmbrOfPostvalues := len(req.PostForm)
 		if nmbrOfPostvalues != 2 {
-			handleFormResponse("Wrong number of POST form values", w)
+			HandleFormResponse("Wrong number of POST form values", w)
 			return false
 		}
 
 		usernamel, exist := req.PostForm["username"]
 		username = usernamel[0]
 		if !exist {
-			handleFormResponse("Username not present in POST form", w)
+			HandleFormResponse("Username not present in POST form", w)
 			return false
 		}
 
 		if !validUser(sysLogger, username) {
 			sysLogger.Errorf("basic_auth: validUser(): presented username '%s' does not exist or is wrong.", username)
-			handleFormResponse("Username or password are not correct", w)
+			HandleFormResponse("Username or password are not correct", w)
 			return false
 		}
 
-		failedAttempts, err := getPWAuthenticationFails(sysLogger, username)
+		failedAttempts, err := getFailedAuthAttempts(sysLogger, username)
 		if err != nil {
 			sysLogger.Errorf("basic_auth: validUser(): For presented username '%s' the failed PW authentication attempts could not retrieved from PIP: %v.", username, err)
-			handleFormResponse("Internal Error. Try again later", w)
+			HandleFormResponse("Internal Error. Try again later", w)
 			return false
 		}
 		if failedAttempts > 3 {
 			sysLogger.Errorf("basic_auth: validUser(): Presented username '%s' has too many failed PW authentication attempts", username)
-			handleFormResponse("You user account has been suspended", w)
+			HandleFormResponse("You user account has been suspended", w)
 			return false
 		}
 
 		passwordl, exist := req.PostForm["password"]
 		password = passwordl[0]
 		if !exist {
-			handleFormResponse("Password not present in POST form", w)
+			HandleFormResponse("Password not present in POST form", w)
 			sysLogger.Errorf("basic_auth: validPassword(): user '%s' presented no password.", username)
-			if err := pushPWAuthenticationFail(sysLogger, username); err != nil {
+			if err := pushAuthFail(sysLogger, username); err != nil {
 				sysLogger.Errorf("%v", err)
 			}
 			return false
 		}
 
 		if !validPassword(sysLogger, username, password) {
-			handleFormResponse("Username or password are not correct", w)
+			HandleFormResponse("Username or password are not correct", w)
 			sysLogger.Errorf("basic_auth: validPassword(): presented password for user '%s' is incorrect.", username)
-			if err := pushPWAuthenticationFail(sysLogger, username); err != nil {
+			if err := pushAuthFail(sysLogger, username); err != nil {
 				sysLogger.Errorf("%v", err)
 			}
 			return false
 		}
 
-		pushPWAuthenticationSucess(sysLogger, username)
+		// pushAuthSuccess(sysLogger, username)
 
 		// Create JWT
 		jwtToken, err := createJWToken(username)
@@ -140,8 +155,8 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 		return false
 
 	} else {
-		// handleFormResponse("only post methods are accepted in this state", w)
-		handleFormResponse("", w)
+		// HandleFormResponse("only post methods are accepted in this state", w)
+		HandleFormResponse("", w)
 		return false
 	}
 }
@@ -173,20 +188,20 @@ func performX509auth(req *http.Request) bool {
 	return false
 }
 
-func pushPWAuthenticationFail(sysLogger *logger.Logger, username string) error {
+func pushAuthFail(sysLogger *logger.Logger, username string) error {
 	pushReq, err := http.NewRequest("POST", config.Config.Pip.TargetAddr+config.Config.Pip.PushUserAttributesUpdateEndpoint, nil)
 	if err != nil {
-		return fmt.Errorf("attributes: pushPWAuthenticationFail(): unable to create push user update attribute request for PIP: %w", err)
+		return fmt.Errorf("attributes: pushAuthFail(): unable to create push user update attribute request for PIP: %w", err)
 	}
 
 	pushReqQuery := pushReq.URL.Query()
 	pushReqQuery.Set("user", username)
-	pushReqQuery.Set("failed-pw-authentication", "1")
+	pushReqQuery.Set("failed-auth-attempt", "1")
 	pushReq.URL.RawQuery = pushReqQuery.Encode()
 
 	pipResp, err := config.Config.Pip.PipClient.Do(pushReq)
 	if err != nil {
-		return fmt.Errorf("attributes: pushPWAuthenticationFail(): unable to send push user attribute request to PIP: %w", err)
+		return fmt.Errorf("attributes: pushAuthFail(): unable to send push user attribute request to PIP: %w", err)
 	}
 
 	if pipResp.StatusCode != 200 {
@@ -196,20 +211,21 @@ func pushPWAuthenticationFail(sysLogger *logger.Logger, username string) error {
 	return nil
 }
 
-func pushPWAuthenticationSucess(sysLogger *logger.Logger, username string) error {
+// Not in use anymore
+func pushAuthSuccess(sysLogger *logger.Logger, username string) error {
 	pushReq, err := http.NewRequest("POST", config.Config.Pip.TargetAddr+config.Config.Pip.PushUserAttributesUpdateEndpoint, nil)
 	if err != nil {
-		return fmt.Errorf("attributes: pushPWAuthenticationFail(): unable to create push user update attribute request for PIP: %w", err)
+		return fmt.Errorf("attributes: pushAuthSuccess(): unable to create push user update attribute request for PIP: %w", err)
 	}
 
 	pushReqQuery := pushReq.URL.Query()
 	pushReqQuery.Set("user", username)
-	pushReqQuery.Set("success-pw-authentication", "1")
+	pushReqQuery.Set("success-auth-attempt", "1")
 	pushReq.URL.RawQuery = pushReqQuery.Encode()
 
 	pipResp, err := config.Config.Pip.PipClient.Do(pushReq)
 	if err != nil {
-		return fmt.Errorf("attributes: pushPWAuthenticationFail(): unable to send push user attribute request to PIP: %w", err)
+		return fmt.Errorf("attributes: pushAuthSuccess(): unable to send push user attribute request to PIP: %w", err)
 	}
 
 	if pipResp.StatusCode != 200 {
@@ -220,7 +236,7 @@ func pushPWAuthenticationSucess(sysLogger *logger.Logger, username string) error
 }
 
 // TODO: Writing an own endpoint for getting failed PW authentications?
-func getPWAuthenticationFails(sysLogger *logger.Logger, username string) (int, error) {
+func getFailedAuthAttempts(sysLogger *logger.Logger, username string) (int, error) {
 
 	usr := rattr.NewEmptyUser()
 	usrReq, err := http.NewRequest("GET", config.Config.Pip.TargetAddr+config.Config.Pip.UserEndpoint, nil)
@@ -245,7 +261,7 @@ func getPWAuthenticationFails(sysLogger *logger.Logger, username string) (int, e
 		return -1, fmt.Errorf("attributes: RequestUserAttributes(): unable to decode the PIP response: %w", err)
 	}
 
-	return usr.FailedPWAuthentication, nil
+	return usr.FailedAuthAttempts, nil
 }
 
 func validUser(sysLogger *logger.Logger, username string) bool {
@@ -270,7 +286,7 @@ func calcSaltedHash(password, salt string) string {
 	return fmt.Sprintf("%x", digest)
 }
 
-func handleFormResponse(msg string, w http.ResponseWriter) {
+func HandleFormResponse(msg string, w http.ResponseWriter) {
 	form := `<!DOCTYPE html>
 		<html>
 		  <head>
