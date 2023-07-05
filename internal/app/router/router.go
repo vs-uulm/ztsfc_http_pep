@@ -119,7 +119,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	md := new(metadata.CpMetadata)
 	metadata.CollectMetadata(req, md)
 
-	// AUTHENTICATION: prompts the user for the authentication factors and evalautes them
+	// AUTHENTICATION
+	// prompts the user for the authentication factors and evalautes them
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
 	// TODO: return error to client?
 	// Check if user has a valid session already

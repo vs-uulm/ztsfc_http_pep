@@ -69,5 +69,6 @@ func prepareAuthRequest(authoReq *http.Request, cpm *metadata.CpMetadata) {
 	q.Set("location", cpm.Location)
 	q.Set("connectionSecurity", cpm.ConnectionSecurity)
 	q.Set("userAgent", cpm.UserAgent)
+	q.Set("requestProtocol", strconv.FormatFloat(cpm.RequestProtocol, 'f', -1, 32))
 	authoReq.URL.RawQuery = q.Encode()
 }

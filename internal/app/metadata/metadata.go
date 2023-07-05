@@ -36,6 +36,7 @@ type CpMetadata struct {
 	Location           string
 	ConnectionSecurity string
 	UserAgent          string
+	RequestProtocol    float64
 	SFC                []Sf
 	SFP                []struct {
 		Name string
@@ -57,6 +58,7 @@ func (cpm *CpMetadata) ClearMetadata() {
 	cpm.Location = ""
 	cpm.ConnectionSecurity = ""
 	cpm.UserAgent = ""
+	cpm.RequestProtocol = 0.0
 	cpm.SFC = []Sf{}
 	cpm.SFP = []struct {
 		Name string
@@ -76,9 +78,10 @@ func (cpm *CpMetadata) String() string {
 	device := fmt.Sprintf("Device=%s, ", cpm.Device)
 	location := fmt.Sprintf("Location=%s, ", cpm.Location)
 	connectionSecurity := fmt.Sprintf("ConnectionSecurity=%s, ", cpm.ConnectionSecurity)
-	UserAgent := fmt.Sprintf("UserAgent=%s", cpm.UserAgent)
+	userAgent := fmt.Sprintf("UserAgent=%s", cpm.UserAgent)
+	requestProtocol := fmt.Sprintf("RequestProtocol=%f", cpm.RequestProtocol)
 	mdString := header + authDecision + authReason + user + pwAuthenticated + certAuthenticated +
-		resource + action + device + location + connectionSecurity + UserAgent
+		resource + action + device + location + connectionSecurity + userAgent + requestProtocol
 
 	return mdString
 }
@@ -95,6 +98,7 @@ func CollectMetadata(clientReq *http.Request, cpm *CpMetadata) {
 	collectLocation(clientReq, cpm)
 	collectConnectionSecurity(clientReq, cpm)
 	collectUserAgent(clientReq, cpm)
+	collectRequestProtocol(clientReq, cpm)
 }
 
 func collectResource(clientReq *http.Request, cpm *CpMetadata) {
@@ -138,4 +142,8 @@ func collectConnectionSecurity(clientReq *http.Request, cpm *CpMetadata) {
 
 func collectUserAgent(clientReq *http.Request, cpm *CpMetadata) {
 	cpm.UserAgent = clientReq.Header.Get("User-Agent")
+}
+
+func collectRequestProtocol(clientReq *http.Request, cpm *CpMetadata) {
+	cpm.RequestProtocol = float64(clientReq.ProtoMajor) + float64(clientReq.ProtoMinor)/10
 }

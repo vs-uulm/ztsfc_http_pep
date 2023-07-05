@@ -4,14 +4,20 @@ package config
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/go-webauthn/webauthn/webauthn"
 )
 
 // Config contains all input from the config file and is is globally accessible
@@ -44,14 +50,72 @@ type BasicAuthT struct {
 }
 
 type PasswdT struct {
-	PathToPasswd   string `yaml:"path_to_passwd"`
-	PasswdList     map[string]ShadowT
+	PathToPasswd   string              `yaml:"path_to_passwd"`
+	PasswdList     map[string]*ShadowT // Key is username
 	WaitPasswdList sync.WaitGroup
 }
 
 type ShadowT struct {
+	User   string
+	ID     []byte
 	Salt   string
 	Digest string
+}
+
+// ShadowT implements the WebAuthn User interface:
+func (user *ShadowT) WebAuthnID() []byte {
+	return user.ID
+}
+
+func (user *ShadowT) WebAuthnName() string {
+	return user.User
+}
+
+func (user *ShadowT) WebAuthnDisplayName() string {
+	return user.User
+}
+
+func (user *ShadowT) WebAuthnIcon() string {
+	return ""
+}
+
+func (user *ShadowT) WebAuthnCredentials() []webauthn.Credential {
+	// Read passkey file
+	data, err := ioutil.ReadFile("/passkeys/" + user.User + ".passkey")
+	if err != nil {
+		log.Fatalf("Failed to read file: %s", err)
+	}
+
+	// Unmarshal JSON data
+	var credentials protocol.CredentialCreationResponse
+	err = json.Unmarshal(data, &credentials)
+	if err != nil {
+		log.Fatalf("Failed to unmarshal JSON data: %s", err)
+	}
+	parsedCredentials, err := credentials.Parse()
+	if err != nil {
+		log.Fatalf("Failed to parse credentials: %s", err)
+	}
+	finalCredentials, err := webauthn.MakeNewCredential(parsedCredentials)
+	if err != nil {
+		log.Fatalf("Failed to make new credentials: %s", err)
+	}
+	finalCredentialList := make([]webauthn.Credential, 0)
+	finalCredentialList = append(finalCredentialList, *finalCredentials)
+
+	return finalCredentialList
+	//return user.credentials
+}
+
+func (user *ShadowT) PasskeyExists() bool {
+	_, err := os.Stat("/passkeys/" + user.User + ".passkey")
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return false
 }
 
 //type SessionT struct {
