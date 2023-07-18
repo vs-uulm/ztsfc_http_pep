@@ -37,7 +37,8 @@ func initBasicAuth(sysLogger *logger.Logger) error {
 
 func initPasswd(sysLogger *logger.Logger) error {
 	var err error
-	config.Config.BasicAuth.Passwd.PasswdList = make(map[string]*config.ShadowT)
+	config.Config.BasicAuth.Passwd.PasswdListByUsername = make(map[string]*config.ShadowT)
+	config.Config.BasicAuth.Passwd.PasswdListByID = make(map[string]*config.ShadowT)
 
 	if config.Config.BasicAuth.Passwd.PathToPasswd == "" {
 		return errors.New("initPasswd(): path to passwd file is not defined")
@@ -80,7 +81,8 @@ func initPasswd(sysLogger *logger.Logger) error {
 			continue
 		}
 
-		config.Config.BasicAuth.Passwd.PasswdList[values[0]] = &config.ShadowT{User: values[0], ID: []byte(values[1]), Salt: values[2], Digest: values[3]}
+		config.Config.BasicAuth.Passwd.PasswdListByUsername[values[0]] = &config.ShadowT{User: values[0], ID: []byte(values[1]), Salt: values[2], Digest: values[3]}
+		config.Config.BasicAuth.Passwd.PasswdListByID[values[1]] = &config.ShadowT{User: values[0], ID: []byte(values[1]), Salt: values[2], Digest: values[3]}
 	}
 
 	if err = scanner.Err(); err != nil {
@@ -115,11 +117,17 @@ func initSession(sysLogger *logger.Logger) error {
 }
 
 func initWebAuthnContext(sysLogger *logger.Logger) error {
+	// Collect RPOrigins
+	rporigins := []string{}
+	for _, value := range config.Config.ServicePool {
+		rporigins = append(rporigins, "https://"+value.Sni)
+	}
+
 	// Create a new WebAuthn config
 	webAuthnConfig := &webauthn.Config{
 		RPDisplayName: "ZTSFC WebAuthn",
-		RPID:          "wiki.bwnet.informatik.uni-ulm.de",
-		RPOrigins:     []string{"https://wiki.bwnet.informatik.uni-ulm.de"},
+		RPID:          config.Config.BasicAuth.RPID,
+		RPOrigins:     rporigins,
 	}
 
 	// Create a new WebAuthn object

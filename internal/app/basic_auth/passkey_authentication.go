@@ -282,7 +282,7 @@ func BeginPasskeyRegistration(w http.ResponseWriter, r *http.Request) {
 	username := extractUsername(w, r)
 
 	// Check if username exists
-	user, ok := config.Config.BasicAuth.Passwd.PasswdList[username]
+	user, ok := config.Config.BasicAuth.Passwd.PasswdListByUsername[username]
 	if !ok {
 		JSONResponse(w, "User does not exist", http.StatusBadRequest)
 		return
@@ -302,7 +302,7 @@ func BeginPasskeyRegistration(w http.ResponseWriter, r *http.Request) {
 		JSONResponse(w, "Error creating new user passkey options", http.StatusBadRequest)
 		return
 	}
-	sessionData.UserDisplayName = user.User
+	sessionData.UserID = user.ID
 	sessionstore[sessionData.Challenge] = sessionData
 
 	// store the sessionData values
@@ -331,7 +331,7 @@ func FinishPasskeyRegistration(w http.ResponseWriter, r *http.Request) {
 	// Get the session data stored from the function above
 	session := sessionstore[response.Response.CollectedClientData.Challenge]
 
-	user, ok := config.Config.BasicAuth.Passwd.PasswdList[session.UserDisplayName] // Get the user
+	user, ok := config.Config.BasicAuth.Passwd.PasswdListByID[string(session.UserID)] // Get the user
 	if !ok {
 		fmt.Printf("Error: user could not restored from active session\n")
 	}
@@ -378,7 +378,7 @@ func BeginPasskeyLogin(w http.ResponseWriter, r *http.Request) {
 	username := extractUsername(w, r)
 
 	// Check if username exists
-	user, ok := config.Config.BasicAuth.Passwd.PasswdList[username]
+	user, ok := config.Config.BasicAuth.Passwd.PasswdListByUsername[username]
 	if !ok {
 		JSONResponse(w, "User does not exist", http.StatusBadRequest)
 		return
@@ -398,7 +398,7 @@ func BeginPasskeyLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// store the session values
-	session.UserDisplayName = user.User
+	session.UserID = user.ID
 	sessionstore[session.Challenge] = session
 
 	JSONResponse(w, options, http.StatusOK) // return the options generated
@@ -416,7 +416,7 @@ func FinishPasskeyLogin(sysLogger *logger.Logger, w http.ResponseWriter, r *http
 	// Get the session data stored from the function above
 	session := sessionstore[response.Response.CollectedClientData.Challenge]
 
-	user, ok := config.Config.BasicAuth.Passwd.PasswdList[session.UserDisplayName] // Get the user
+	user, ok := config.Config.BasicAuth.Passwd.PasswdListByID[string(session.UserID)] // Get the user
 	if !ok {
 		JSONResponse(w, "User login could not be finished", http.StatusBadRequest)
 		return
@@ -430,7 +430,7 @@ func FinishPasskeyLogin(sysLogger *logger.Logger, w http.ResponseWriter, r *http
 
 	fmt.Println("All Good...")
 	// If login was successful, handle next steps
-	if err = setCookieAndFinishAuthentication(sysLogger, w, r, user.User); err != nil {
+	if err = setCookieAndFinishAuthentication(sysLogger, w, r, user.User, "passkey"); err != nil {
 		JSONResponse(w, "User session cookie could not be created", http.StatusBadRequest)
 		return
 	}

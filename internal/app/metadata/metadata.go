@@ -25,20 +25,21 @@ type Sf struct {
 // request. The struct can be passed across the PEP, such that several
 // components can collect different information in here.
 type CpMetadata struct {
-	AuthDecision       bool
-	AuthReason         string
-	User               string
-	PwAuthenticated    bool
-	CertAuthenticated  bool
-	Resource           string
-	Action             string
-	Device             string
-	Location           string
-	ConnectionSecurity string
-	UserAgent          string
-	RequestProtocol    float64
-	SFC                []Sf
-	SFP                []struct {
+	AuthDecision         bool
+	AuthReason           string
+	User                 string
+	PwAuthenticated      bool
+	PasskeyAuthenticated bool
+	CertAuthenticated    bool
+	Resource             string
+	Action               string
+	Device               string
+	Location             string
+	ConnectionSecurity   string
+	UserAgent            string
+	RequestProtocol      float64
+	SFC                  []Sf
+	SFP                  []struct {
 		Name string
 		URL  string
 	}
@@ -51,6 +52,7 @@ func (cpm *CpMetadata) ClearMetadata() {
 	cpm.AuthReason = ""
 	cpm.User = ""
 	cpm.PwAuthenticated = false
+	cpm.PasskeyAuthenticated = false
 	cpm.CertAuthenticated = false
 	cpm.Resource = ""
 	cpm.Action = ""
@@ -72,6 +74,7 @@ func (cpm *CpMetadata) String() string {
 	authReason := fmt.Sprintf("AuthReason=%s, ", cpm.AuthReason)
 	user := fmt.Sprintf("User=%s, ", cpm.User)
 	pwAuthenticated := fmt.Sprintf("PwAuthenticated=%t, ", cpm.PwAuthenticated)
+	passkeyAuthenticated := fmt.Sprintf("PasskeyAuthenticaed=%t, ", cpm.PasskeyAuthenticated)
 	certAuthenticated := fmt.Sprintf("CertAuthenticated=%t, ", cpm.CertAuthenticated)
 	resource := fmt.Sprintf("Resource=%s, ", cpm.Resource)
 	action := fmt.Sprintf("Action=%s, ", cpm.Action)
@@ -80,7 +83,7 @@ func (cpm *CpMetadata) String() string {
 	connectionSecurity := fmt.Sprintf("ConnectionSecurity=%s, ", cpm.ConnectionSecurity)
 	userAgent := fmt.Sprintf("UserAgent=%s", cpm.UserAgent)
 	requestProtocol := fmt.Sprintf("RequestProtocol=%f", cpm.RequestProtocol)
-	mdString := header + authDecision + authReason + user + pwAuthenticated + certAuthenticated +
+	mdString := header + authDecision + authReason + user + pwAuthenticated + passkeyAuthenticated + certAuthenticated +
 		resource + action + device + location + connectionSecurity + userAgent + requestProtocol
 
 	return mdString
@@ -89,6 +92,7 @@ func (cpm *CpMetadata) String() string {
 func CollectMetadata(clientReq *http.Request, cpm *CpMetadata) {
 	// User is set by BasicAuth()
 	// PwAuthenticated is set by BasicAuth()
+	// PasskeyAuthenticated is set by BasicAuth()
 	// CertAuthenticated is set by BasicAuth()
 	collectResource(clientReq, cpm)
 	collectAction(clientReq, cpm)

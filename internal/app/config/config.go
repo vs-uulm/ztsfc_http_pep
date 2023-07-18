@@ -47,12 +47,14 @@ type PepT struct {
 type BasicAuthT struct {
 	Passwd  PasswdT  `yaml:"passwd"`
 	Session SessionT `yaml:"session"`
+	RPID    string   `yaml:"rpid"`
 }
 
 type PasswdT struct {
-	PathToPasswd   string              `yaml:"path_to_passwd"`
-	PasswdList     map[string]*ShadowT // Key is username
-	WaitPasswdList sync.WaitGroup
+	PathToPasswd         string              `yaml:"path_to_passwd"`
+	PasswdListByUsername map[string]*ShadowT // Key is username
+	PasswdListByID       map[string]*ShadowT // Key is ID (string)
+	WaitPasswdList       sync.WaitGroup
 }
 
 type ShadowT struct {

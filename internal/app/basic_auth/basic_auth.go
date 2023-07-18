@@ -35,7 +35,7 @@ func UserSessionIsValid(sysLogger *logger.Logger, w http.ResponseWriter, req *ht
 	}
 
 	username := token.Claims.(jwt.MapClaims)["sub"].(string)
-
+	authentication_method := token.Claims.(jwt.MapClaims)["iss"].(string)
 	/*
 		failedAttempts, err := getFailedAuthAttempts(sysLogger, username)
 		if err != nil {
@@ -51,7 +51,16 @@ func UserSessionIsValid(sysLogger *logger.Logger, w http.ResponseWriter, req *ht
 	*/
 
 	cpm.User = username
-	cpm.PwAuthenticated = true
+	if authentication_method == "password" {
+		cpm.PwAuthenticated = true
+		cpm.PasskeyAuthenticated = false
+	} else if authentication_method == "passkey" {
+		cpm.PwAuthenticated = false
+		cpm.PasskeyAuthenticated = true
+	} else {
+		return false
+	}
+
 	cpm.CertAuthenticated = performX509auth(req)
 
 	return true
@@ -163,7 +172,7 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 		}
 
 		// pushAuthSuccess(sysLogger, username)
-		if err = setCookieAndFinishAuthentication(sysLogger, w, req, username); err != nil {
+		if err = setCookieAndFinishAuthentication(sysLogger, w, req, username, "password"); err != nil {
 			HandleFormResponse("Internal Error", w)
 			sysLogger.Errorf("basic_auth: validPassword(): For user '%s' no session cookie could be created.", username)
 			if err := pushAuthFail(sysLogger, username); err != nil {
@@ -179,9 +188,9 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 	}
 }
 
-func setCookieAndFinishAuthentication(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request, username string) error {
+func setCookieAndFinishAuthentication(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request, username, authType string) error {
 	// Create JWT
-	jwtToken, err := createJWToken(username)
+	jwtToken, err := createJWToken(username, authType)
 	if err != nil {
 		return fmt.Errorf("%v", err)
 	}
@@ -202,9 +211,9 @@ func setCookieAndFinishAuthentication(sysLogger *logger.Logger, w http.ResponseW
 	return nil
 }
 
-func createJWToken(username string) (string, error) {
+func createJWToken(username, authType string) (string, error) {
 	claims := &jwt.RegisteredClaims{
-		Issuer:    "ztsfc_pep",
+		Issuer:    authType,
 		Subject:   username,
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -306,7 +315,7 @@ func getFailedAuthAttempts(sysLogger *logger.Logger, username string) (int, erro
 }
 
 func validUser(sysLogger *logger.Logger, username string) bool {
-	_, ok := config.Config.BasicAuth.Passwd.PasswdList[username]
+	_, ok := config.Config.BasicAuth.Passwd.PasswdListByUsername[username]
 	if !ok {
 		return false
 	}
@@ -314,7 +323,11 @@ func validUser(sysLogger *logger.Logger, username string) bool {
 }
 
 func validPassword(sysLogger *logger.Logger, username, password string) bool {
-	if calcSaltedHash(password, config.Config.BasicAuth.Passwd.PasswdList[username].Salt) == config.Config.BasicAuth.Passwd.PasswdList[username].Digest {
+	// Check if user has password authentication enabled
+	if config.Config.BasicAuth.Passwd.PasswdListByUsername[username].Digest == "" {
+		return false
+	}
+	if calcSaltedHash(password, config.Config.BasicAuth.Passwd.PasswdListByUsername[username].Salt) == config.Config.BasicAuth.Passwd.PasswdListByUsername[username].Digest {
 		return true
 	} else {
 		return false

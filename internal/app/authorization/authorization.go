@@ -60,6 +60,7 @@ func prepareAuthRequest(authoReq *http.Request, cpm *metadata.CpMetadata) {
 	q := authoReq.URL.Query()
 	q.Set("user", cpm.User)
 	q.Set("pwAuthenticated", strconv.FormatBool(cpm.PwAuthenticated))
+	q.Set("passkeyAuthenticated", strconv.FormatBool(cpm.PasskeyAuthenticated))
 	q.Set("certAuthenticated", strconv.FormatBool(cpm.CertAuthenticated))
 	q.Set("resource", cpm.Resource)
 	q.Set("action", cpm.Action)
