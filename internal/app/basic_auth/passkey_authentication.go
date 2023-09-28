@@ -21,7 +21,7 @@ var (
 	sessionstore    map[string]*webauthn.SessionData = make(map[string]*webauthn.SessionData)
 )
 
-func HandlePasskeyAuthentication(w http.ResponseWriter) {
+func HandlePasskeyAuthentication(msg string, w http.ResponseWriter) {
 	response := `<!DOCTYPE html>
 		<html>
 			<head>
@@ -120,8 +120,9 @@ func HandlePasskeyAuthentication(w http.ResponseWriter) {
 			</head>
 			<body>	
 					<div class="container">
-					<h1>Zero Trust Service Function Chaining<br>Login Portal</h1>
+						<h1>Zero Trust Service Function Chaining<br>Login Portal</h1>
 						<h2>Passkey Authentication</h2>
+						<h3>` + msg + `</h3>
 						<div style="margin-top: 40px;"></div>
 						<input id="register-username" type="text" placeholder="Username">
 						<button id="register-button">Register</button>

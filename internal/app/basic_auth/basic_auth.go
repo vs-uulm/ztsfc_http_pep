@@ -81,7 +81,7 @@ func BasicAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Reques
 		return cpm.PwAuthenticated
 	// Passkey Authentication
 	case "/passkey-authentication":
-		HandlePasskeyAuthentication(w)
+		HandlePasskeyAuthentication("", w)
 		return false
 	case "/begin-passkey-register":
 		BeginPasskeyRegistration(w, req)
@@ -97,7 +97,7 @@ func BasicAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Reques
 		return false
 	// All other cases for user without valid session
 	default:
-		HandleAuthenticationWelcome(w)
+		HandleAuthenticationWelcome("", w)
 		return false
 	}
 	//HandleFormResponse("", w)
@@ -145,7 +145,8 @@ func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *htt
 			HandleFormResponse("Internal Error. Try again later", w)
 			return false
 		}
-		if failedAttempts > 3 {
+		// JUST FOR DEMONSTRATION
+		if failedAttempts > 300 {
 			sysLogger.Errorf("basic_auth: validUser(): Presented username '%s' has too many failed PW authentication attempts", username)
 			HandleFormResponse("You user account has been suspended", w)
 			return false
@@ -196,10 +197,10 @@ func setCookieAndFinishAuthentication(sysLogger *logger.Logger, w http.ResponseW
 	}
 
 	ztsfcCookie := http.Cookie{
-		Name:   "ztsfc_session",
-		Value:  jwtToken,
-		MaxAge: 86400,
-		Path:   "/",
+		Name:  "ztsfc_session",
+		Value: jwtToken,
+		//MaxAge: 86400,
+		Path: "/",
 	}
 	http.SetCookie(w, &ztsfcCookie)
 
@@ -792,7 +793,7 @@ func HandleFormResponse(msg string, w http.ResponseWriter) {
 	fmt.Fprint(w, form)
 }
 
-func HandleAuthenticationWelcome(w http.ResponseWriter) {
+func HandleAuthenticationWelcome(msg string, w http.ResponseWriter) {
 	response := `<!DOCTYPE html>
 	<html>
 		<head>
@@ -822,6 +823,13 @@ func HandleAuthenticationWelcome(w http.ResponseWriter) {
 					color: #333;
 				}
 	
+				h3 {
+					font-size: 18px;
+					margin: 0 0 10px;
+					text-align: center;
+					color: #f44336;
+				}
+
 				.button-container {
 					display: flex;
 					justify-content: center;
@@ -866,6 +874,7 @@ func HandleAuthenticationWelcome(w http.ResponseWriter) {
 		<body>
 			<div class="container">
 				<h1>Zero Trust Service Function Chaining<br>Login Portal</h1>
+				<h3>` + msg + `</h3>
 				<div class="button-container">
 					<button id="password-auth-button">Password Authentication</button>
 					<button id="passkey-auth-button">Passkey Authentication</button>

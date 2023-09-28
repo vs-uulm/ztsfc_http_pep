@@ -36,10 +36,13 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 	router.sysLogger = logger
 
 	router.tlsConfig = &tls.Config{
-		Rand:                   nil,
-		Time:                   nil,
-		MinVersion:             tls.VersionTLS13,
-		MaxVersion:             tls.VersionTLS13,
+		Rand:               nil,
+		Time:               nil,
+		InsecureSkipVerify: true,             // REMOVE AFTER DEMO
+		MinVersion:         tls.VersionTLS12, // REMOVE AFTER DEMO
+		MaxVersion:         tls.VersionTLS12, // REMOVE AFTER DEMO
+		//MinVersion:             tls.VersionTLS13,
+		//MaxVersion:             tls.VersionTLS13,
 		SessionTicketsDisabled: true,
 		Certificates:           nil,
 		ClientAuth:             tls.RequireAndVerifyClientCert,
@@ -53,6 +56,9 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 			}
 			return &service.X509KeyPairShownByPepToClient, nil
 		},
+		GetClientCertificate: func(certInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+			return nil, nil
+		}, // REMOVE AFTER DEMONSTRATION!!!
 	}
 
 	// Frontend Handlers
@@ -143,10 +149,50 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if !md.AuthDecision {
 		// io.WriteString(w, md.AuthReason+". Contact your security advisor for more information.")
-		w.WriteHeader(403)
-		basic_auth.HandleFormResponse(md.AuthReason, w)
 		router.sysLogger.Infof("router: ServeHTTP(): request from user %s was rejected due to the reason: %s", md.User, md.AuthReason)
-		return
+		//w.WriteHeader(403)
+		//ztsfcCookie := http.Cookie{
+		//	Name:    "ztsfc_session",
+		//	Value:   "",
+		//	MaxAge:  -1,
+		//	Path:    "/",
+		//	Expires: time.Unix(0, 0),
+		//}
+		//http.SetCookie(w, &ztsfcCookie)
+		switch req.URL.Path {
+		// Password Authentication
+		case "/password-authentication":
+			basic_auth.HandleFormResponse(md.AuthReason, w)
+			return
+		// Passkey Authentication
+		case "/passkey-authentication":
+			basic_auth.HandlePasskeyAuthentication(md.AuthReason, w)
+			return
+		case "/begin-passkey-register":
+			basic_auth.BeginPasskeyRegistration(w, req)
+			return
+		case "/finish-passkey-register":
+			basic_auth.FinishPasskeyRegistration(w, req)
+			return
+		case "/begin-passkey-login":
+			basic_auth.BeginPasskeyLogin(w, req)
+			return
+		case "/finish-passkey-login":
+			basic_auth.FinishPasskeyLogin(router.sysLogger, w, req)
+			return
+		// All other cases for user without valid session
+		default:
+			basic_auth.HandleAuthenticationWelcome(md.AuthReason, w)
+			return
+		}
+
+		//if md.PasskeyAuthenticated {
+		//	basic_auth.HandlePasskeyAuthentication(md.AuthReason, w)
+		//} else {
+		//	basic_auth.HandleFormResponse(md.AuthReason, w)
+		//}
+		//router.sysLogger.Infof("router: ServeHTTP(): request from user %s was rejected due to the reason: %s", md.User, md.AuthReason)
+		//return
 	}
 	router.sysLogger.Debugf("router: ServeHTTP(): request from %s passed PDP. SFC: %s", req.RemoteAddr, md.SFC)
 
