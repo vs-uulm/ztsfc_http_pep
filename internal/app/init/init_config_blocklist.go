@@ -3,8 +3,8 @@ package init
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -25,7 +25,7 @@ func initBotnetBlocklist(sysLogger *logger.Logger) error {
 		return errors.New("InitBlocklist(): path to botnet blocklist is not defined")
 	}
 
-	botnetListData, err := ioutil.ReadFile(config.Config.Blocklists.PathToBotnetList)
+	botnetListData, err := os.ReadFile(config.Config.Blocklists.PathToBotnetList)
 	if err != nil {
 		return fmt.Errorf("InitBotnetBlocklist(): could not read file '%s' at given path to botnet blocklist", config.Config.Blocklists.PathToBotnetList)
 	}
@@ -62,7 +62,7 @@ func reloadRoutine(sysLogger *logger.Logger) {
 }
 
 func reloadBotnetList(sysLogger *logger.Logger) error {
-	botnetListData, err := ioutil.ReadFile(config.Config.Blocklists.PathToBotnetList)
+	botnetListData, err := os.ReadFile(config.Config.Blocklists.PathToBotnetList)
 	if err != nil {
 		return fmt.Errorf("reloadBotnetList(): %v", err)
 	}

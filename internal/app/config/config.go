@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -79,7 +78,7 @@ func (user *ShadowT) WebAuthnIcon() string {
 
 func (user *ShadowT) WebAuthnCredentials() []webauthn.Credential {
 	// Read passkey file
-	data, err := ioutil.ReadFile("/passkeys/" + user.User + ".passkey")
+	data, err := os.ReadFile("/passkeys/" + user.User + ".passkey")
 	if err != nil {
 		log.Fatalf("Failed to read file: %s", err)
 	}

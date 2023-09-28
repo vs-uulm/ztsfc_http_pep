@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -313,7 +312,7 @@ func BeginPasskeyRegistration(w http.ResponseWriter, r *http.Request) {
 
 func FinishPasskeyRegistration(w http.ResponseWriter, r *http.Request) {
 	// Read the body
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Fatalf("Failed to read body: %s", err)
 	}
