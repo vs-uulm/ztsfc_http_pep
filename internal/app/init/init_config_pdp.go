@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	gct "github.com/leobrada/golang_convenience_tools"
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 )
@@ -42,13 +43,13 @@ func initPdp(sysLogger *logger.Logger) error {
 	}
 
 	// Preload X509KeyPair and write it to config
-	config.Config.Pdp.X509KeyPairShownByPepToPdp, err = loadX509KeyPair(sysLogger, config.Config.Pdp.CertShownByPepToPdp, config.Config.Pdp.PrivkeyForCertShownByPepToPdp, "PDP", "")
+	config.Config.Pdp.X509KeyPairShownByPepToPdp, err = gct.LoadX509KeyPair(config.Config.Pdp.CertShownByPepToPdp, config.Config.Pdp.PrivkeyForCertShownByPepToPdp)
 	if err != nil {
 		return err
 	}
 
 	// Preload CA certificate and append it to cert pool
-	err = loadCACertificate(sysLogger, config.Config.Pdp.CertPepAcceptsShownByPdp, "PDP", config.Config.CAcertPoolPepAcceptsFromInt)
+	err = gct.LoadCACertificate(config.Config.Pdp.CertPepAcceptsShownByPdp, config.Config.CAcertPoolPepAcceptsFromInt)
 	if err != nil {
 		return err
 	}

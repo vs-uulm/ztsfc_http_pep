@@ -36,18 +36,15 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 	router.sysLogger = logger
 
 	router.tlsConfig = &tls.Config{
-		Rand:               nil,
-		Time:               nil,
-		InsecureSkipVerify: true,             // REMOVE AFTER DEMO
-		MinVersion:         tls.VersionTLS12, // REMOVE AFTER DEMO
-		MaxVersion:         tls.VersionTLS12, // REMOVE AFTER DEMO
-		//MinVersion:             tls.VersionTLS13,
-		//MaxVersion:             tls.VersionTLS13,
+		Rand:                   nil,
+		Time:                   nil,
+		InsecureSkipVerify:     false,
+		MinVersion:             tls.VersionTLS13,
+		MaxVersion:             tls.VersionTLS13,
 		SessionTicketsDisabled: true,
 		Certificates:           nil,
 		ClientAuth:             tls.RequireAndVerifyClientCert,
-		//ClientAuth: tls.VerifyClientCertIfGiven,
-		ClientCAs: config.Config.CAcertPoolPepAcceptsFromExt,
+		ClientCAs:              config.Config.CAcertPoolPepAcceptsFromExt,
 		GetCertificate: func(cli *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// use SNI map to load suitable certificate
 			service, ok := config.Config.ServiceSniMap[cli.ServerName]
@@ -56,9 +53,6 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 			}
 			return &service.X509KeyPairShownByPepToClient, nil
 		},
-		GetClientCertificate: func(certInfo *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-			return nil, nil
-		}, // REMOVE AFTER DEMONSTRATION!!!
 	}
 
 	// Frontend Handlers
@@ -117,7 +111,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !ok {
 		io.WriteString(w, "Requested resource is not provided by this PEP. Please check again.")
 		w.WriteHeader(404)
-		router.sysLogger.Infof("router: ServerHTTP(): %s requested a resource that is not probided by this PEP.", req.RemoteAddr)
+		router.sysLogger.Infof("router: ServerHTTP(): %s requested a resource that is not provided by this PEP.", req.RemoteAddr)
 		return
 	}
 

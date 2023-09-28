@@ -6,9 +6,10 @@ package init
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
-    "net/url"
 
+	gct "github.com/leobrada/golang_convenience_tools"
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 )
@@ -75,15 +76,13 @@ func initServicePool(sysLogger *logger.Logger) error {
 		}
 
 		// Preload X509KeyPairs shown by pep to client
-		config.Config.ServicePool[serviceName].X509KeyPairShownByPepToClient, err = loadX509KeyPair(sysLogger,
-			serviceConfig.CertShownByPepToClientsMatchingSni, serviceConfig.PrivkeyForCertShownByPepToClient, "service "+serviceName, "external")
+		config.Config.ServicePool[serviceName].X509KeyPairShownByPepToClient, err = gct.LoadX509KeyPair(serviceConfig.CertShownByPepToClientsMatchingSni, serviceConfig.PrivkeyForCertShownByPepToClient)
 		if err != nil {
 			return err
 		}
 
 		// Preload X509KeyPairs shown by pep to service
-		config.Config.ServicePool[serviceName].X509KeyPairShownByPepToService, err = loadX509KeyPair(sysLogger,
-			serviceConfig.CertShownByPepToService, serviceConfig.PrivkeyForCertShownByPepToService, "service "+serviceName, "internal")
+		config.Config.ServicePool[serviceName].X509KeyPairShownByPepToService, err = gct.LoadX509KeyPair(serviceConfig.CertShownByPepToService, serviceConfig.PrivkeyForCertShownByPepToService)
 		if err != nil {
 			return err
 		}
@@ -96,7 +95,7 @@ func initServicePool(sysLogger *logger.Logger) error {
 		sysLogger.Debugf("initServicePool(): Target service URL for service %s was successfully parsed", serviceName)
 
 		// Preload CA certificate and append it to cert pool
-		err = loadCACertificate(sysLogger, serviceConfig.CertPepAcceptsWhenShownByService, "service "+serviceName, config.Config.CAcertPoolPepAcceptsFromInt)
+		err = gct.LoadCACertificate(serviceConfig.CertPepAcceptsWhenShownByService, config.Config.CAcertPoolPepAcceptsFromInt)
 		if err != nil {
 			return err
 		}

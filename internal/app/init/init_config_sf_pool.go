@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 
+	gct "github.com/leobrada/golang_convenience_tools"
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 )
@@ -52,7 +53,7 @@ func initSfPool(sysLogger *logger.Logger) error {
 		}
 
 		// preload X509KeyPairs shown by pep to sf
-		config.Config.SfPool[sfName].X509KeyPairShownByPepToSf, err = loadX509KeyPair(sysLogger, sfConfig.CertShownByPepToSf, sfConfig.PrivkeyForCertShownByPepToSf, "service function "+sfName, "")
+		config.Config.SfPool[sfName].X509KeyPairShownByPepToSf, err = gct.LoadX509KeyPair(sfConfig.CertShownByPepToSf, sfConfig.PrivkeyForCertShownByPepToSf)
 		if err != nil {
 			return err
 		}
@@ -65,7 +66,7 @@ func initSfPool(sysLogger *logger.Logger) error {
 		sysLogger.Debugf("initSfPool(): Target URL for service function %s was successfully parsed", sfName)
 
 		// Preload CA certificate and append it to cert pool
-		err = loadCACertificate(sysLogger, sfConfig.CertPepAcceptsShownBySf, "service function "+sfName, config.Config.CAcertPoolPepAcceptsFromInt)
+		err = gct.LoadCACertificate(sfConfig.CertPepAcceptsShownBySf, config.Config.CAcertPoolPepAcceptsFromInt)
 		if err != nil {
 			return err
 		}

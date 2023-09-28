@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	yt "github.com/leobrada/yaml_tools"
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	confInit "github.com/vs-uulm/ztsfc_http_pep/internal/app/init"
@@ -19,19 +20,17 @@ var (
 )
 
 func init() {
-	var err error
-
 	// Operating input parameters
 	flag.StringVar(&confFilePath, "c", "./config/conf.yml", "Path to user defined YML config file")
 	flag.Parse()
 
 	// Loading all config parameter from config file defined in "confFilePath"
-	err = config.LoadConfig(confFilePath)
+	err := yt.LoadYamlFile(confFilePath, &config.Config)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("main: init(): could not load yaml file: %v", err)
 	}
 
-	// init system logger
+	// init System Logger
 	confInit.InitSysLoggerParams()
 
 	// Create an instance of the system logger
@@ -43,7 +42,6 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	confInit.SetupCloseHandler(sysLogger)
 
 	sysLogger.Debugf("loading logger configuration from %s - OK", confFilePath)
 
@@ -62,12 +60,6 @@ func init() {
 }
 
 func main() {
-
-	// Code snippets useful for performance profiling:
-	// defer profile.Start(profile.CPUProfile, profile.ProfilePath(".")).Stop()
-	// defer profile.Start(profile.BlockProfile, profile.ProfilePath(".")).Stop()
-	// defer profile.Start(profile.GoroutineProfile, profile.ProfilePath(".")).Stop()
-
 	// Create new PEP router
 	pep, err := router.NewRouter(sysLogger)
 	if err != nil {

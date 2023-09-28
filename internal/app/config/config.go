@@ -5,16 +5,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"sync"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
@@ -208,29 +204,4 @@ type ConfigT struct {
 	CAcertPoolPepAcceptsFromExt *x509.CertPool
 	CAcertPoolPepAcceptsFromInt *x509.CertPool
 	ServiceSniMap               map[string]*ServiceT
-}
-
-// LoadConfig() parses a configuration yaml file into the global Config variable
-func LoadConfig(configPath string) error {
-	// If the config file path was not provided
-	if configPath == "" {
-		return errors.New("no configuration file is provided")
-	}
-
-	// Open config file
-	file, err := os.Open(configPath)
-	if err != nil {
-		return fmt.Errorf("unable to open the YAML configuration file '%s': %w", configPath, err)
-	}
-	defer file.Close()
-
-	// Init new YAML decode
-	d := yaml.NewDecoder(file)
-
-	// Decode configuration from the YAML config file
-	err = d.Decode(&Config)
-	if err != nil {
-		return fmt.Errorf("unable to decode the YAML configuration file '%s': %w", configPath, err)
-	}
-	return nil
 }

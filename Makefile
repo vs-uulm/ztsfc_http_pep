@@ -12,4 +12,4 @@ go:
 .PHONY: docker
 docker:
 	sudo docker image rm -f $(DOCKER_BUILD_TARGET) || true
-	sudo docker build -t $(DOCKER_BUILD_TARGET) .
+	sudo DOCKER_BUILDKIT=1 docker build -t $(DOCKER_BUILD_TARGET) .

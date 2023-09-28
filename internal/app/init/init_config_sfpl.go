@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	gct "github.com/leobrada/golang_convenience_tools"
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 )
@@ -42,14 +43,14 @@ func initSfpl(sysLogger *logger.Logger) error {
 	}
 
 	// Preload X509KeyPair and write it to config
-	config.Config.SfpLogic.X509KeyPairShownByPepToSfpl, err = loadX509KeyPair(sysLogger, config.Config.SfpLogic.CertShownByPepToSfpl,
-		config.Config.SfpLogic.PrivkeyForCertShownByPepToSfpl, "SFP_logic", "")
+	config.Config.SfpLogic.X509KeyPairShownByPepToSfpl, err = gct.LoadX509KeyPair(config.Config.SfpLogic.CertShownByPepToSfpl,
+		config.Config.SfpLogic.PrivkeyForCertShownByPepToSfpl)
 	if err != nil {
 		return err
 	}
 
 	// Preload CA certificate and append it to cert pool
-	err = loadCACertificate(sysLogger, config.Config.SfpLogic.CertPepAcceptsShownBySfpl, "SFP_logic", config.Config.CAcertPoolPepAcceptsFromInt)
+	err = gct.LoadCACertificate(config.Config.SfpLogic.CertPepAcceptsShownBySfpl, config.Config.CAcertPoolPepAcceptsFromInt)
 	if err != nil {
 		return err
 	}

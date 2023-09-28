@@ -5,8 +5,9 @@ package init
 
 import (
 	"fmt"
-    "strings"
+	"strings"
 
+	gct "github.com/leobrada/golang_convenience_tools"
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 )
@@ -32,7 +33,7 @@ func initPep(sysLogger *logger.Logger) error {
 
 	// Read CA certs used for signing client certs and are accepted by the PEP
 	for _, acceptedClientCert := range config.Config.Pep.CertsPepAcceptsWhenShownByClients {
-		err = loadCACertificate(sysLogger, acceptedClientCert, "client", config.Config.CAcertPoolPepAcceptsFromExt)
+		err = gct.LoadCACertificate(acceptedClientCert, config.Config.CAcertPoolPepAcceptsFromExt)
 		if err != nil {
 			return err
 		}
