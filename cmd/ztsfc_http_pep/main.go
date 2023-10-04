@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/x509"
 	"flag"
 	"log"
 	"net/http"
@@ -43,34 +42,29 @@ func init() {
 		log.Fatal(err)
 	}
 
-	sysLogger.Debugf("loading logger configuration from %s - OK", confFilePath)
-
-	// Create Certificate Pools for the CA certificates used by the PEP
-	config.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
-	config.Config.CAcertPoolPepAcceptsFromInt = x509.NewCertPool()
-
 	if err = confInit.InitConfig(sysLogger); err != nil {
 		sysLogger.Fatalf("main: init(): %v", err)
 	}
 
-	// Init Reverse Proxies used for the modules
-	// Basic_auth_proxy currently not needed since BasicAuth is performed as part of the PEP
+	// Initializes Client Pools for PDP and SFP TLS connections
 	proxies.PdpClientPool = proxies.NewClientPool(config.Config.Pdp.PdpClientPoolSize, config.Config.Pdp.X509KeyPairShownByPepToPdp)
 	proxies.SfpLogicClientPool = proxies.NewClientPool(config.Config.SfpLogic.SfplClientPoolSize, config.Config.SfpLogic.X509KeyPairShownByPepToSfpl)
+
+	sysLogger.Infof("Initializing PEP from %s - OK", confFilePath)
 }
 
 func main() {
 	// Create new PEP router
 	pep, err := router.NewRouter(sysLogger)
 	if err != nil {
-		sysLogger.Fatalf("main: unable to create a new router: %w", err)
+		sysLogger.Fatalf("main: main(): unable to create a new router: %w", err)
 	}
-	sysLogger.Debug("main: new router was successfully created")
+	sysLogger.Info("main: main(): new router was successfully created")
 
 	http.Handle("/", pep)
 
 	err = pep.ListenAndServeTLS()
 	if err != nil {
-		sysLogger.Fatalf("main: ListenAndServeTLS() fatal error: %w", err)
+		sysLogger.Fatalf("main: main(): ListenAndServeTLS() fatal error: %w", err)
 	}
 }

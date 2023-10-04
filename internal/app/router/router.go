@@ -53,6 +53,7 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 			}
 			return &service.X509KeyPairShownByPepToClient, nil
 		},
+		//VerifyConnection: ,
 	}
 
 	// Frontend Handlers

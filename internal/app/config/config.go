@@ -190,14 +190,13 @@ type ServFunctionT struct {
 
 // ConfigT struct is for parsing the basic structure of the config file
 type ConfigT struct {
-	SysLogger  sysLoggerT  `yaml:"system_logger"`
-	Blocklists BlocklistsT `yaml:"blocklists"`
-	Pep        PepT        `yaml:"pep"`
-	BasicAuth  BasicAuthT  `yaml:"basic_auth"`
-	Pdp        PdpT        `yaml:"pdp"`
-	Pip        PipT        `yaml:"pip"`
-	SfpLogic   SfplT       `yaml:"sfp_logic"`
-	// TODO: Use Structs of ServiceT and ServFunctionT instead of pointers to the structs?
+	SysLogger                   sysLoggerT                `yaml:"system_logger"`
+	Blocklists                  BlocklistsT               `yaml:"blocklists"`
+	Pep                         PepT                      `yaml:"pep"`
+	BasicAuth                   BasicAuthT                `yaml:"basic_auth"`
+	Pdp                         PdpT                      `yaml:"pdp"`
+	Pip                         PipT                      `yaml:"pip"`
+	SfpLogic                    SfplT                     `yaml:"sfp_logic"`
 	ServicePool                 map[string]*ServiceT      `yaml:"service_pool"`
 	SfPool                      map[string]*ServFunctionT `yaml:"sf_pool"`
 	CAcertPoolPepAcceptsFromExt *x509.CertPool

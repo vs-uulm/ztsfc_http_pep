@@ -4,13 +4,23 @@
 package init
 
 import (
+	"crypto/x509"
 	"fmt"
 
 	logger "github.com/vs-uulm/ztsfc_http_logger"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 )
 
 func InitConfig(sysLogger *logger.Logger) error {
 	initDefaultValues(sysLogger)
+
+	// Create Certificate Pools for the CA certificates used by the PEP
+	config.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
+	config.Config.CAcertPoolPepAcceptsFromInt = x509.NewCertPool()
+
+	if err := initBlocklists(sysLogger); err != nil {
+		return fmt.Errorf("init: InitConfig(): %v", err)
+	}
 
 	if err := initBlocklists(sysLogger); err != nil {
 		return fmt.Errorf("init: InitConfig(): %v", err)

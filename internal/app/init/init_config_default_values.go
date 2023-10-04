@@ -12,7 +12,7 @@ import (
 func initDefaultValues(sysLogger *logger.Logger) {
 	// Initialize a DefaultPoolSize if its not set
 	if config.Config.Pep.DefaultPoolSize == 0 {
-		config.Config.Pep.DefaultPoolSize = 50
+		config.Config.Pep.DefaultPoolSize = 1
 	}
-	sysLogger.Debug("init: InitDefaultValues(): Config.Pep.DefaultPoolSize is set to 50")
+	sysLogger.Info("init: InitDefaultValues(): Config.Pep.DefaultPoolSize is set to 1")
 }
