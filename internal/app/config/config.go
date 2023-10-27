@@ -36,6 +36,7 @@ type BlocklistsT struct {
 type PepT struct {
 	ListenAddr                        string   `yaml:"listen_addr"`
 	CertsPepAcceptsWhenShownByClients []string `yaml:"certs_pep_accepts_when_shown_by_clients"`
+	ClientCRL                         string   `yaml:"client_crl"`
 	DefaultPoolSize                   int      `yaml:"default_pool_size"`
 }
 
@@ -200,6 +201,7 @@ type ConfigT struct {
 	ServicePool                 map[string]*ServiceT      `yaml:"service_pool"`
 	SfPool                      map[string]*ServFunctionT `yaml:"sf_pool"`
 	CAcertPoolPepAcceptsFromExt *x509.CertPool
+	CRLForExt                   *x509.RevocationList
 	CAcertPoolPepAcceptsFromInt *x509.CertPool
 	ServiceSniMap               map[string]*ServiceT
 }

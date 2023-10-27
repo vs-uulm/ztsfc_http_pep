@@ -123,11 +123,11 @@ func HandlePasskeyAuthentication(msg string, w http.ResponseWriter) {
 						<h2>Passkey Authentication</h2>
 						<h3>` + msg + `</h3>
 						<div style="margin-top: 40px;"></div>
-						<input id="register-username" type="text" placeholder="Username">
-						<button id="register-button">Register</button>
-						<div style="margin-top: 40px;"></div>
 						<input id="login-username" type="text" placeholder="Username">
 						<button id="login-button">Login</button>
+						<div style="margin-top: 40px;"></div>
+						<input id="register-username" type="text" placeholder="Username">
+						<button id="register-button">Register</button>
 					</div>
 				</div>
 	

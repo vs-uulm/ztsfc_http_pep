@@ -53,7 +53,19 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 			}
 			return &service.X509KeyPairShownByPepToClient, nil
 		},
-		//VerifyConnection: ,
+		VerifyConnection: func(con tls.ConnectionState) error {
+			if len(con.VerifiedChains) == 0 || len(con.VerifiedChains[0]) == 0 {
+				return fmt.Errorf("VerifyConnection(): error: verified chains does not hold a valid client certificate")
+			}
+
+			for _, revokedCertificateEntry := range config.Config.CRLForExt.RevokedCertificateEntries {
+				if con.VerifiedChains[0][0].SerialNumber.Cmp(revokedCertificateEntry.SerialNumber) == 0 {
+					return fmt.Errorf("VerifyConnection(): error: client certificate is revoked")
+				}
+			}
+
+			return nil
+		},
 	}
 
 	// Frontend Handlers

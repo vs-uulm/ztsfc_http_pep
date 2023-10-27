@@ -4,7 +4,9 @@
 package init
 
 import (
+	"crypto/x509"
 	"fmt"
+	"os"
 	"strings"
 
 	gct "github.com/leobrada/golang_convenience_tools"
@@ -35,8 +37,18 @@ func initPep(sysLogger *logger.Logger) error {
 	for _, acceptedClientCert := range config.Config.Pep.CertsPepAcceptsWhenShownByClients {
 		err = gct.LoadCACertificate(acceptedClientCert, config.Config.CAcertPoolPepAcceptsFromExt)
 		if err != nil {
-			return err
+			return fmt.Errorf("initPep(): could not load certificates PEP accepts from clients: '%s'", err)
 		}
+	}
+
+	// Read and parse client CRL
+	clientCRLBinary, err := os.ReadFile(config.Config.Pep.ClientCRL)
+	if err != nil {
+		return fmt.Errorf("initPep(): could not load client CRL: '%s'", err)
+	}
+	config.Config.CRLForExt, err = x509.ParseRevocationList(clientCRLBinary)
+	if err != nil {
+		return fmt.Errorf("initPep(): could not parse client CRL: '%s'", err)
 	}
 
 	return nil
