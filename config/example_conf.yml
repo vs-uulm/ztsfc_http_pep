@@ -43,6 +43,7 @@ pep:
   listen_addr: ":443"
   certs_pep_accepts_when_shown_by_clients:
     - ./certs/root_CA.crt
+  client_crl: "./certs/root_CA_crl.der"
   default_pool_size: 50
 
 # Basic Auth section
