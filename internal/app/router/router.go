@@ -60,7 +60,7 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 
 			for _, revokedCertificateEntry := range config.Config.CRLForExt.RevokedCertificateEntries {
 				if con.VerifiedChains[0][0].SerialNumber.Cmp(revokedCertificateEntry.SerialNumber) == 0 {
-					return fmt.Errorf("VerifyConnection(): error: client certificate is revoked")
+					return fmt.Errorf("VerifyConnection(): client '%s' certificate is revoked", con.VerifiedChains[0][0].Subject.CommonName)
 				}
 			}
 

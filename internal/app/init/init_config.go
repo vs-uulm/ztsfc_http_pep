@@ -17,6 +17,7 @@ func InitConfig(sysLogger *logger.Logger) error {
 	// Create Certificate Pools for the CA certificates used by the PEP
 	config.Config.CAcertPoolPepAcceptsFromExt = x509.NewCertPool()
 	config.Config.CAcertPoolPepAcceptsFromInt = x509.NewCertPool()
+	config.Config.CACertSlicePEPAcceptsFromExt = make([]*x509.Certificate, 0)
 
 	if err := initBlocklists(sysLogger); err != nil {
 		return fmt.Errorf("init: InitConfig(): %v", err)

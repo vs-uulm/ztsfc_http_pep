@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/go-webauthn/webauthn v0.8.4
 	github.com/golang-jwt/jwt/v5 v5.0.0
-	github.com/leobrada/golang_convenience_tools v0.0.0-20230226145447-cbd5896c5ecf
+	github.com/leobrada/golang_convenience_tools v0.0.0-20231027190949-23729c408209
 	github.com/leobrada/yaml_tools v0.0.0-20220115205103-7f6e1de7ab2e
 	github.com/vs-uulm/ztsfc_http_attributes v0.0.0-20230718145859-e9c5fbffbfa7
 	github.com/vs-uulm/ztsfc_http_logger v0.0.0-20220504121928-852f30c337e5
