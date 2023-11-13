@@ -50,7 +50,7 @@ func init() {
 	proxies.PdpClientPool = proxies.NewClientPool(config.Config.Pdp.PdpClientPoolSize, config.Config.Pdp.X509KeyPairShownByPepToPdp)
 	proxies.SfpLogicClientPool = proxies.NewClientPool(config.Config.SfpLogic.SfplClientPoolSize, config.Config.SfpLogic.X509KeyPairShownByPepToSfpl)
 
-	sysLogger.Infof("Initializing PEP from %s - OK", confFilePath)
+	sysLogger.Infof("main: init(): Initializing PEP from %s - OK", confFilePath)
 }
 
 func main() {

@@ -103,6 +103,8 @@ func CollectMetadata(clientReq *http.Request, cpm *CpMetadata) {
 	collectConnectionSecurity(clientReq, cpm)
 	collectUserAgent(clientReq, cpm)
 	collectRequestProtocol(clientReq, cpm)
+	// SFC is defined by PerformAuthorization()
+	// SFP is defined by TransformSFCIntoSFP()
 }
 
 func collectResource(clientReq *http.Request, cpm *CpMetadata) {
@@ -124,9 +126,6 @@ func collectDevice(clientReq *http.Request, cpm *CpMetadata) {
 		return
 	}
 	cpm.Device = clientCert.Subject.CommonName
-	// "github.com/mileusna/useragent"
-	// ua := ua.Parse(clientReq.Header.Get("User-Agent"))
-	// cpm.Device = ua.Device + ";" + ua.Name + ";" + ua.OS + ";" + ua.OSVersion
 }
 
 // TODO: Harden this function

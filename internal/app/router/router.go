@@ -49,18 +49,18 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 			// use SNI map to load suitable certificate
 			service, ok := config.Config.ServiceSniMap[cli.ServerName]
 			if !ok {
-				return nil, fmt.Errorf("error: could not serve a suitable certificate for %s", cli.ServerName)
+				return nil, fmt.Errorf("router: GetCertificate(): could not serve a suitable certificate for %s", cli.ServerName)
 			}
 			return &service.X509KeyPairShownByPepToClient, nil
 		},
 		VerifyConnection: func(con tls.ConnectionState) error {
 			if len(con.VerifiedChains) == 0 || len(con.VerifiedChains[0]) == 0 {
-				return fmt.Errorf("VerifyConnection(): error: verified chains does not hold a valid client certificate")
+				return fmt.Errorf("router: VerifyConnection(): error: verified chains does not hold a valid client certificate")
 			}
 
 			for _, revokedCertificateEntry := range config.Config.CRLForExt.RevokedCertificateEntries {
 				if con.VerifiedChains[0][0].SerialNumber.Cmp(revokedCertificateEntry.SerialNumber) == 0 {
-					return fmt.Errorf("VerifyConnection(): client '%s' certificate is revoked", con.VerifiedChains[0][0].Subject.CommonName)
+					return fmt.Errorf("router: VerifyConnection(): client '%s' certificate is revoked", con.VerifiedChains[0][0].Subject.CommonName)
 				}
 			}
 
@@ -83,21 +83,6 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 	}
 
 	return router, nil
-}
-
-func addHSTSHeader(w http.ResponseWriter) {
-	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
-}
-
-func prepareSfMdHeader(req *http.Request, cpm *metadata.CpMetadata) {
-	for _, sf := range cpm.SFC {
-		switch sf.Name {
-		case "logger":
-			req.Header.Set("Logger_MD", sf.Md)
-		case "ips":
-			req.Header.Set("ips_md", sf.Md)
-		}
-	}
 }
 
 // ServeHTTP gets called if a request receives the PEP. The function implements
@@ -296,4 +281,19 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func (router *Router) ListenAndServeTLS() error {
 	return router.frontend.ListenAndServeTLS("", "")
+}
+
+func addHSTSHeader(w http.ResponseWriter) {
+	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+}
+
+func prepareSfMdHeader(req *http.Request, cpm *metadata.CpMetadata) {
+	for _, sf := range cpm.SFC {
+		switch sf.Name {
+		case "logger":
+			req.Header.Set("logger_md", sf.Md)
+		case "ips":
+			req.Header.Set("ips_md", sf.Md)
+		}
+	}
 }
