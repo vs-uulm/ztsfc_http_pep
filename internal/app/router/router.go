@@ -93,8 +93,8 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Log all http requests incl. TLS informaion in the case of a successful TLS handshake
 	router.sysLogger.LogHTTPRequest(req)
 
-	// Add HSTS Header
-	addHSTSHeader(w)
+	// Prepare Reponse
+	prepareResponse(w)
 
 	// BLOCKING: Check if req.RemoteAddr is on one of the blocklists
 	if blocklist.BlockRequest(req) {
@@ -113,7 +113,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Declares a new metadata instance in which all necessary data to process the client's request are stored in
+	// Declares a new metadata instance which stores all necessary data to process the client's request
 	md := new(metadata.CpMetadata)
 	metadata.CollectMetadata(req, md)
 
@@ -122,7 +122,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Check if the user is authenticated; if not authenticate her; if that fails return an error
 	// TODO: return error to client?
 	// Check if user has a valid session already
-	if !basic_auth.UserSessionIsValid(router.sysLogger, w, req, md) {
+	if !basic_auth.ClientHasValidSession(router.sysLogger, w, req, md) {
 		if !basic_auth.BasicAuth(router.sysLogger, w, req, md) {
 			// Used for measuring the time ServeHTTP runs
 			// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
@@ -281,6 +281,11 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func (router *Router) ListenAndServeTLS() error {
 	return router.frontend.ListenAndServeTLS("", "")
+}
+
+func prepareResponse(w http.ResponseWriter) {
+	//Prepare Response Header
+	addHSTSHeader(w)
 }
 
 func addHSTSHeader(w http.ResponseWriter) {
