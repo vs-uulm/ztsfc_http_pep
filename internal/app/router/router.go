@@ -20,6 +20,7 @@ import (
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/blocklist"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/resources"
 	sfpl "github.com/vs-uulm/ztsfc_http_pep/internal/app/sfp_logic"
 )
 
@@ -31,6 +32,7 @@ type Router struct {
 
 func NewRouter(logger *logger.Logger) (*Router, error) {
 	router := new(Router)
+	wh := new(WelcomeHandler)
 
 	// Set sysLogger to the one created in the init function
 	router.sysLogger = logger
@@ -71,6 +73,7 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 	// Frontend Handlers
 	mux := http.NewServeMux()
 	mux.Handle("/", router)
+	mux.Handle("/welcome/", wh)
 
 	// Setting Up the Frontend Server
 	router.frontend = &http.Server{
@@ -283,13 +286,40 @@ func (router *Router) ListenAndServeTLS() error {
 	return router.frontend.ListenAndServeTLS("", "")
 }
 
-func prepareResponse(w http.ResponseWriter) {
-	//Prepare Response Header
-	addHSTSHeader(w)
+type WelcomeHandler struct{}
+
+func (wh *WelcomeHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	prepareResponse(w)
+
+	// Serves external welcome resources
+	switch req.URL.Path {
+	case "/welcome/style.css":
+		w.Header().Set("Content-Type", "text/css; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, resources.WelcomeStyle)
+		return
+	case "/welcome/script.js":
+		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, resources.WelcomeScript)
+		return
+	default:
+		break
+	}
 }
 
-func addHSTSHeader(w http.ResponseWriter) {
-	w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+func prepareResponse(w http.ResponseWriter) {
+	//Prepare Response Header
+	setHSTSHeader(w)
+	setCSPHeader(w)
+}
+
+func setHSTSHeader(w http.ResponseWriter) {
+	w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+}
+
+func setCSPHeader(w http.ResponseWriter) {
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: www.w3.org; font-src 'self'; worker-src 'self' blob:")
 }
 
 func prepareSfMdHeader(req *http.Request, cpm *metadata.CpMetadata) {
