@@ -13,6 +13,7 @@ import (
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/metadata"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/resources"
 )
 
 type ZTSFCClaims struct {
@@ -49,20 +50,6 @@ func ClientHasValidSession(sysLogger *logger.Logger, w http.ResponseWriter, req 
 		sysLogger.Errorf("basic_auth: ClientHasValidSession(): could not parse jwt claims")
 	}
 
-	/*
-		failedAttempts, err := getFailedAuthAttempts(sysLogger, username)
-		if err != nil {
-			sysLogger.Errorf("basic_auth: validUser(): For presented username '%s' the failed PW authentication attempts could not retrieved from PIP: %v.", username, err)
-			HandleFormResponse("Internal Error. Try again later", w)
-			return false
-		}
-		if failedAttempts > 3 {
-			sysLogger.Errorf("basic_auth: validUser(): Presented username '%s' has too many failed PW authentication attempts", username)
-			HandleFormResponse("You user account has been suspended", w)
-			return false
-		}
-	*/
-
 	cpm.User = claims.Subject
 	if claims.UserAuthType == "password" {
 		cpm.PwAuthenticated = true
@@ -76,49 +63,45 @@ func ClientHasValidSession(sysLogger *logger.Logger, w http.ResponseWriter, req 
 
 	cpm.CertAuthenticated = performX509auth(req)
 
-	return true
+	return cpm.CertAuthenticated
 }
 
-func BasicAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request, cpm *metadata.CpMetadata) bool {
+func PerformAuthentication(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request, cpm *metadata.CpMetadata) {
 	// Device Authentication
 	cpm.CertAuthenticated = performX509auth(req)
 	if !cpm.CertAuthenticated {
-		return false
+		return
 	}
 
 	// User Authentication
 	switch req.URL.Path {
 	// Password Authentication
-	case "/password-authentication":
-		cpm.PwAuthenticated = performPasswdAuth(sysLogger, w, req)
-		return cpm.PwAuthenticated
-	// Passkey Authentication
-	case "/passkey-authentication":
-		HandlePasskeyAuthentication("", w)
-		return false
-	case "/begin-passkey-register":
-		BeginPasskeyRegistration(w, req)
-		return false
-	case "/finish-passkey-register":
-		FinishPasskeyRegistration(w, req)
-		return false
-	case "/begin-passkey-login":
-		BeginPasskeyLogin(w, req)
-		return false
-	case "/finish-passkey-login":
-		FinishPasskeyLogin(sysLogger, w, req)
-		return false
-	// All other cases for user without valid session
-	default:
+	case "/40d2343b/welcome-page":
 		HandleAuthenticationWelcome("", w)
-		return false
+		return
+	case "/40d2343b/password-authentication":
+		performPasswdAuth(sysLogger, w, req)
+		return
+	// Passkey Authentication
+	case "/40d2343b/passkey-authentication":
+		HandlePasskeyAuthentication("", w)
+		return
+	case "/40d2343b/begin-passkey-register":
+		BeginPasskeyRegistration(w, req)
+		return
+	case "/40d2343b/finish-passkey-register":
+		FinishPasskeyRegistration(w, req)
+		return
+	case "/40d2343b/begin-passkey-login":
+		BeginPasskeyLogin(w, req)
+		return
+	case "/40d2343b/finish-passkey-login":
+		FinishPasskeyLogin(sysLogger, w, req)
+		return
+	default:
+		http.Redirect(w, req, "https://"+req.Host+"/40d2343b/welcome-page", http.StatusFound) // 302
+		return
 	}
-	//HandleFormResponse("", w)
-	//cpm.PwAuthenticated = performPasswdAuth(sysLogger, w, req)
-	//if !cpm.PwAuthenticated {
-	//	return false
-	//}
-	//return true
 }
 
 func setCookieAndFinishAuthentication(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request, username, authType string) error {
@@ -212,7 +195,6 @@ func pushAuthSuccess(sysLogger *logger.Logger, username string) error {
 	return nil
 }
 
-// TODO: Writing an own endpoint for getting failed PW authentications?
 func getFailedAuthAttempts(sysLogger *logger.Logger, username string) (int, error) {
 
 	usr := rattr.NewEmptyUser()
@@ -242,120 +224,8 @@ func getFailedAuthAttempts(sysLogger *logger.Logger, username string) (int, erro
 }
 
 func HandleAuthenticationWelcome(msg string, w http.ResponseWriter) {
-	response := `
-	<!DOCTYPE html>
-	<html>
-    	<head>
-        	<meta charset="UTF-8">
-        	<title>Zero Trust Service Function Chaining</title>
-        	<meta name="viewport" content="width=device-width, initial-scale=1">
-        	<link rel="stylesheet" href="/welcome/style.css">
-        	<script src="/welcome/script.js" defer></script>
-    	</head>
-		<body>
-			<div class="container">
-				<h1>Zero Trust Service Function Chaining<br>Login Portal</h1>
-				<h3>` + msg + `</h3>
-				<div class="button-container">
-					<button id="password-auth-button">Password Authentication</button>
-					<button id="passkey-auth-button">Passkey Authentication</button>
-				</div>
-			</div>
-		</body>
-	</html>	
-	`
-
-	w.WriteHeader(http.StatusOK)
+	welcomePage := resources.GenerateWelcomePage(msg)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprint(w, response)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, welcomePage)
 }
-
-//response := `<!DOCTYPE html>
-//	<html>
-//		<head>
-//			<meta charset="UTF-8">
-//			<title>Zero Trust Service Function Chaining</title>
-//			<meta name="viewport" content="width=device-width, initial-scale=1">
-//			<style>
-//				body {
-//					font-family: "Segoe UI", "Roboto", sans-serif;
-//					background-color: #f2f2f2;
-//					margin: 0;
-//				}
-//
-//				.container {
-//					background-color: #fff;
-//					border-radius: 5px;
-//					box-shadow: 0 0 20px rgba(0,0,0,0.2);
-//					margin: 50px auto;
-//					padding: 30px;
-//					max-width: 700px;
-//				}
-//
-//				h1 {
-//					font-size: 36px;
-//					margin: 0 0 20px;
-//					text-align: center;
-//					color: #333;
-//				}
-//
-//				h3 {
-//					font-size: 18px;
-//					margin: 0 0 10px;
-//					text-align: center;
-//					color: #f44336;
-//				}
-//
-//				.button-container {
-//					display: flex;
-//					justify-content: center;
-//					margin-top: 30px;
-//				}
-//
-//				.button-container button {
-//					padding: 12px 20px;
-//					border-radius: 5px;
-//					border: none;
-//					background-color: #4caf50;
-//					color: #fff;
-//					font-size: 16px;
-//					cursor: pointer;
-//					margin: 0 10px;
-//					transition: background-color 0.3s ease-in-out;
-//				}
-//
-//				.button-container button:hover {
-//					background-color: #3e8e41;
-//				}
-//			</style>
-//			<script>
-//				function navigateToWebsite(path) {
-//					window.location.href = path;
-//				}
-//
-//				document.addEventListener('DOMContentLoaded', function() {
-//					var passwordAuthButton = document.getElementById('password-auth-button');
-//					var passkeyAuthButton = document.getElementById('passkey-auth-button');
-//
-//					passwordAuthButton.addEventListener('click', function() {
-//						navigateToWebsite('/password-authentication');
-//					});
-//
-//					passkeyAuthButton.addEventListener('click', function() {
-//						navigateToWebsite('/passkey-authentication');
-//					});
-//				});
-//			</script>
-//		</head>
-//		<body>
-//			<div class="container">
-//				<h1>Zero Trust Service Function Chaining<br>Login Portal</h1>
-//				<h3>` + msg + `</h3>
-//				<div class="button-container">
-//					<button id="password-auth-button">Password Authentication</button>
-//					<button id="passkey-auth-button">Passkey Authentication</button>
-//				</div>
-//			</div>
-//		</body>
-//	</html>
-//	`

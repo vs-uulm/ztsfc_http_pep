@@ -1,5 +1,31 @@
 package resources
 
+func GenerateWelcomePage(msg string) string {
+	welcomePage := `
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Zero Trust Service Function Chaining</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <link rel="stylesheet" href="/9af1ecf7/welcome-style.css">
+            <script src="/9af1ecf7/welcome-script.js" defer></script>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Zero Trust Service Function Chaining<br>Login Portal</h1>
+                <h3>` + msg + `</h3>
+                <div class="button-container">
+                    <button id="password-auth-button">Password Authentication</button>
+                    <button id="passkey-auth-button">Passkey Authentication</button>
+                </div>
+            </div>
+        </body>
+    </html>	
+    `
+	return welcomePage
+}
+
 var WelcomeStyle string = `
 body {
     font-family: "Segoe UI", "Roboto", sans-serif;
@@ -62,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var passwordAuthButton = document.getElementById('password-auth-button');
     if (passwordAuthButton) {
         passwordAuthButton.addEventListener('click', function() {
-            navigateToWebsite('/password-authentication');
+            navigateToWebsite('/40d2343b/password-authentication');
         });
     }
 
@@ -70,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var passkeyAuthButton = document.getElementById('passkey-auth-button');
     if (passkeyAuthButton) {
         passkeyAuthButton.addEventListener('click', function() {
-            navigateToWebsite('/passkey-authentication');
+            navigateToWebsite('/40d2343b/passkey-authentication');
         });
     }
 });

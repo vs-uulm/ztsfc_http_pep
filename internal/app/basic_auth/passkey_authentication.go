@@ -155,7 +155,7 @@ func HandlePasskeyAuthentication(msg string, w http.ResponseWriter) {
 					// Function for WebAuthn Registration
 					async function register(username) {
 						// Get challenge from server
-						const response = await fetch('/begin-passkey-register', {
+						const response = await fetch('/40d2343b/begin-passkey-register', {
 							method: 'POST',
 							headers: {
 								'Content-Type': 'application/json'
@@ -186,7 +186,7 @@ func HandlePasskeyAuthentication(msg string, w http.ResponseWriter) {
 							// authenticatorAttachment: ...,
 						};
 	
-						await fetch('/finish-passkey-register', {
+						await fetch('/40d2343b/finish-passkey-register', {
 							method: 'POST',
 							headers: {
 								'Content-Type': 'application/json'
@@ -198,7 +198,7 @@ func HandlePasskeyAuthentication(msg string, w http.ResponseWriter) {
 					// Function for WebAuthn Login
 					async function login(username) {
 						// Get challenge from server
-						const response = await fetch('/begin-passkey-login', {
+						const response = await fetch('/40d2343b/begin-passkey-login', {
 							method: 'POST',
 							headers: {
 								'Content-Type': 'application/json'
@@ -227,7 +227,7 @@ func HandlePasskeyAuthentication(msg string, w http.ResponseWriter) {
 							},
 						};
 	
-						await fetch('/finish-passkey-login', {
+						await fetch('/40d2343b/finish-passkey-login', {
 							method: 'POST',
 							headers: {
 								'Content-Type': 'application/json'

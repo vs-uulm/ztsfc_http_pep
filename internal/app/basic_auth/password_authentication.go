@@ -9,86 +9,67 @@ import (
 
 	logger "github.com/vs-uulm/ztsfc_http_logger"
 	"github.com/vs-uulm/ztsfc_http_pep/internal/app/config"
+	"github.com/vs-uulm/ztsfc_http_pep/internal/app/resources"
 )
 
-func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request) bool {
-	var username, password string
+func performPasswdAuth(sysLogger *logger.Logger, w http.ResponseWriter, req *http.Request) {
+	var password string
 
-	// TODO: Check for JW Token initially
-	// Check if it is a POST request
 	if req.Method == "POST" {
 
-		if err := req.ParseForm(); err != nil {
-			HandleFormResponse("Parsing Error", w)
-			return false
+		if feedback, err := handleForm(sysLogger, req); err != nil {
+			sysLogger.Errorf("basic_auth: performPasswdAuth(): %v", err)
+			HandlePwdAuth(feedback, w)
+			return
 		}
 
-		nmbrOfPostvalues := len(req.PostForm)
-		if nmbrOfPostvalues != 2 {
-			HandleFormResponse("Wrong number of POST form values", w)
-			return false
-		}
-
-		usernamel, exist := req.PostForm["username"]
-		username = usernamel[0]
-		if !exist {
-			HandleFormResponse("Username not present in POST form", w)
-			return false
-		}
-
-		if !validUser(sysLogger, username) {
-			sysLogger.Errorf("basic_auth: validUser(): presented username '%s' does not exist or is wrong.", username)
-			HandleFormResponse("Username or password are not correct", w)
-			return false
-		}
-
-		failedAttempts, err := getFailedAuthAttempts(sysLogger, username)
+		username, feedback, err := handleUsername(sysLogger, req)
 		if err != nil {
-			sysLogger.Errorf("basic_auth: validUser(): For presented username '%s' the failed PW authentication attempts could not retrieved from PIP: %v.", username, err)
-			HandleFormResponse("Internal Error. Try again later", w)
-			return false
+			sysLogger.Errorf("basic_auth: performPasswdAuth(): %v", err)
+			HandlePwdAuth(feedback, w)
+			return
 		}
-		// JUST FOR DEMONSTRATION
-		if failedAttempts > 300 {
-			sysLogger.Errorf("basic_auth: validUser(): Presented username '%s' has too many failed PW authentication attempts", username)
-			HandleFormResponse("You user account has been suspended", w)
-			return false
+
+		if feedback, err = handleFailedAuthAttempts(sysLogger, req, username); err != nil {
+			sysLogger.Errorf("basic_auth: performPasswdAuth(): %v", err)
+			HandlePwdAuth(feedback, w)
+			return
 		}
 
 		passwordl, exist := req.PostForm["password"]
 		password = passwordl[0]
 		if !exist {
-			HandleFormResponse("Password not present in POST form", w)
-			sysLogger.Errorf("basic_auth: validPassword(): user '%s' presented no password.", username)
+			sysLogger.Errorf("basic_auth: performPasswdAuth(): In HTTP POST request from %s, user '%s' presented no password", req.Host, username)
+			HandlePwdAuth("Password not present in POST form", w)
 			if err := pushAuthFail(sysLogger, username); err != nil {
 				sysLogger.Errorf("%v", err)
 			}
-			return false
+			return
 		}
 
 		if !validPassword(sysLogger, username, password) {
-			HandleFormResponse("Username or password are not correct", w)
-			sysLogger.Errorf("basic_auth: validPassword(): presented password for user '%s' is incorrect.", username)
+			HandlePwdAuth("Invalid username or password", w)
+			sysLogger.Errorf("basic_auth: validPassword(): In HTTP POST request from %s, presented password for user '%s' is incorrect", req.Host, username)
 			if err := pushAuthFail(sysLogger, username); err != nil {
 				sysLogger.Errorf("%v", err)
 			}
-			return false
+			return
 		}
 
 		// pushAuthSuccess(sysLogger, username)
 		if err = setCookieAndFinishAuthentication(sysLogger, w, req, username, "password"); err != nil {
-			HandleFormResponse("Internal Error", w)
-			sysLogger.Errorf("basic_auth: validPassword(): For user '%s' no session cookie could be created.", username)
+			HandlePwdAuth("Internal Error. Try again later", w)
+			sysLogger.Errorf("basic_auth: validPassword(): In HTTP POST request from %s, for user '%s' no session cookie could be created", req.Host, username)
 			if err := pushAuthFail(sysLogger, username); err != nil {
 				sysLogger.Errorf("%v", err)
 			}
 		}
-		return false
+		return
 
 	} else {
-		// HandleFormResponse("only post methods are accepted in this state", w)
-		HandleFormResponse("", w)
-		return false
+		// HandlePwdAuth("only post methods are accepted in this state", w)
+		HandlePwdAuth("", w)
+		return
 	}
 }
 
@@ -115,454 +96,54 @@ func calcSaltedHash(password, salt string) string {
 	return fmt.Sprintf("%x", digest)
 }
 
-func HandleFormResponse(msg string, w http.ResponseWriter) {
-	form := `<!DOCTYPE html>
-		<html>
-			<head>
-				<meta charset="UTF-8">
-				<title>Zero Trust Service Function Chaining Login Portal</title>
-				<meta name="viewport" content="width=device-width, initial-scale=1">
-				<style>
-					body {
-						font-family: "Segoe UI", "Roboto", sans-serif;
-						background-color: #f2f2f2;
-						margin: 0;
-					}
-		
-					.container {
-						background-color: #fff;
-						border-radius: 5px;
-						box-shadow: 0 0 20px rgba(0,0,0,0.2);
-						margin: 50px auto;
-						padding: 30px;
-						max-width: 700px;
-					}
-		
-					h1 {
-						font-size: 36px;
-						margin: 0 0 20px;
-						text-align: center;
-						color: #333;
-					}
-		
-					h2 {
-						font-size: 24px;
-						margin: 0 0 10px;
-						text-align: center;
-						color: #333;
-					}
-
-					h3 {
-						font-size: 18px;
-						margin: 0 0 10px;
-						text-align: center;
-						color: #f44336;
-					}
-		
-					form {
-						display: flex;
-						flex-direction: column;
-						align-items: center;
-						margin-top: 20px;
-					}
-		
-					label {
-						font-size: 16px;
-						color: #333;
-						margin-bottom: 5px;
-						text-align: left;
-						display: block;
-						width: 100%;
-					}
-		
-					input[type="text"],
-					input[type="password"],
-					#register-username,
-					#login-username {
-						padding: 12px;
-						border-radius: 5px;
-						border: none;
-						background-color: #f2f2f2;
-						width: 100%;
-						font-size: 16px;
-						margin-bottom: 15px;
-					}
-		
-					button[type="submit"],
-					#register-button,
-					#login-button {
-						padding: 12px 20px;
-						border-radius: 5px;
-						border: none;
-						background-color: #4caf50;
-						color: #fff;
-						font-size: 16px;
-						cursor: pointer;
-						transition: background-color 0.3s ease-in-out;
-					}
-		
-					button[type="submit"]:hover,
-					#register-button:hover,
-					#login-button:hover {
-						background-color: #3e8e41;
-					}
-		
-					.passkey-auth {
-						margin-top: 30px;
-					}
-				</style>
-			</head>
-			<body>
-				<div class="container">
-					<h1>Zero Trust Service Function Chaining<br>Login Portal</h1>
-					<h2>Password Authentication</h2>
-					<h3>` + msg + `</h3>
-					<form method="POST">
-						<label for="username">Username:</label>
-						<input type="text" id="username" name="username" required>
-						<label for="password">Password:</label>
-						<input type="password" id="password" name="password" required>
-						<button type="submit">Log In</button>
-					</form>
-			</body>
-		</html>	`
-
-	//	form := `<!DOCTYPE html>
-	//	<html>
-	//		<head>
-	//			<meta charset="UTF-8">
-	//			<title>Zero Trust Service Function Chaining Login Portal</title>
-	//			<meta name="viewport" content="width=device-width, initial-scale=1">
-	//			<style>
-	//				body {
-	//					font-family: "Segoe UI", "Roboto", sans-serif;
-	//					background-color: #f2f2f2;
-	//					margin: 0;
-	//				}
-	//
-	//				.container {
-	//					background-color: #fff;
-	//					border-radius: 5px;
-	//					box-shadow: 0 0 20px rgba(0,0,0,0.2);
-	//					margin: 50px auto;
-	//					padding: 30px;
-	//					max-width: 700px;
-	//				}
-	//
-	//				h1 {
-	//					font-size: 36px;
-	//					margin: 0 0 20px;
-	//					text-align: center;
-	//					color: #333;
-	//				}
-	//
-	//				h3 {
-	//					font-size: 18px;
-	//					margin: 0 0 10px;
-	//					text-align: center;
-	//					color: #f44336;
-	//				}
-	//
-	//				form {
-	//					display: flex;
-	//					flex-direction: column;
-	//					align-items: center;
-	//					margin-top: 20px;
-	//				}
-	//
-	//				label {
-	//					font-size: 16px;
-	//					color: #333;
-	//					margin-bottom: 5px;
-	//					text-align: left;
-	//					display: block;
-	//					width: 100%;
-	//				}
-	//
-	//				input[type="text"],
-	//				input[type="password"],
-	//				#register-username,
-	//				#login-username {
-	//					padding: 12px;
-	//					border-radius: 5px;
-	//					border: none;
-	//					background-color: #f2f2f2;
-	//					width: 100%;
-	//					font-size: 16px;
-	//					margin-bottom: 15px;
-	//				}
-	//
-	//				button[type="submit"],
-	//				#register-button,
-	//				#login-button {
-	//					padding: 12px 20px;
-	//					border-radius: 5px;
-	//					border: none;
-	//					background-color: #4caf50;
-	//					color: #fff;
-	//					font-size: 16px;
-	//					cursor: pointer;
-	//					transition: background-color 0.3s ease-in-out;
-	//				}
-	//
-	//				button[type="submit"]:hover,
-	//				#register-button:hover,
-	//				#login-button:hover {
-	//					background-color: #3e8e41;
-	//				}
-	//
-	//				.passkey-auth {
-	//					margin-top: 30px;
-	//				}
-	//			</style>
-	//		</head>
-	//		<body>
-	//			<div class="container">
-	//				<h1>Zero Trust Service Function Chaining<br>Login Portal</h1>
-	//				<h1>Password Authentication</h1>
-	//				<h3>` + msg + `</h3>
-	//				<form method="POST">
-	//					<label for="username">Username:</label>
-	//					<input type="text" id="username" name="username" required>
-	//					<label for="password">Password:</label>
-	//					<input type="password" id="password" name="password" required>
-	//					<button type="submit">Log In</button>
-	//				</form>
-	//
-	//				<div class="passkey-auth">
-	//					<h1>Passkey Authentication</h1>
-	//					<h2>Registration</h2>
-	//					<input id="register-username" type="text" placeholder="Username">
-	//					<button id="register-button">Register</button>
-	//
-	//					<h2>Login</h2>
-	//					<input id="login-username" type="text" placeholder="Username">
-	//					<button id="login-button">Login</button>
-	//				</div>
-	//			</div>
-	//
-	//			<script>
-	//				// Functions to convert base64 to arrayBuffer and vice versa
-	//				function base64urlToBuffer(base64url) {
-	//					let binary = atob(base64url.replace(/-/g, '+').replace(/_/g, '/'));
-	//					let len = binary.length;
-	//					let bytes = new Uint8Array(len);
-	//					for (let i = 0; i < len; i++) {
-	//						bytes[i] = binary.charCodeAt(i);
-	//					}
-	//					return bytes.buffer;
-	//				}
-	//
-	//				function bufferToBase64url(buffer) {
-	//					let binary = '';
-	//					let bytes = new Uint8Array(buffer);
-	//					for (let i = 0; i < bytes.byteLength; i++) {
-	//						binary += String.fromCharCode(bytes[i]);
-	//					}
-	//					return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-	//				}
-	//
-	//				// Function for WebAuthn Registration
-	//				async function register(username) {
-	//					// Get challenge from server
-	//					const response = await fetch('/begin-register', {
-	//						method: 'POST',
-	//						headers: {
-	//							'Content-Type': 'application/json'
-	//						},
-	//						body: JSON.stringify({ username })
-	//					});
-	//					const data = await response.json();
-	//
-	//					// Convert challenge from base64url to arrayBuffer
-	//					data.publicKey.challenge = base64urlToBuffer(data.publicKey.challenge);
-	//					data.publicKey.user.id = base64urlToBuffer(data.publicKey.user.id);
-	//
-	//					// Use WebAuthn API to create a new credential
-	//					const credential = await navigator.credentials.create({ publicKey: data.publicKey });
-	//
-	//					// Post the credential back to the server
-	//					const credentialForServer = {
-	//						id: credential.id,
-	//						type: 'public-key', // This field is needed by the server and its value should be 'public-key' for Webauthn credentials
-	//						rawId: bufferToBase64url(credential.rawId),
-	//						response: {
-	//							clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
-	//							attestationObject: bufferToBase64url(credential.response.attestationObject)
-	//						},
-	//						// Optionally include other fields that the server may be expecting
-	//						// transports: ...,
-	//						// clientExtensionResults: ...,
-	//						// authenticatorAttachment: ...,
-	//					};
-	//
-	//					await fetch('/finish-register', {
-	//						method: 'POST',
-	//						headers: {
-	//							'Content-Type': 'application/json'
-	//						},
-	//						body: JSON.stringify(credentialForServer)
-	//					});
-	//				}
-	//
-	//				// Function for WebAuthn Login
-	//				async function login(username) {
-	//					// Get challenge from server
-	//					const response = await fetch('/begin-login', {
-	//						method: 'POST',
-	//						headers: {
-	//							'Content-Type': 'application/json'
-	//						},
-	//						body: JSON.stringify({ username })
-	//					});
-	//					const data = await response.json();
-	//
-	//					// Convert challenge and allowCredentials.id from base64url to arrayBuffer
-	//					data.publicKey.challenge = base64urlToBuffer(data.publicKey.challenge);
-	//					for (let cred of data.publicKey.allowCredentials) {
-	//						cred.id = base64urlToBuffer(cred.id);
-	//					}
-	//
-	//					// Use WebAuthn API to get an assertion
-	//					const assertion = await navigator.credentials.get({ publicKey: data.publicKey });
-	//					const assertionForServer = {
-	//						id: assertion.id,
-	//						type: 'public-key',
-	//						rawId: bufferToBase64url(assertion.rawId),
-	//						response: {
-	//							authenticatorData: bufferToBase64url(assertion.response.authenticatorData),
-	//							clientDataJSON: bufferToBase64url(assertion.response.clientDataJSON),
-	//							signature: bufferToBase64url(assertion.response.signature),
-	//							userHandle: bufferToBase64url(assertion.response.userHandle)
-	//						},
-	//					};
-	//
-	//					await fetch('/finish-login', {
-	//						method: 'POST',
-	//						headers: {
-	//							'Content-Type': 'application/json'
-	//						},
-	//						body: JSON.stringify(assertionForServer)
-	//					});
-	//				}
-	//
-	//				document.getElementById('register-button').addEventListener('click', function () {
-	//					const username = document.getElementById('register-username').value;
-	//					register(username).then(() => {
-	//						console.log('Registration completed');
-	//					}).catch((error) => {
-	//						console.error('Registration failed', error);
-	//					});
-	//				});
-	//
-	//				document.getElementById('login-button').addEventListener('click', function () {
-	//					const username = document.getElementById('login-username').value;
-	//					login(username).then(() => {
-	//						console.log('Login completed');
-	//					}).catch((error) => {
-	//						console.error('Login failed', error);
-	//					});
-	//				});
-	//			</script>
-	//		</body>
-	//	</html>`
-	//
-
-	//	form := `<!DOCTYPE html>
-	//		<html>
-	//		  <head>
-	//			<meta charset="UTF-8">
-	//			<title>Zero Trust Service Function Chaining Login Portal</title>
-	//			<meta name="viewport" content="width=device-width, initial-scale=1">
-	//			<style>
-	//			  body {
-	//				font-family: "Segoe UI", "Roboto", sans-serif;
-	//				background-color: #f2f2f2;
-	//				margin: 0;
-	//			  }
-	//
-	//			  .container {
-	//				background-color: #fff;
-	//				border-radius: 5px;
-	//				box-shadow: 0 0 20px rgba(0,0,0,0.2);
-	//				margin: 50px auto;
-	//				padding: 30px;
-	//				max-width: 700px;
-	//			  }
-	//
-	//			  h1 {
-	//				font-size: 36px;
-	//				margin: 0 0 20px;
-	//				text-align: center;
-	//				color: #333;
-	//			  }
-	//
-	//			  h3 {
-	//				font-size: 18px;
-	//				margin: 0 0 10px;
-	//				text-align: center;
-	//				color: #f44336;
-	//			  }
-	//
-	//			  form {
-	//				display: flex;
-	//				flex-direction: column;
-	//				align-items: center;
-	//				margin-top: 20px;
-	//			  }
-	//
-	//			  label {
-	//				font-size: 16px;
-	//				color: #333;
-	//				margin-bottom: 5px;
-	//				text-align: left;
-	//				display: block;
-	//				width: 100%;
-	//			  }
-	//
-	//			  input[type="text"], input[type="password"] {
-	//				padding: 12px;
-	//				border-radius: 5px;
-	//				border: none;
-	//				background-color: #f2f2f2;
-	//				width: 100%;
-	//				font-size: 16px;
-	//				margin-bottom: 15px;
-	//			  }
-	//
-	//			  button[type="submit"] {
-	//				padding: 12px 20px;
-	//				border-radius: 5px;
-	//				border: none;
-	//				background-color: #4caf50;
-	//				color: #fff;
-	//				font-size: 16px;
-	//				cursor: pointer;
-	//				transition: background-color 0.3s ease-in-out;
-	//			  }
-	//
-	//			  button[type="submit"]:hover {
-	//				background-color: #3e8e41;
-	//			  }
-	//			</style>
-	//		  </head>
-	//		  <body>
-	//			<div class="container">
-	//			  <h1>Zero Trust Service Function Chaining<br>Login Portal</h1>
-	//			  <h3>` + msg + `</h3>
-	//			  <form method="POST">
-	//				<label for="username">Username:</label>
-	//				<input type="text" id="username" name="username" required>
-	//				<label for="password">Password:</label>
-	//				<input type="password" id="password" name="password" required>
-	//				<button type="submit">Log In</button>
-	//			  </form>
-	//			</div>
-	//		  </body>
-	//		</html>
-	//        `
-
-	w.WriteHeader(http.StatusOK)
+// TODO: make it private; call in router.go prevents it currently
+func HandlePwdAuth(msg string, w http.ResponseWriter) {
+	pwdAuthPage := resources.GeneratePwdAuthPage(msg)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprint(w, form)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, pwdAuthPage)
+}
+
+func handleForm(sysLogger *logger.Logger, req *http.Request) (string, error) {
+	if err := req.ParseForm(); err != nil {
+		return "Parsing Error", fmt.Errorf("handleForm(): HTTP POST request from %s could not be parsed", req.Host)
+	}
+
+	nmbrOfPostvalues := len(req.PostForm)
+	if nmbrOfPostvalues != 2 {
+		return "Wrong number of POST form values", fmt.Errorf("handleForm(): HTTP POST request from %s has wrong number of POST form values", req.Host)
+	}
+
+	return "", nil
+}
+
+func handleUsername(sysLogger *logger.Logger, req *http.Request) (string, string, error) {
+	usernamel, exist := req.PostForm["username"]
+	if len(usernamel) < 1 {
+		return "", "Internal Error. Try again later", fmt.Errorf("handleUsername(): No user exist in user DB")
+	}
+
+	username := usernamel[0]
+	if !exist {
+		return "", "Username not present in POST form", fmt.Errorf("handleUsername(): HTTP POST request from %s did not provide a username", req.Host)
+	}
+
+	if !validUser(sysLogger, username) {
+		return "", "Invalid username or password", fmt.Errorf("handleUsername(): In HTTP POST request from %s, presented username '%s' does not exist or is wrong", req.Host, username)
+	}
+
+	return username, "", nil
+}
+
+func handleFailedAuthAttempts(sysLogger *logger.Logger, req *http.Request, username string) (string, error) {
+	failedAttempts, err := getFailedAuthAttempts(sysLogger, username)
+	if err != nil {
+		return "Internal Error. Try again later", fmt.Errorf("handleFailedAuthAttempts(): In HTTP POST request from %s, for presented username '%s' the failed PW authentication attempts could not retrieved from PIP: %v", req.Host, username, err)
+	}
+	// TODO: Implement time delay; not a DoS
+	if failedAttempts > 5 {
+		return "You user account has been suspended", fmt.Errorf("handleFailedAuthAttempts(): In HTTP POST request from %s, presented username '%s' has too many failed PW authentication attempts", req.Host, username)
+	}
+
+	return "", nil
 }

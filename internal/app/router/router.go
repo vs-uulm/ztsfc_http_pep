@@ -32,7 +32,7 @@ type Router struct {
 
 func NewRouter(logger *logger.Logger) (*Router, error) {
 	router := new(Router)
-	wh := new(WelcomeHandler)
+	rh := new(ResourceHandler)
 
 	// Set sysLogger to the one created in the init function
 	router.sysLogger = logger
@@ -73,7 +73,7 @@ func NewRouter(logger *logger.Logger) (*Router, error) {
 	// Frontend Handlers
 	mux := http.NewServeMux()
 	mux.Handle("/", router)
-	mux.Handle("/welcome/", wh)
+	mux.Handle("/9af1ecf7/", rh)
 
 	// Setting Up the Frontend Server
 	router.frontend = &http.Server{
@@ -126,11 +126,10 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// TODO: return error to client?
 	// Check if user has a valid session already
 	if !basic_auth.ClientHasValidSession(router.sysLogger, w, req, md) {
-		if !basic_auth.BasicAuth(router.sysLogger, w, req, md) {
-			// Used for measuring the time ServeHTTP runs
-			// fmt.Printf("Authentication,'%s', %v\n", md.SFC, time.Since(start))
-			return
-		}
+		//http.Redirect(w, req, "https://"+req.Host+"/9af1ecf7/login-portal", http.StatusFound) // 302
+		//return
+		basic_auth.PerformAuthentication(router.sysLogger, w, req, md)
+		return
 	}
 
 	// AUTHORIZATION
@@ -146,18 +145,10 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		// io.WriteString(w, md.AuthReason+". Contact your security advisor for more information.")
 		router.sysLogger.Infof("router: ServeHTTP(): request from user %s was rejected due to the reason: %s", md.User, md.AuthReason)
 		//w.WriteHeader(403)
-		//ztsfcCookie := http.Cookie{
-		//	Name:    "ztsfc_session",
-		//	Value:   "",
-		//	MaxAge:  -1,
-		//	Path:    "/",
-		//	Expires: time.Unix(0, 0),
-		//}
-		//http.SetCookie(w, &ztsfcCookie)
 		switch req.URL.Path {
 		// Password Authentication
 		case "/password-authentication":
-			basic_auth.HandleFormResponse(md.AuthReason, w)
+			basic_auth.HandlePwdAuth(md.AuthReason, w)
 			return
 		// Passkey Authentication
 		case "/passkey-authentication":
@@ -180,14 +171,6 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			basic_auth.HandleAuthenticationWelcome(md.AuthReason, w)
 			return
 		}
-
-		//if md.PasskeyAuthenticated {
-		//	basic_auth.HandlePasskeyAuthentication(md.AuthReason, w)
-		//} else {
-		//	basic_auth.HandleFormResponse(md.AuthReason, w)
-		//}
-		//router.sysLogger.Infof("router: ServeHTTP(): request from user %s was rejected due to the reason: %s", md.User, md.AuthReason)
-		//return
 	}
 	router.sysLogger.Debugf("router: ServeHTTP(): request from %s passed PDP. SFC: %s", req.RemoteAddr, md.SFC)
 
@@ -286,22 +269,27 @@ func (router *Router) ListenAndServeTLS() error {
 	return router.frontend.ListenAndServeTLS("", "")
 }
 
-type WelcomeHandler struct{}
+type ResourceHandler struct{}
 
-func (wh *WelcomeHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (wh *ResourceHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	prepareResponse(w)
 
 	// Serves external welcome resources
 	switch req.URL.Path {
-	case "/welcome/style.css":
+	case "/9af1ecf7/welcome-style.css":
 		w.Header().Set("Content-Type", "text/css; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, resources.WelcomeStyle)
 		return
-	case "/welcome/script.js":
+	case "/9af1ecf7/welcome-script.js":
 		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, resources.WelcomeScript)
+		return
+	case "/9af1ecf7/password-style.css":
+		w.Header().Set("Content-Type", "text/css; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, resources.PasswordStyle)
 		return
 	default:
 		break
